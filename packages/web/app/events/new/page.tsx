@@ -72,28 +72,33 @@ function monthIndex(name: string): number {
   return MONTH_NAMES.indexOf(name.toLowerCase());
 }
 
-function extractDate(text: string, fallbackYear: number): { year: number; month: number; day: number } | null {
-  // 1. "27 February 2025" or "Thursday, 27 February 2025"
+interface DateValue { year: number; month: number; day: number }
+interface TimeValue { hour: number; minute: number }
+interface Extracted<T> { value: T; matchStr: string }
+
+function extractDate(text: string, fallbackYear: number): Extracted<DateValue> | null {
   const longMonth = '(january|february|march|april|may|june|july|august|september|october|november|december)';
+
+  // 1. "27 February 2025" or "Thursday, 27 February 2025"
   const reFullDay = new RegExp(`\\b(\\d{1,2})\\s+${longMonth}\\s+(\\d{4})\\b`, 'i');
   const mFull = text.match(reFullDay);
-  if (mFull) return { day: Number(mFull[1]), month: monthIndex(mFull[2]!), year: Number(mFull[3]) };
+  if (mFull) return { value: { day: Number(mFull[1]), month: monthIndex(mFull[2]!), year: Number(mFull[3]) }, matchStr: mFull[0] };
 
   // 2. "February 27, 2025"
   const reMonthFirst = new RegExp(`\\b${longMonth}\\s+(\\d{1,2}),?\\s+(\\d{4})\\b`, 'i');
   const mMonth = text.match(reMonthFirst);
-  if (mMonth) return { day: Number(mMonth[2]), month: monthIndex(mMonth[1]!), year: Number(mMonth[3]) };
+  if (mMonth) return { value: { day: Number(mMonth[2]), month: monthIndex(mMonth[1]!), year: Number(mMonth[3]) }, matchStr: mMonth[0] };
 
   // 3. "27 February" (no year)
   const reNoYear = new RegExp(`\\b(\\d{1,2})\\s+${longMonth}\\b`, 'i');
   const mNoYear = text.match(reNoYear);
-  if (mNoYear) return { day: Number(mNoYear[1]), month: monthIndex(mNoYear[2]!), year: fallbackYear };
+  if (mNoYear) return { value: { day: Number(mNoYear[1]), month: monthIndex(mNoYear[2]!), year: fallbackYear }, matchStr: mNoYear[0] };
 
   // 4. "27/02/2025" or "27-02-2025" or "2025-02-27"
   const reSlash = text.match(/\b(\d{4})[/-](\d{1,2})[/-](\d{1,2})\b/);
-  if (reSlash) return { year: Number(reSlash[1]), month: Number(reSlash[2]) - 1, day: Number(reSlash[3]) };
+  if (reSlash) return { value: { year: Number(reSlash[1]), month: Number(reSlash[2]) - 1, day: Number(reSlash[3]) }, matchStr: reSlash[0] };
   const reSlashDmy = text.match(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b/);
-  if (reSlashDmy) return { day: Number(reSlashDmy[1]), month: Number(reSlashDmy[2]) - 1, year: Number(reSlashDmy[3]) };
+  if (reSlashDmy) return { value: { day: Number(reSlashDmy[1]), month: Number(reSlashDmy[2]) - 1, year: Number(reSlashDmy[3]) }, matchStr: reSlashDmy[0] };
 
   return null;
 }
@@ -110,31 +115,38 @@ function parseTime(token: string): { hour: number; minute: number } | null {
   return { hour, minute };
 }
 
-function extractTime(text: string): { hour: number; minute: number } | null {
+function extractTime(text: string): Extracted<TimeValue> | null {
   // "9:30 AM to 2:00 PM" / "12:00PM – 2:00PM" / "7.00PM - 9.00PM"
   const range = text.match(/(\d{1,2}[:.]?\d{0,2}\s*(?:am|pm|AM|PM))\s*(?:–|-|to|until)\s*(\d{1,2}[:.]?\d{0,2}\s*(?:am|pm|AM|PM))/);
   if (range) {
     const t = parseTime(range[1]!);
-    if (t) return t;
+    if (t) return { value: t, matchStr: range[0] };
   }
   // "Time: 12:00 PM" or first standalone time-of-day token
   const single = text.match(/\b(\d{1,2}[:.]\d{2}\s*(?:am|pm|AM|PM))\b/);
   if (single) {
     const t = parseTime(single[1]!);
-    if (t) return t;
+    if (t) return { value: t, matchStr: single[0] };
   }
   return null;
 }
 
-function extractVenue(text: string): string | null {
-  // "Venue: X" or "Location: X"
-  const tagged = text.match(/(?:^|\n)\s*(?:Venue|Location)\s*[:\-]\s*([^\n\r]+)/i);
-  if (tagged) return tagged[1]!.trim().replace(/[•\-:\s]+$/, '');
+function extractVenue(text: string): Extracted<string> | null {
+  // "Venue: X" or "Location: X" — stops at line-break, pipe, semicolon, " on "
+  // (so we don't swallow the whole subject when there's no newline).
+  const tagged = text.match(/(?:^|\n)\s*(?:Venue|Location)\s*[:\-]\s*([^\n\r|;]+?)(?:\s+\bon\b|[|;\n\r]|$)/i);
+  if (tagged) {
+    const value = tagged[1]!.trim().replace(/[•\-:\s]+$/, '');
+    if (value) return { value, matchStr: tagged[0] };
+  }
 
   // "at <Venue Name>" — venue follows the word "at", begins with a capital,
-  // ends before punctuation or a connector word.
-  const atMatch = text.match(/\bat\s+([A-Z][A-Za-z0-9 &',.\-]{3,80}?)(?:\s+(?:on|from|for|tomorrow|today|where|located|to celebrate|with)|[.,\n\r])/);
-  if (atMatch) return atMatch[1]!.trim().replace(/[\s,.]+$/, '');
+  // ends before a connector word, punctuation, or end-of-string.
+  const atMatch = text.match(/\bat\s+([A-Z][A-Za-z0-9 &',.\-]{3,80}?)(?:\s+(?:on|from|for|tomorrow|today|where|located|to celebrate|with)|[.,\n\r]|$)/);
+  if (atMatch) {
+    const value = atMatch[1]!.trim().replace(/[\s,.]+$/, '');
+    if (value) return { value, matchStr: atMatch[0] };
+  }
 
   return null;
 }
@@ -160,7 +172,7 @@ function cleanSubject(subject: string): string {
     prev = s;
     s = s.replace(/^\s*(re|fwd?)\s*:\s*/i, '');
     s = s.replace(/^\s*[\[\(\{][^\]\)\}]*[\]\)\}]\s*/, '');
-    s = s.replace(/^\s*(invitation|invitations|external|internal|confidential|fyi)\b[\s:,\-–|]*/i, '');
+    s = s.replace(/^\s*(invitation|invitations|external|internal|confidential|fyi)\b[\s:,\-–—|]*/i, '');
   } while (s !== prev);
 
   // Drop the same noise words anywhere in the title, as whole words.
@@ -170,11 +182,44 @@ function cleanSubject(subject: string): string {
   s = s.replace(/^\s*(to|for|at|on|re)\b\s+/i, '');
 
   // Collapse runs of stray separators (": -", "- :", " | ,") to one space.
-  s = s.replace(/(\s*[\-–:|,]\s*){2,}/g, ' ');
+  s = s.replace(/(\s*[\-–—:|,]\s*){2,}/g, ' ');
 
   // Final whitespace + edge tidy.
   s = s.replace(/\s+/g, ' ').replace(/^[\s\-–:|,]+|[\s\-–:|,]+$/g, '').trim();
   return s || subject.trim();
+}
+
+/** Removes a substring (case-insensitive) from `s` if present. */
+function stripSubstring(s: string, sub: string): string {
+  const idx = s.toLowerCase().indexOf(sub.toLowerCase());
+  if (idx < 0) return s;
+  return s.slice(0, idx) + s.slice(idx + sub.length);
+}
+
+/** Extract date/time/venue from a Gmail subject and return the cleaned
+ *  subject with those substrings removed (e.g. "[INVITATION] SPARK Lunch on
+ *  3 June 2026 at Garibaldi" → name "SPARK Lunch", date 3 Jun 2026, venue
+ *  Garibaldi). Word "on " left dangling after the date is also tidied. */
+function inferFromSubject(subject: string, fallbackYear: number): {
+  date_local: string | null;
+  venue: string | null;
+  cleanedName: string;
+} {
+  const d = extractDate(subject, fallbackYear);
+  const t = extractTime(subject);
+  const v = extractVenue(subject);
+
+  let stripped = subject;
+  for (const m of [d?.matchStr, t?.matchStr, v?.matchStr]) {
+    if (m) stripped = stripSubstring(stripped, m);
+  }
+  // Common connector words left orphaned by the strip: "on ", "from ", "at ".
+  stripped = stripped.replace(/\b(on|from|at|venue|date|time)\s*[:\-]?\s*(?=$|[\s,;|.\-–])/gi, '');
+  // Drop "in the morning/afternoon/evening" leftovers
+  stripped = stripped.replace(/\bin the\s+(morning|afternoon|evening)\b/gi, '');
+
+  const date_local = d ? toDateTimeLocal(d.value.year, d.value.month, d.value.day, t?.value.hour ?? 9, t?.value.minute ?? 0) : null;
+  return { date_local, venue: v?.value ?? null, cleanedName: cleanSubject(stripped) };
 }
 
 function inferEventDetails(bodyText: string, subject: string, fallbackYear: number): {
@@ -188,11 +233,9 @@ function inferEventDetails(bodyText: string, subject: string, fallbackYear: numb
 
   let date_local: string | null = null;
   if (d) {
-    const hour = t?.hour ?? 9; // default to 9am if no time found
-    const minute = t?.minute ?? 0;
-    date_local = toDateTimeLocal(d.year, d.month, d.day, hour, minute);
+    date_local = toDateTimeLocal(d.value.year, d.value.month, d.value.day, t?.value.hour ?? 9, t?.value.minute ?? 0);
   }
-  return { date_local, venue };
+  return { date_local, venue: venue?.value ?? null };
 }
 
 export default function NewEventPage() {
@@ -248,24 +291,30 @@ export default function NewEventPage() {
     return () => { cancelled = true; };
   }, [picked]);
 
-  // Reset and prefill name from subject every time the user picks a different
-  // email (so switching emails re-syncs the form). Picking the same email
-  // again is a no-op so an in-progress manual edit isn't clobbered.
+  // On a new pick, pull what we can straight from the subject (date / time /
+  // venue mentioned inline) and move them into the matching form fields. The
+  // event name is whatever's left of the subject after that strip.
   useEffect(() => {
     if (!picked) return;
-    setName(cleanSubject(picked.subject));
-    setDate('');
-    setVenue('');
+    const fallbackYear = new Date(picked.internal_date).getFullYear();
+    const inferred = inferFromSubject(picked.subject, fallbackYear);
+    setName(inferred.cleanedName);
+    setDate(inferred.date_local ?? '');
+    setVenue(inferred.venue ?? '');
   }, [picked?.id]);
 
-  // Once the full body loads for the currently-picked email, fill date + venue
-  // from the body. Runs on every new email pick (overwrites prior inference).
+  // Once the full body loads, scan it for date / time / venue and use those
+  // as the authoritative answer. The body's labelled lines ("Date: ...",
+  // "Venue: ...", "Time: 12:00 PM – 2:00 PM") are more reliable than the
+  // best-effort match we made from the subject before the body arrived, so
+  // we overwrite even if the subject managed to fill the field.
   useEffect(() => {
     if (!fullMessage || !picked || fullMessage.id !== picked.id) return;
     const fallbackYear = new Date(picked.internal_date).getFullYear();
     const inferred = inferEventDetails(fullMessage.body_text, picked.subject, fallbackYear);
     if (inferred.date_local) setDate(inferred.date_local);
     if (inferred.venue) setVenue(inferred.venue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fullMessage, picked]);
 
   const submit = () => {
