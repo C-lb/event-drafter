@@ -42,7 +42,18 @@ export async function listEventsWithStats() {
 }
 
 export async function searchInbox(query: string) {
-  return listRecentMessages(query || 'newer_than:30d', 20);
+  return listRecentMessages(query || 'newer_than:30d', 30);
+}
+
+export async function previewGmailMessage(id: string) {
+  const msg = await fetchMessage(id);
+  return {
+    id: msg.id,
+    from: msg.from,
+    subject: msg.subject,
+    internal_date: msg.internal_date,
+    body_text: msg.body_text,
+  };
 }
 
 const createSchema = z.object({
