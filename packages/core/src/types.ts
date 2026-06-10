@@ -4,6 +4,7 @@ export const JOB_KINDS = [
   'classify_reply',
   'draft_response',
   'generate_follow_up',
+  'import_contacts',
 ] as const;
 export type JobKind = (typeof JOB_KINDS)[number];
 
