@@ -7,6 +7,8 @@ import { sendMessageHandler } from './send-message.js';
 import { checkRepliesHandler } from './check-replies.js';
 import { classifyReplyHandler } from './classify-reply.js';
 import { sendResponseHandler } from './send-response.js';
+import { generateFollowUpsHandler } from './generate-follow-ups.js';
+import { sendFollowUpHandler } from './send-follow-up.js';
 
 export type JobHandler = (job: Job) => Promise<void>;
 
@@ -19,4 +21,7 @@ export const handlers: Record<JobKind, JobHandler> = {
   classify_reply: classifyReplyHandler,
   draft_response: classifyReplyHandler,
   send_response: sendResponseHandler,
+  generate_follow_ups: generateFollowUpsHandler,
+  generate_follow_up: generateFollowUpsHandler,
+  send_follow_up: sendFollowUpHandler,
 };

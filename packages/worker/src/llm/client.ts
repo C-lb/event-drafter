@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { setSetting } from '@vip/core/settings';
 
 export const MODEL = 'claude-sonnet-4-6';
 
@@ -33,23 +34,30 @@ export interface PromptBlock {
 
 export async function complete(prompt: PromptBlock, max_tokens = 1024): Promise<CompletionResult> {
   const client = getClient();
-  const res = await client.messages.create({
-    model: MODEL,
-    max_tokens,
-    system: prompt.system,
-    messages: [{ role: 'user', content: prompt.user }],
-  });
-
-  const text = res.content
-    .filter((b): b is Extract<typeof b, { type: 'text' }> => b.type === 'text')
-    .map((b) => b.text)
-    .join('');
-
-  return {
-    text,
-    input_tokens: res.usage.input_tokens,
-    output_tokens: res.usage.output_tokens,
-    cache_creation_input_tokens: res.usage.cache_creation_input_tokens ?? 0,
-    cache_read_input_tokens: res.usage.cache_read_input_tokens ?? 0,
-  };
+  try {
+    const res = await client.messages.create({
+      model: MODEL,
+      max_tokens,
+      system: prompt.system,
+      messages: [{ role: 'user', content: prompt.user }],
+    });
+    setSetting('anthropic_last_ok', { ts: Date.now() });
+    const text = res.content
+      .filter((b): b is Extract<typeof b, { type: 'text' }> => b.type === 'text')
+      .map((b) => b.text)
+      .join('');
+    return {
+      text,
+      input_tokens: res.usage.input_tokens,
+      output_tokens: res.usage.output_tokens,
+      cache_creation_input_tokens: res.usage.cache_creation_input_tokens ?? 0,
+      cache_read_input_tokens: res.usage.cache_read_input_tokens ?? 0,
+    };
+  } catch (err) {
+    setSetting('anthropic_last_error', {
+      ts: Date.now(),
+      message: err instanceof Error ? err.message : String(err),
+    });
+    throw err;
+  }
 }

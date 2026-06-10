@@ -5,6 +5,7 @@ import { and, asc, eq, isNull, lte, or, sql } from 'drizzle-orm';
 import { handlers } from './jobs/index.js';
 import { logger } from './logger.js';
 import { JobDeferred } from './errors.js';
+import { beat } from './heartbeat.js';
 
 const STUCK_RUNNING_MS = 5 * 60 * 1000;
 
@@ -73,6 +74,7 @@ export async function tick(now: Date = new Date()): Promise<number> {
 export async function runForever(intervalMs = 1000): Promise<void> {
   logger.info('worker poller started', { intervalMs });
   while (true) {
+    beat();
     const did = await tick();
     if (did === 0) await new Promise((r) => setTimeout(r, intervalMs));
   }

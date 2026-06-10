@@ -1,0 +1,1 @@
+ALTER TABLE `follow_ups` ADD `prefilled_at` integer;

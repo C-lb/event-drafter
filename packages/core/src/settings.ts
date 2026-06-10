@@ -29,6 +29,9 @@ interface SettingTypes {
   style_guide: string;
   anthropic_key_set: boolean;
   setup_completed: boolean;
+  worker_heartbeat: { ts: number; node: string };
+  anthropic_last_ok: { ts: number };
+  anthropic_last_error: { ts: number; message: string };
 }
 
 export function getSetting<K extends SettingKey>(key: K): SettingTypes[K] | null {

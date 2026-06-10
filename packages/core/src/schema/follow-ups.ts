@@ -13,6 +13,7 @@ export const follow_ups = sqliteTable('follow_ups', {
     .notNull()
     .default(sql`(unixepoch() * 1000)`),
   approved_at: integer('approved_at', { mode: 'timestamp_ms' }),
+  prefilled_at: integer('prefilled_at', { mode: 'timestamp_ms' }),
   sent_at: integer('sent_at', { mode: 'timestamp_ms' }),
   status: text('status').notNull().$type<FollowUpStatus>().default('pending'),
 });

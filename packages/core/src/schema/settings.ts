@@ -20,6 +20,9 @@ export const SETTING_KEYS = {
   style_guide: 'style_guide',
   anthropic_key_set: 'anthropic_key_set',
   setup_completed: 'setup_completed',
+  worker_heartbeat: 'worker_heartbeat',
+  anthropic_last_ok: 'anthropic_last_ok',
+  anthropic_last_error: 'anthropic_last_error',
 } as const;
 
 export type SettingKey = (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS];

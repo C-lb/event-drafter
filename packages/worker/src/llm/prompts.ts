@@ -176,3 +176,59 @@ export function parseClassifyAndDraft(raw: string): ClassifyAndDraftOutput {
   if (!response_draft) throw new Error('classify: empty response_draft');
   return { classification: c, confidence, summary, response_draft };
 }
+
+// ===== Follow-up (Plan 6) =====
+
+export interface FollowUpInput {
+  event: Pick<Event, 'name' | 'event_date' | 'venue'>;
+  contact: Pick<Contact, 'full_name' | 'preferred_name' | 'personal_note'>;
+  original_invite_text: string;
+  days_since_sent: number;
+  style_guide: string;
+  operator_first_name?: string;
+}
+
+const FOLLOW_UP_RULES = `Draft a short, no-pressure WhatsApp follow-up to a contact who hasn't replied to the original invitation. Output ONLY the message body (no greetings metadata, no quotes, no Markdown).
+
+Hard rules:
+- 1-3 sentences.
+- Acknowledge gently that they might have missed the first message; do NOT guilt-trip.
+- Reference the event briefly but do not re-paste the original invite.
+- Leave the door open ("no pressure at all, just floating it back up").
+- Match the style guide's tone exactly.`;
+
+export function buildFollowUpPrompt(input: FollowUpInput): PromptBlock {
+  const eventDateStr = new Date(input.event.event_date).toLocaleDateString('en-SG', {
+    weekday: 'long', month: 'long', day: 'numeric',
+  });
+
+  const systemHeader = `# Style guide
+
+${input.style_guide}
+
+# Follow-up drafting rules
+
+${FOLLOW_UP_RULES}
+
+# Event context
+Event: ${input.event.name}
+When: ${eventDateStr}
+Venue: ${input.event.venue ?? '(not specified)'}
+
+# Operator
+${input.operator_first_name ? `Sign off with: "${input.operator_first_name}"` : 'Sign off with the operator\'s first name.'}`;
+
+  const userMessage = `# Contact
+Name: ${input.contact.full_name} (preferred: ${input.contact.preferred_name ?? input.contact.full_name.split(' ')[0]})
+Personal hook: ${input.contact.personal_note ?? '(none)'}
+
+# Original invite (sent ${input.days_since_sent} day${input.days_since_sent === 1 ? '' : 's'} ago, no reply)
+${input.original_invite_text}
+
+Draft the follow-up now.`;
+
+  return {
+    system: [{ type: 'text', text: systemHeader, cache_control: { type: 'ephemeral' } }],
+    user: userMessage,
+  };
+}
