@@ -10,7 +10,8 @@
     "./schema": "./dist/schema/index.js",
     "./db": "./dist/db.js",
     "./types": "./dist/types.js",
-    "./migrate": "./dist/migrate.js"
+    "./migrate": "./dist/migrate.js",
+    "./settings": "./dist/settings.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

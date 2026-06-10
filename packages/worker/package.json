@@ -4,6 +4,12 @@
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./google/oauth": "./dist/google/oauth.js",
+    "./google/sheets": "./dist/google/sheets.js",
+    "./google/gmail": "./dist/google/gmail.js"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
@@ -12,7 +18,8 @@
   },
   "dependencies": {
     "@vip/core": "*",
-    "drizzle-orm": "^0.36.0"
+    "drizzle-orm": "^0.36.0",
+    "googleapis": "^144.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
