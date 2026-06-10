@@ -64,6 +64,104 @@ function avatarColor(from: string): string {
   return palette[Math.abs(h) % palette.length]!;
 }
 
+// ---------- Heuristic extraction from email body ----------
+
+const MONTH_NAMES = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+
+function monthIndex(name: string): number {
+  return MONTH_NAMES.indexOf(name.toLowerCase());
+}
+
+function extractDate(text: string, fallbackYear: number): { year: number; month: number; day: number } | null {
+  // 1. "27 February 2025" or "Thursday, 27 February 2025"
+  const longMonth = '(january|february|march|april|may|june|july|august|september|october|november|december)';
+  const reFullDay = new RegExp(`\\b(\\d{1,2})\\s+${longMonth}\\s+(\\d{4})\\b`, 'i');
+  const mFull = text.match(reFullDay);
+  if (mFull) return { day: Number(mFull[1]), month: monthIndex(mFull[2]!), year: Number(mFull[3]) };
+
+  // 2. "February 27, 2025"
+  const reMonthFirst = new RegExp(`\\b${longMonth}\\s+(\\d{1,2}),?\\s+(\\d{4})\\b`, 'i');
+  const mMonth = text.match(reMonthFirst);
+  if (mMonth) return { day: Number(mMonth[2]), month: monthIndex(mMonth[1]!), year: Number(mMonth[3]) };
+
+  // 3. "27 February" (no year)
+  const reNoYear = new RegExp(`\\b(\\d{1,2})\\s+${longMonth}\\b`, 'i');
+  const mNoYear = text.match(reNoYear);
+  if (mNoYear) return { day: Number(mNoYear[1]), month: monthIndex(mNoYear[2]!), year: fallbackYear };
+
+  // 4. "27/02/2025" or "27-02-2025" or "2025-02-27"
+  const reSlash = text.match(/\b(\d{4})[/-](\d{1,2})[/-](\d{1,2})\b/);
+  if (reSlash) return { year: Number(reSlash[1]), month: Number(reSlash[2]) - 1, day: Number(reSlash[3]) };
+  const reSlashDmy = text.match(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b/);
+  if (reSlashDmy) return { day: Number(reSlashDmy[1]), month: Number(reSlashDmy[2]) - 1, year: Number(reSlashDmy[3]) };
+
+  return null;
+}
+
+function parseTime(token: string): { hour: number; minute: number } | null {
+  const m = token.trim().match(/^(\d{1,2})(?::|\.)?(\d{2})?\s*(am|pm|AM|PM)?$/);
+  if (!m) return null;
+  let hour = Number(m[1]);
+  const minute = m[2] ? Number(m[2]) : 0;
+  const meridiem = m[3]?.toLowerCase();
+  if (meridiem === 'pm' && hour < 12) hour += 12;
+  if (meridiem === 'am' && hour === 12) hour = 0;
+  if (hour > 23 || minute > 59) return null;
+  return { hour, minute };
+}
+
+function extractTime(text: string): { hour: number; minute: number } | null {
+  // "9:30 AM to 2:00 PM" / "12:00PM – 2:00PM" / "7.00PM - 9.00PM"
+  const range = text.match(/(\d{1,2}[:.]?\d{0,2}\s*(?:am|pm|AM|PM))\s*(?:–|-|to|until)\s*(\d{1,2}[:.]?\d{0,2}\s*(?:am|pm|AM|PM))/);
+  if (range) {
+    const t = parseTime(range[1]!);
+    if (t) return t;
+  }
+  // "Time: 12:00 PM" or first standalone time-of-day token
+  const single = text.match(/\b(\d{1,2}[:.]\d{2}\s*(?:am|pm|AM|PM))\b/);
+  if (single) {
+    const t = parseTime(single[1]!);
+    if (t) return t;
+  }
+  return null;
+}
+
+function extractVenue(text: string): string | null {
+  // "Venue: X" or "Location: X"
+  const tagged = text.match(/(?:^|\n)\s*(?:Venue|Location)\s*[:\-]\s*([^\n\r]+)/i);
+  if (tagged) return tagged[1]!.trim().replace(/[•\-:\s]+$/, '');
+
+  // "at <Venue Name>" — venue follows the word "at", begins with a capital,
+  // ends before punctuation or a connector word.
+  const atMatch = text.match(/\bat\s+([A-Z][A-Za-z0-9 &',.\-]{3,80}?)(?:\s+(?:on|from|for|tomorrow|today|where|located|to celebrate|with)|[.,\n\r])/);
+  if (atMatch) return atMatch[1]!.trim().replace(/[\s,.]+$/, '');
+
+  return null;
+}
+
+function toDateTimeLocal(year: number, month: number, day: number, hour: number, minute: number): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${year}-${pad(month + 1)}-${pad(day)}T${pad(hour)}:${pad(minute)}`;
+}
+
+function inferEventDetails(bodyText: string, subject: string, fallbackYear: number): {
+  date_local: string | null;
+  venue: string | null;
+} {
+  const text = `${subject}\n${bodyText}`;
+  const d = extractDate(text, fallbackYear);
+  const t = extractTime(text);
+  const venue = extractVenue(text);
+
+  let date_local: string | null = null;
+  if (d) {
+    const hour = t?.hour ?? 9; // default to 9am if no time found
+    const minute = t?.minute ?? 0;
+    date_local = toDateTimeLocal(d.year, d.month, d.day, hour, minute);
+  }
+  return { date_local, venue };
+}
+
 export default function NewEventPage() {
   const router = useRouter();
   const [query, setQuery] = useState('newer_than:30d');
@@ -121,6 +219,17 @@ export default function NewEventPage() {
   useEffect(() => {
     if (picked && !name) setName(picked.subject.replace(/^(re:|fwd?:)\s*/i, '').trim());
   }, [picked, name]);
+
+  // Once the full body loads, try to extract date / time / venue. Only fills
+  // fields the user hasn't already edited.
+  useEffect(() => {
+    if (!fullMessage || !picked) return;
+    const fallbackYear = new Date(picked.internal_date).getFullYear();
+    const inferred = inferEventDetails(fullMessage.body_text, picked.subject, fallbackYear);
+    if (inferred.date_local && !date) setDate(inferred.date_local);
+    if (inferred.venue && !venue) setVenue(inferred.venue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fullMessage]);
 
   const submit = () => {
     if (!picked) return;
