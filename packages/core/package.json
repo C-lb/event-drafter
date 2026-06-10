@@ -1,0 +1,31 @@
+{
+  "name": "@vip/core",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./schema": "./dist/schema/index.js",
+    "./db": "./dist/db.js",
+    "./types": "./dist/types.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "migrate": "tsx src/migrate.ts",
+    "drizzle:generate": "drizzle-kit generate"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.5.0",
+    "drizzle-orm": "^0.36.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^22.0.0",
+    "drizzle-kit": "^0.28.0",
+    "tsx": "^4.19.0",
+    "vitest": "^2.1.0"
+  }
+}
