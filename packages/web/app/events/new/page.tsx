@@ -144,6 +144,39 @@ function toDateTimeLocal(year: number, month: number, day: number, hour: number,
   return `${year}-${pad(month + 1)}-${pad(day)}T${pad(hour)}:${pad(minute)}`;
 }
 
+// Cleans a Gmail subject down to a usable event name. Strips:
+//   - Re: / Fwd: prefixes
+//   - Bracketed labels like [INVITATION], (External), {Internal}
+//   - Standalone noise words: invitation, external, internal, confidential, fyi
+//   - Trailing/leading punctuation and double spaces
+function cleanSubject(subject: string): string {
+  let s = subject.trim();
+
+  // Repeatedly strip prefix garbage: Re:/Fwd:, bracket tags, leading noise
+  // words like "Invitation:" or "External -". Loop until stable so chains
+  // like "Re: Fwd: [Internal][External] Invitation: ..." all peel off.
+  let prev: string;
+  do {
+    prev = s;
+    s = s.replace(/^\s*(re|fwd?)\s*:\s*/i, '');
+    s = s.replace(/^\s*[\[\(\{][^\]\)\}]*[\]\)\}]\s*/, '');
+    s = s.replace(/^\s*(invitation|invitations|external|internal|confidential|fyi)\b[\s:,\-–|]*/i, '');
+  } while (s !== prev);
+
+  // Drop the same noise words anywhere in the title, as whole words.
+  s = s.replace(/\b(invitation|invitations|external|internal|confidential|fyi)\b/gi, '');
+
+  // Drop a leading preposition left behind when we stripped "Invitation to ..." etc.
+  s = s.replace(/^\s*(to|for|at|on|re)\b\s+/i, '');
+
+  // Collapse runs of stray separators (": -", "- :", " | ,") to one space.
+  s = s.replace(/(\s*[\-–:|,]\s*){2,}/g, ' ');
+
+  // Final whitespace + edge tidy.
+  s = s.replace(/\s+/g, ' ').replace(/^[\s\-–:|,]+|[\s\-–:|,]+$/g, '').trim();
+  return s || subject.trim();
+}
+
 function inferEventDetails(bodyText: string, subject: string, fallbackYear: number): {
   date_local: string | null;
   venue: string | null;
@@ -215,21 +248,25 @@ export default function NewEventPage() {
     return () => { cancelled = true; };
   }, [picked]);
 
-  // Auto-suggest event name from subject when picked changes (only if blank)
+  // Reset and prefill name from subject every time the user picks a different
+  // email (so switching emails re-syncs the form). Picking the same email
+  // again is a no-op so an in-progress manual edit isn't clobbered.
   useEffect(() => {
-    if (picked && !name) setName(picked.subject.replace(/^(re:|fwd?:)\s*/i, '').trim());
-  }, [picked, name]);
+    if (!picked) return;
+    setName(cleanSubject(picked.subject));
+    setDate('');
+    setVenue('');
+  }, [picked?.id]);
 
-  // Once the full body loads, try to extract date / time / venue. Only fills
-  // fields the user hasn't already edited.
+  // Once the full body loads for the currently-picked email, fill date + venue
+  // from the body. Runs on every new email pick (overwrites prior inference).
   useEffect(() => {
-    if (!fullMessage || !picked) return;
+    if (!fullMessage || !picked || fullMessage.id !== picked.id) return;
     const fallbackYear = new Date(picked.internal_date).getFullYear();
     const inferred = inferEventDetails(fullMessage.body_text, picked.subject, fallbackYear);
-    if (inferred.date_local && !date) setDate(inferred.date_local);
-    if (inferred.venue && !venue) setVenue(inferred.venue);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fullMessage]);
+    if (inferred.date_local) setDate(inferred.date_local);
+    if (inferred.venue) setVenue(inferred.venue);
+  }, [fullMessage, picked]);
 
   const submit = () => {
     if (!picked) return;
