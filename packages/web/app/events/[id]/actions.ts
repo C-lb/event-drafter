@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { getDb } from '@vip/core/db';
-import { contacts, events, invites, jobs } from '@vip/core/schema';
+import { contacts, events, invites, jobs, replies } from '@vip/core/schema';
 import { and, eq, like, notInArray, or, sql } from 'drizzle-orm';
 
 export async function getEventOrThrow(id: number) {
@@ -148,4 +148,69 @@ export async function regenerateDraft(input: unknown) {
     kind: 'draft_invite',
     payload: { event_id: inv.event_id, contact_id: inv.contact_id },
   }).run();
+}
+
+export async function triggerReplyCheck() {
+  const db = getDb();
+  db.insert(jobs).values({ kind: 'check_replies', payload: {} }).run();
+}
+
+export async function listRepliesForEvent(event_id: number) {
+  const db = getDb();
+  return db
+    .select({
+      reply_id: replies.id,
+      classification: replies.classification,
+      confidence: replies.classification_confidence,
+      summary: replies.classification_summary,
+      reply_text: replies.wa_message_text,
+      response_draft: replies.response_draft,
+      response_status: replies.response_status,
+      response_prefilled_at: replies.response_prefilled_at,
+      response_sent_at: replies.response_sent_at,
+      contact_name: contacts.full_name,
+      contact_id: contacts.id,
+    })
+    .from(replies)
+    .innerJoin(invites, eq(replies.invite_id, invites.id))
+    .innerJoin(contacts, eq(invites.contact_id, contacts.id))
+    .where(eq(invites.event_id, event_id))
+    .orderBy(sql`${replies.detected_at} DESC`)
+    .all();
+}
+
+const responseActionSchema = z.object({ reply_id: z.number() });
+
+export async function approveResponse(input: unknown) {
+  const { reply_id } = responseActionSchema.parse(input);
+  const db = getDb();
+  db.transaction((tx) => {
+    tx.update(replies)
+      .set({ response_status: 'approved', response_approved_at: new Date() })
+      .where(eq(replies.id, reply_id))
+      .run();
+    tx.insert(jobs).values({ kind: 'send_response', payload: { reply_id } }).run();
+  });
+}
+
+export async function skipResponse(input: unknown) {
+  const { reply_id } = responseActionSchema.parse(input);
+  const db = getDb();
+  db.update(replies).set({ response_status: 'skipped' }).where(eq(replies.id, reply_id)).run();
+}
+
+export async function markResponseSent(input: unknown) {
+  const { reply_id } = responseActionSchema.parse(input);
+  const db = getDb();
+  db.update(replies)
+    .set({ response_status: 'sent', response_sent_at: new Date() })
+    .where(eq(replies.id, reply_id))
+    .run();
+}
+
+const editResponseSchema = z.object({ reply_id: z.number(), response_draft: z.string().min(1).max(2000) });
+export async function editResponse(input: unknown) {
+  const { reply_id, response_draft } = editResponseSchema.parse(input);
+  const db = getDb();
+  db.update(replies).set({ response_draft }).where(eq(replies.id, reply_id)).run();
 }

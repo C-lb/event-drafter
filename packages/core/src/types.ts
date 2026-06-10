@@ -6,6 +6,7 @@ export const JOB_KINDS = [
   'generate_follow_up',
   'import_contacts',
   'draft_invite',
+  'send_response',
 ] as const;
 export type JobKind = (typeof JOB_KINDS)[number];
 
@@ -46,6 +47,7 @@ export const RESPONSE_STATUSES = [
   'pending',
   'drafted',
   'approved',
+  'prefilled',
   'sent',
   'skipped',
   'failed',

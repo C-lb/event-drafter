@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildDraftPrompt } from '../src/llm/prompts.js';
+import { buildDraftPrompt, buildClassifyAndDraftPrompt, parseClassifyAndDraft } from '../src/llm/prompts.js';
 
 const baseInput = {
   event: {
@@ -66,5 +66,48 @@ describe('buildDraftPrompt', () => {
       contact: { ...baseInput.contact, preferred_name: null },
     });
     expect(p.user).toContain('Preferred name: Ada');
+  });
+});
+
+describe('parseClassifyAndDraft', () => {
+  it('parses a happy-path JSON', () => {
+    const raw = `{"classification":"yes","confidence":0.9,"summary":"accepted","response_draft":"Lovely, see you there."}`;
+    const r = parseClassifyAndDraft(raw);
+    expect(r.classification).toBe('yes');
+    expect(r.confidence).toBe(0.9);
+    expect(r.response_draft).toContain('see you there');
+  });
+
+  it('strips accidental ```json code fences', () => {
+    const raw = "```json\n" + `{"classification":"no","confidence":0.7,"summary":"declined","response_draft":"Understood, hope to see you next time."}` + "\n```";
+    const r = parseClassifyAndDraft(raw);
+    expect(r.classification).toBe('no');
+  });
+
+  it('throws on invalid classification', () => {
+    expect(() => parseClassifyAndDraft(`{"classification":"perhaps","confidence":0.5,"summary":"x","response_draft":"x"}`)).toThrow();
+  });
+
+  it('throws on confidence out of range', () => {
+    expect(() => parseClassifyAndDraft(`{"classification":"yes","confidence":2,"summary":"x","response_draft":"x"}`)).toThrow();
+  });
+
+  it('throws on empty response_draft', () => {
+    expect(() => parseClassifyAndDraft(`{"classification":"yes","confidence":0.9,"summary":"x","response_draft":""}`)).toThrow();
+  });
+});
+
+describe('buildClassifyAndDraftPrompt', () => {
+  it('includes contact + original invite + reply in user message', () => {
+    const p = buildClassifyAndDraftPrompt({
+      event: { name: 'Gala', event_date: new Date(), venue: null },
+      contact: { full_name: 'Ada', preferred_name: 'Ada', personal_note: 'pianist' },
+      original_invite_text: 'Hi Ada, would love to see you at Gala…',
+      reply_text: 'unfortunately out of town that weekend',
+      style_guide: 'Brief and warm.',
+    });
+    expect(p.user).toContain('out of town');
+    expect(p.user).toContain('Hi Ada');
+    expect(p.system[0]?.cache_control?.type).toBe('ephemeral');
   });
 });

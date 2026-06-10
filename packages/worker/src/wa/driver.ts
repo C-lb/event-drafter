@@ -94,6 +94,13 @@ export async function prefillDraft(phoneE164: string, text: string): Promise<voi
   throw new WaSelectorMismatch('input box did not receive prefilled text');
 }
 
+import { openChatAndReadInbound as _read } from './reader.js';
+
+export async function readChatInbound(phoneE164: string) {
+  const { page } = await ensureContext();
+  return _read(page, phoneE164);
+}
+
 for (const sig of ['SIGINT', 'SIGTERM'] as const) {
   process.on(sig, () => {
     void shutdownWa().finally(() => process.exit(0));

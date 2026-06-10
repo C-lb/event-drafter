@@ -13,12 +13,23 @@ export const SEL = {
   invalidNumberDialog: 'text=/phone number shared via url is invalid/i, text=/invalid phone number/i',
   useHereButton: 'role=button[name=/use here/i]',
   loadingSpinner: 'div[data-icon="progress"], svg[aria-label="Loading"]',
+
+  // ===== Reply scraping (added in Plan 5) =====
+  // WARNING: these selectors are heuristic. WA does not expose a public DOM
+  // contract. Run `npm run wa-smoke` after WA updates to detect drift.
+  conversationPane: 'div[role="application"], div[data-tab="8"] [role="row"]',
+  messageRow: 'div[role="row"]',
+  inboundBubble: 'div.message-in, [data-pre-plain-text]:not([data-pre-plain-text*="From you"])',
+  outboundBubble: 'div.message-out',
+  messageText: 'span.selectable-text, span[dir="ltr"], span[dir="auto"]',
+  messageMeta: '[data-pre-plain-text]',
 };
 
 export const WAIT = {
   appReadyMs: 30_000,
   inputReadyMs: 20_000,
   inputFilledMs: 10_000,
+  conversationReadyMs: 15_000,
 };
 
 export const WA_URL = {
