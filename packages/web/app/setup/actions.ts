@@ -2,8 +2,8 @@
 
 import { setSetting, getSetting } from '@vip/core/settings';
 
-export async function markAnthropicKeySet(set: boolean): Promise<void> {
-  setSetting('anthropic_key_set', set);
+export async function markLLMReady(ready: boolean): Promise<void> {
+  setSetting('llm_ready', ready);
 }
 
 export async function markSetupCompleted(): Promise<void> {
@@ -12,7 +12,7 @@ export async function markSetupCompleted(): Promise<void> {
 
 export async function getSetupStatus() {
   return {
-    anthropic: getSetting('anthropic_key_set') === true,
+    llm: getSetting('llm_ready') === true,
     google: getSetting('google_tokens') !== null,
     sheet: getSetting('contacts_sheet') !== null,
     completed: getSetting('setup_completed') === true,

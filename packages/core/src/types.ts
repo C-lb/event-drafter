@@ -9,6 +9,7 @@ export const JOB_KINDS = [
   'send_response',
   'generate_follow_ups',
   'send_follow_up',
+  'cleanup_jobs',
 ] as const;
 export type JobKind = (typeof JOB_KINDS)[number];
 

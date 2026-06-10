@@ -39,7 +39,7 @@ export async function classifyReplyHandler(job: Job): Promise<void> {
     operator_first_name,
   });
 
-  const result = await complete(prompt, 500);
+  const result = await complete(prompt, 500, { json: true });
   logger.info('classify_reply: model output', {
     reply_id,
     in: result.input_tokens,

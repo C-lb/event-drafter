@@ -33,7 +33,7 @@ export async function checkRepliesHandler(_job: Job): Promise<void> {
     try {
       const inbound = await readChatInbound(row.phone);
       const sentAt = row.sent_at as Date;
-      const candidates = inbound.filter((m) => m.wa_sent_at.getTime() >= sentAt.getTime() - 60_000);
+      const candidates = inbound.filter((m) => m.wa_sent_at.getTime() >= sentAt.getTime());
 
       if (candidates.length === 0) {
         await sleep(READ_GAP_MS);

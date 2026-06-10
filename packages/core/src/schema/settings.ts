@@ -18,11 +18,11 @@ export const SETTING_KEYS = {
   google_client_id: 'google_client_id',
   contacts_sheet: 'contacts_sheet',
   style_guide: 'style_guide',
-  anthropic_key_set: 'anthropic_key_set',
+  llm_ready: 'llm_ready',
   setup_completed: 'setup_completed',
   worker_heartbeat: 'worker_heartbeat',
-  anthropic_last_ok: 'anthropic_last_ok',
-  anthropic_last_error: 'anthropic_last_error',
+  llm_last_ok: 'llm_last_ok',
+  llm_last_error: 'llm_last_error',
 } as const;
 
 export type SettingKey = (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS];

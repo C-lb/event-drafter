@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export default async function SetupHome() {
   const s = await getSetupStatus();
   const steps: { href: string; label: string; done: boolean }[] = [
-    { href: '/setup/api-keys', label: 'Anthropic API key', done: s.anthropic },
+    { href: '/setup/llm', label: 'Local LLM (Ollama)', done: s.llm },
     { href: '/setup/google', label: 'Connect Google', done: s.google },
     { href: '/setup/sheet', label: 'Pick contacts Sheet', done: s.sheet },
     { href: '/setup/import', label: 'Import contacts', done: s.completed },

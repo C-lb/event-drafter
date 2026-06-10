@@ -13,8 +13,8 @@
     "./scheduler": "./dist/scheduler.js"
   },
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "start": "node dist/index.js",
+    "dev": "tsx watch --env-file=.env src/index.ts",
+    "start": "node --env-file=.env dist/index.js",
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "wa-smoke": "tsx src/wa/smoke.ts"

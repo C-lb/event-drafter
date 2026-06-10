@@ -9,6 +9,7 @@ export const SCHEDULES = {
   evening_check: { cron: '0 10 * * *', kind: 'check_replies' as const, label: '06:00 PM SGT — check replies' },
   evening_followups: { cron: '5 10 * * *', kind: 'generate_follow_ups' as const, label: '06:05 PM SGT — generate follow-ups' },
   noon_check: { cron: '0 4 * * *', kind: 'check_replies' as const, label: '12:00 PM SGT — catch-up reply check' },
+  nightly_cleanup: { cron: '0 19 * * *', kind: 'cleanup_jobs' as const, label: '03:00 AM SGT — prune succeeded jobs >30d' },
 };
 
 function hasJobCreatedToday(kind: JobKind): boolean {

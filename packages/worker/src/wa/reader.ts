@@ -65,6 +65,7 @@ export async function openChatAndReadInbound(
     return out;
   }, { outboundBubble: SEL.outboundBubble, messageMeta: SEL.messageMeta, messageText: SEL.messageText });
 
+  const MAX_INBOUND = 10;
   const inbound: InboundMessage[] = [];
   for (const r of rows) {
     if (!r.isInbound) continue;
@@ -75,7 +76,8 @@ export async function openChatAndReadInbound(
       text: r.text,
     });
   }
+  const recent = inbound.slice(-MAX_INBOUND);
 
-  logger.info('wa: read inbound', { phone: phoneE164, count: inbound.length });
-  return inbound;
+  logger.info('wa: read inbound', { phone: phoneE164, visible: inbound.length, kept: recent.length });
+  return recent;
 }

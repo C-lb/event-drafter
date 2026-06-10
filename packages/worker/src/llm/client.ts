@@ -1,22 +1,29 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { setSetting } from '@vip/core/settings';
 
-export const MODEL = 'claude-sonnet-4-6';
+export const LLM_PROVIDER = (process.env.LLM_PROVIDER ?? 'ollama') as 'ollama' | 'anthropic';
+
+export const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
+export const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'qwen2.5:7b-instruct';
+export const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6';
+
+export const MODEL = LLM_PROVIDER === 'anthropic' ? ANTHROPIC_MODEL : OLLAMA_MODEL;
+
+export class LLMNotReachable extends Error {
+  constructor(detail: string) {
+    super(`Ollama not reachable at ${OLLAMA_BASE_URL}: ${detail}. Is \`ollama serve\` running?`);
+  }
+}
+
+export class LLMModelMissing extends Error {
+  constructor(model: string) {
+    super(`Ollama model "${model}" not pulled. Run: ollama pull ${model}`);
+  }
+}
 
 export class AnthropicNotConfigured extends Error {
   constructor() {
     super('ANTHROPIC_API_KEY missing from .env');
   }
-}
-
-let _client: Anthropic | null = null;
-
-export function getClient(): Anthropic {
-  if (_client) return _client;
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) throw new AnthropicNotConfigured();
-  _client = new Anthropic({ apiKey: key });
-  return _client;
 }
 
 export interface CompletionResult {
@@ -32,20 +39,107 @@ export interface PromptBlock {
   user: string;
 }
 
-export async function complete(prompt: PromptBlock, max_tokens = 1024): Promise<CompletionResult> {
-  const client = getClient();
+export interface CompleteOptions {
+  /** Force strict JSON output. Ollama uses `format: "json"`; Anthropic relies on prompt discipline. */
+  json?: boolean;
+}
+
+interface OllamaChatResponse {
+  message?: { role: string; content: string };
+  prompt_eval_count?: number;
+  eval_count?: number;
+  done?: boolean;
+  error?: string;
+}
+
+async function completeOllama(
+  prompt: PromptBlock,
+  max_tokens: number,
+  opts: CompleteOptions,
+): Promise<CompletionResult> {
+  const systemText = prompt.system.map((b) => b.text).join('\n\n');
+  const body = {
+    model: OLLAMA_MODEL,
+    stream: false,
+    messages: [
+      { role: 'system', content: systemText },
+      { role: 'user', content: prompt.user },
+    ],
+    options: { num_predict: max_tokens },
+    ...(opts.json ? { format: 'json' as const } : {}),
+  };
+
+  let res: Response;
   try {
+    res = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    const wrapped = new LLMNotReachable(detail);
+    setSetting('llm_last_error', { ts: Date.now(), message: wrapped.message });
+    throw wrapped;
+  }
+
+  if (!res.ok) {
+    const text = await res.text();
+    if (res.status === 404 && /model.*not found/i.test(text)) {
+      const wrapped = new LLMModelMissing(OLLAMA_MODEL);
+      setSetting('llm_last_error', { ts: Date.now(), message: wrapped.message });
+      throw wrapped;
+    }
+    const message = `Ollama ${res.status}: ${text.slice(0, 200)}`;
+    setSetting('llm_last_error', { ts: Date.now(), message });
+    throw new Error(message);
+  }
+
+  const data = (await res.json()) as OllamaChatResponse;
+  if (data.error) {
+    setSetting('llm_last_error', { ts: Date.now(), message: data.error });
+    throw new Error(`Ollama error: ${data.error}`);
+  }
+
+  setSetting('llm_last_ok', { ts: Date.now() });
+  return {
+    text: data.message?.content ?? '',
+    input_tokens: data.prompt_eval_count ?? 0,
+    output_tokens: data.eval_count ?? 0,
+    cache_creation_input_tokens: 0,
+    cache_read_input_tokens: 0,
+  };
+}
+
+let _anthropicClient: import('@anthropic-ai/sdk').default | null = null;
+
+async function getAnthropicClient() {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) throw new AnthropicNotConfigured();
+  if (_anthropicClient) return _anthropicClient;
+  const { default: Anthropic } = await import('@anthropic-ai/sdk');
+  _anthropicClient = new Anthropic({ apiKey: key });
+  return _anthropicClient;
+}
+
+async function completeAnthropic(
+  prompt: PromptBlock,
+  max_tokens: number,
+  _opts: CompleteOptions,
+): Promise<CompletionResult> {
+  try {
+    const client = await getAnthropicClient();
     const res = await client.messages.create({
-      model: MODEL,
+      model: ANTHROPIC_MODEL,
       max_tokens,
       system: prompt.system,
       messages: [{ role: 'user', content: prompt.user }],
     });
-    setSetting('anthropic_last_ok', { ts: Date.now() });
     const text = res.content
       .filter((b): b is Extract<typeof b, { type: 'text' }> => b.type === 'text')
       .map((b) => b.text)
       .join('');
+    setSetting('llm_last_ok', { ts: Date.now() });
     return {
       text,
       input_tokens: res.usage.input_tokens,
@@ -54,10 +148,19 @@ export async function complete(prompt: PromptBlock, max_tokens = 1024): Promise<
       cache_read_input_tokens: res.usage.cache_read_input_tokens ?? 0,
     };
   } catch (err) {
-    setSetting('anthropic_last_error', {
+    setSetting('llm_last_error', {
       ts: Date.now(),
       message: err instanceof Error ? err.message : String(err),
     });
     throw err;
   }
+}
+
+export async function complete(
+  prompt: PromptBlock,
+  max_tokens = 1024,
+  opts: CompleteOptions = {},
+): Promise<CompletionResult> {
+  if (LLM_PROVIDER === 'anthropic') return completeAnthropic(prompt, max_tokens, opts);
+  return completeOllama(prompt, max_tokens, opts);
 }
