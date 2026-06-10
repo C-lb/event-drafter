@@ -32,6 +32,14 @@ interface SettingTypes {
   worker_heartbeat: { ts: number; node: string };
   llm_last_ok: { ts: number };
   llm_last_error: { ts: number; message: string };
+  sheet_history: Array<{
+    spreadsheet_id: string;
+    sheet_url: string;
+    title: string;
+    range: string;
+    last_used: number;
+  }>;
+  last_sheet_url: string;
 }
 
 export function getSetting<K extends SettingKey>(key: K): SettingTypes[K] | null {

@@ -23,6 +23,8 @@ export const SETTING_KEYS = {
   worker_heartbeat: 'worker_heartbeat',
   llm_last_ok: 'llm_last_ok',
   llm_last_error: 'llm_last_error',
+  sheet_history: 'sheet_history',
+  last_sheet_url: 'last_sheet_url',
 } as const;
 
 export type SettingKey = (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS];

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getEventOrThrow, listInvitesForEvent, triggerReplyCheck, listRepliesForEvent } from './actions';
+import { EventEditPanel } from './EventEditPanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,6 +74,17 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
           </button>
         </form>
       </div>
+
+      <EventEditPanel
+        event={{
+          id: event.id,
+          name: event.name,
+          event_date: event.event_date as Date,
+          venue: event.venue ?? null,
+          edm_subject: event.edm_subject ?? null,
+          edm_body: event.edm_body ?? null,
+        }}
+      />
     </section>
   );
 }

@@ -32,13 +32,21 @@ export function parseSheetUrl(url: string): { spreadsheet_id: string } {
 export async function previewSheet(
   spreadsheet_id: string,
   range: string,
-  maxRows = 5,
+  maxRows = 10,
 ): Promise<SheetPreview> {
   const { data } = await sheets().spreadsheets.values.get({ spreadsheetId: spreadsheet_id, range });
   const all = data.values ?? [];
   const headers = (all[0] ?? []).map((h) => String(h));
   const rows = all.slice(1, 1 + maxRows).map((r) => r.map((c) => String(c ?? '')));
   return { headers, rows };
+}
+
+export async function getSpreadsheetTitle(spreadsheet_id: string): Promise<string> {
+  const { data } = await sheets().spreadsheets.get({
+    spreadsheetId: spreadsheet_id,
+    fields: 'properties.title',
+  });
+  return data.properties?.title ?? '(untitled)';
 }
 
 export async function fetchAllRows(cfg: ContactsSheet): Promise<SheetRow[]> {
