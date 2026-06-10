@@ -6,3 +6,6 @@ data/
 dist/
 .next/
 *.log
+*.tsbuildinfo
+playwright-report/
+test-results/
