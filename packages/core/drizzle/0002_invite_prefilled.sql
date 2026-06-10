@@ -1,0 +1,1 @@
+ALTER TABLE `invites` ADD `prefilled_at` integer;

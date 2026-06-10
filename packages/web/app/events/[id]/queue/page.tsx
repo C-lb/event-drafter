@@ -8,6 +8,8 @@ import {
   approveDraft,
   skipDraft,
   regenerateDraft,
+  markSent,
+  reprefill,
 } from '../actions';
 
 type Row = Awaited<ReturnType<typeof listInvitesForEvent>>[number];
@@ -19,7 +21,7 @@ export default function QueuePage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [edits, setEdits] = useState<Record<number, string>>({});
   const [isPending, start] = useTransition();
-  const [filter, setFilter] = useState<'all' | 'drafted' | 'approved' | 'sent' | 'skipped' | 'pending' | 'failed'>('drafted');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'drafted' | 'approved' | 'prefilled' | 'sent' | 'skipped' | 'failed'>('drafted');
 
   const refresh = () => start(async () => setRows(await listInvitesForEvent(eventId)));
 
@@ -35,8 +37,8 @@ export default function QueuePage() {
     <section className="max-w-3xl space-y-4">
       <h2 className="text-xl font-semibold">Review queue</h2>
 
-      <div className="flex gap-2 text-xs">
-        {(['all', 'pending', 'drafted', 'approved', 'sent', 'skipped', 'failed'] as const).map((s) => (
+      <div className="flex flex-wrap gap-2 text-xs">
+        {(['all', 'pending', 'drafted', 'approved', 'prefilled', 'sent', 'skipped', 'failed'] as const).map((s) => (
           <button
             key={s}
             onClick={() => setFilter(s)}
@@ -68,35 +70,59 @@ export default function QueuePage() {
                     value={editValue}
                     onChange={(e) => setEdits({ ...edits, [r.invite_id]: e.target.value })}
                   />
-                  <div className="flex gap-2 text-xs">
-                    <button
-                      disabled={!dirty || isPending}
-                      onClick={() => start(async () => { await editDraft({ invite_id: r.invite_id, draft_text: editValue }); refresh(); })}
-                      className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
-                    >
-                      Save edits
-                    </button>
-                    <button
-                      disabled={isPending || r.status === 'approved' || r.status === 'sent'}
-                      onClick={() => start(async () => { await approveDraft({ invite_id: r.invite_id }); refresh(); })}
-                      className="rounded bg-green-600 px-2 py-1 text-white disabled:opacity-50"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      disabled={isPending}
-                      onClick={() => start(async () => { await skipDraft({ invite_id: r.invite_id }); refresh(); })}
-                      className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
-                    >
-                      Skip
-                    </button>
-                    <button
-                      disabled={isPending}
-                      onClick={() => start(async () => { await regenerateDraft({ invite_id: r.invite_id }); refresh(); })}
-                      className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
-                    >
-                      Regenerate
-                    </button>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    {r.status === 'prefilled' ? (
+                      <>
+                        <span className="rounded bg-yellow-100 px-2 py-1 text-yellow-800">
+                          ✋ Pre-filled in WA — click send there, then:
+                        </span>
+                        <button
+                          disabled={isPending}
+                          onClick={() => start(async () => { await markSent({ invite_id: r.invite_id }); refresh(); })}
+                          className="rounded bg-green-700 px-2 py-1 text-white disabled:opacity-50"
+                        >
+                          Mark sent
+                        </button>
+                        <button
+                          disabled={isPending}
+                          onClick={() => start(async () => { await reprefill({ invite_id: r.invite_id }); refresh(); })}
+                          className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
+                        >
+                          Re-prefill
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          disabled={!dirty || isPending || r.status === 'sent'}
+                          onClick={() => start(async () => { await editDraft({ invite_id: r.invite_id, draft_text: editValue }); refresh(); })}
+                          className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
+                        >
+                          Save edits
+                        </button>
+                        <button
+                          disabled={isPending || r.status === 'approved' || r.status === 'sent'}
+                          onClick={() => start(async () => { await approveDraft({ invite_id: r.invite_id }); refresh(); })}
+                          className="rounded bg-green-600 px-2 py-1 text-white disabled:opacity-50"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          disabled={isPending || r.status === 'sent'}
+                          onClick={() => start(async () => { await skipDraft({ invite_id: r.invite_id }); refresh(); })}
+                          className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
+                        >
+                          Skip
+                        </button>
+                        <button
+                          disabled={isPending || r.status === 'sent'}
+                          onClick={() => start(async () => { await regenerateDraft({ invite_id: r.invite_id }); refresh(); })}
+                          className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
+                        >
+                          Regenerate
+                        </button>
+                      </>
+                    )}
                   </div>
                 </>
               )}

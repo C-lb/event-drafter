@@ -17,6 +17,7 @@ export const invites = sqliteTable(
     draft_text: text('draft_text'),
     draft_generated_at: integer('draft_generated_at', { mode: 'timestamp_ms' }),
     approved_at: integer('approved_at', { mode: 'timestamp_ms' }),
+    prefilled_at: integer('prefilled_at', { mode: 'timestamp_ms' }),
     sent_at: integer('sent_at', { mode: 'timestamp_ms' }),
     status: text('status').notNull().$type<InviteStatus>().default('pending'),
     rsvp: text('rsvp').notNull().$type<Rsvp>().default('none'),

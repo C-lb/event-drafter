@@ -16,6 +16,7 @@ export const INVITE_STATUSES = [
   'pending',
   'drafted',
   'approved',
+  'prefilled',
   'sent',
   'skipped',
   'failed',

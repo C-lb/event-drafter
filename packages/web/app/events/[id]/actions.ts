@@ -98,10 +98,39 @@ const approveSchema = z.object({ invite_id: z.number() });
 export async function approveDraft(input: unknown) {
   const { invite_id } = approveSchema.parse(input);
   const db = getDb();
+  db.transaction((tx) => {
+    tx.update(invites)
+      .set({ status: 'approved', approved_at: new Date() })
+      .where(eq(invites.id, invite_id))
+      .run();
+    tx.insert(jobs).values({
+      kind: 'send_message',
+      payload: { invite_id },
+    }).run();
+  });
+}
+
+const markSentSchema = z.object({ invite_id: z.number() });
+
+export async function markSent(input: unknown) {
+  const { invite_id } = markSentSchema.parse(input);
+  const db = getDb();
   db.update(invites)
-    .set({ status: 'approved', approved_at: new Date() })
+    .set({ status: 'sent', sent_at: new Date() })
     .where(eq(invites.id, invite_id))
     .run();
+}
+
+export async function reprefill(input: unknown) {
+  const { invite_id } = markSentSchema.parse(input);
+  const db = getDb();
+  db.transaction((tx) => {
+    tx.update(invites)
+      .set({ status: 'approved', prefilled_at: null })
+      .where(eq(invites.id, invite_id))
+      .run();
+    tx.insert(jobs).values({ kind: 'send_message', payload: { invite_id } }).run();
+  });
 }
 
 export async function skipDraft(input: unknown) {

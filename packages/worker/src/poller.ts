@@ -4,6 +4,7 @@ import type { Job, JobKind } from '@vip/core';
 import { and, asc, eq, isNull, lte, or, sql } from 'drizzle-orm';
 import { handlers } from './jobs/index.js';
 import { logger } from './logger.js';
+import { JobDeferred } from './errors.js';
 
 const STUCK_RUNNING_MS = 5 * 60 * 1000;
 
@@ -43,6 +44,21 @@ export async function tick(now: Date = new Date()): Promise<number> {
       .where(eq(jobs.id, job.id))
       .run();
   } catch (err) {
+    if (err instanceof JobDeferred) {
+      const runAfter = new Date(now.getTime() + err.delayMs);
+      logger.info('job deferred', { jobId: job.id, kind: job.kind, delayMs: err.delayMs });
+      db.update(jobs)
+        .set({
+          status: 'queued',
+          started_at: null,
+          attempts: sql`${jobs.attempts} - 1`,
+          run_after: runAfter,
+          last_error: null,
+        })
+        .where(eq(jobs.id, job.id))
+        .run();
+      return 1;
+    }
     const msg = err instanceof Error ? err.stack ?? err.message : String(err);
     logger.error('job failed', { jobId: job.id, kind: job.kind, err: msg });
     db.update(jobs)

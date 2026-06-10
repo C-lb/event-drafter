@@ -8,19 +8,23 @@
     ".": "./dist/index.js",
     "./google/oauth": "./dist/google/oauth.js",
     "./google/sheets": "./dist/google/sheets.js",
-    "./google/gmail": "./dist/google/gmail.js"
+    "./google/gmail": "./dist/google/gmail.js",
+    "./wa/driver": "./dist/wa/driver.js"
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "build": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "wa-smoke": "tsx src/wa/smoke.ts"
   },
   "dependencies": {
     "@vip/core": "*",
     "@anthropic-ai/sdk": "^0.35.0",
     "drizzle-orm": "^0.36.0",
-    "googleapis": "^144.0.0"
+    "googleapis": "^144.0.0",
+    "playwright": "^1.49.0",
+    "zod": "^3.23.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
