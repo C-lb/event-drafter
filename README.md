@@ -9,6 +9,12 @@ See `docs/superpowers/specs/2026-06-10-vip-event-drafter-design.md` for the desi
 ```bash
 nvm use            # node 22
 npm install
-npm run migrate    # initialize SQLite schema in ./data/app.db
-npm run dev        # starts web (localhost:3000) + worker concurrently
+npm run migrate    # initialize SQLite at ./data/app.db
+npm run dev        # starts web (localhost:3000) + worker
+```
+
+## Test
+
+```bash
+npm test           # runs core + worker test suites
 ```
