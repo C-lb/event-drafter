@@ -12,6 +12,17 @@ import { logger } from '../logger.js';
 
 const PROFILE_DIR = resolve(process.cwd(), 'data/wa-profile');
 
+// See CONTEXT.md → "UI interaction timing". 300–500 ms between any two
+// interactions with WA Web (clicks, fills, navigations). Do not lower.
+const HUMAN_PAUSE_MIN_MS = 300;
+const HUMAN_PAUSE_MAX_MS = 500;
+
+/** Wait a human-feeling 300–500 ms between WA Web interactions. */
+export async function humanPause(page: Page): Promise<void> {
+  const ms = HUMAN_PAUSE_MIN_MS + Math.floor(Math.random() * (HUMAN_PAUSE_MAX_MS - HUMAN_PAUSE_MIN_MS + 1));
+  await page.waitForTimeout(ms);
+}
+
 let _ctx: BrowserContext | null = null;
 let _page: Page | null = null;
 
@@ -64,10 +75,13 @@ export async function prefillDraft(phoneE164: string, text: string): Promise<voi
   const { page } = await ensureContext();
 
   await page.goto(WA_URL.base, { waitUntil: 'domcontentloaded' });
+  await humanPause(page);
   const loginState = await detectLoginState(page);
   if (loginState !== 'logged-in') throw new WaNotLoggedIn();
 
+  await humanPause(page);
   await page.goto(WA_URL.send(phoneE164, text), { waitUntil: 'domcontentloaded' });
+  await humanPause(page);
 
   const inputLocator = page.locator(SEL.messageInputBox).first();
   const invalidLocator = page.locator(SEL.invalidNumberDialog).first();
