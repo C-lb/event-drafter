@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { listEventsWithStats } from './actions';
+import { EventCard } from './EventCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,7 +42,24 @@ export default async function EventsPage() {
               <p className="text-xs text-neutral-500">No upcoming events.</p>
             ) : (
               <ul className="space-y-2">
-                {upcoming.map((e) => <EventCard key={e.id} ev={e} expired={false} />)}
+                {upcoming.map((e) => (
+                  <EventCard
+                    key={e.id}
+                    ev={{
+                      id: e.id,
+                      name: e.name,
+                      event_date: e.event_date as Date,
+                      venue: e.venue ?? null,
+                      status: e.status,
+                      total_invites: e.total_invites,
+                      sent_invites: e.sent_invites,
+                      replied: e.replied,
+                      not_replied: e.not_replied,
+                    }}
+                    expired={false}
+                    dateLabel={daysUntil(e.event_date).label}
+                  />
+                ))}
               </ul>
             )}
           </div>
@@ -52,59 +70,29 @@ export default async function EventsPage() {
                 Past ({past.length})
               </h3>
               <ul className="space-y-2">
-                {past.map((e) => <EventCard key={e.id} ev={e} expired={true} />)}
+                {past.map((e) => (
+                  <EventCard
+                    key={e.id}
+                    ev={{
+                      id: e.id,
+                      name: e.name,
+                      event_date: e.event_date as Date,
+                      venue: e.venue ?? null,
+                      status: e.status,
+                      total_invites: e.total_invites,
+                      sent_invites: e.sent_invites,
+                      replied: e.replied,
+                      not_replied: e.not_replied,
+                    }}
+                    expired={true}
+                    dateLabel={daysUntil(e.event_date).label}
+                  />
+                ))}
               </ul>
             </div>
           )}
         </>
       )}
     </section>
-  );
-}
-
-interface CardEvent {
-  id: number;
-  name: string;
-  event_date: Date | string;
-  venue: string | null;
-  status: string;
-  total_invites: number;
-  sent_invites: number;
-  replied: number;
-  not_replied: number;
-}
-
-function EventCard({ ev, expired }: { ev: CardEvent; expired: boolean }) {
-  const { label } = daysUntil(ev.event_date);
-  const wrapperCls = expired
-    ? 'rounded border border-neutral-200 bg-neutral-50 p-3 opacity-70'
-    : 'rounded border border-neutral-200 bg-white p-3';
-  const dateBadgeCls = expired
-    ? 'rounded bg-neutral-200 px-2 py-0.5 text-xs text-neutral-600'
-    : 'rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800';
-
-  return (
-    <li className={wrapperCls}>
-      <div className="flex items-baseline justify-between gap-2">
-        <p className="font-medium">
-          <Link href={`/events/${ev.id}`} className="hover:underline">{ev.name}</Link>
-        </p>
-        <span className={dateBadgeCls}>{label}</span>
-      </div>
-      <p className="mt-0.5 text-xs text-neutral-600">
-        {new Date(ev.event_date).toLocaleString()} · {ev.venue ?? '—'} · {ev.status}
-      </p>
-      <div className="mt-2 flex flex-wrap gap-2 text-xs">
-        <span className="rounded bg-neutral-100 px-2 py-0.5">
-          {ev.total_invites} invited · {ev.sent_invites} sent
-        </span>
-        <span className={`rounded px-2 py-0.5 ${ev.replied > 0 ? 'bg-green-100 text-green-800' : 'bg-neutral-100 text-neutral-600'}`}>
-          {ev.replied} replied
-        </span>
-        <span className={`rounded px-2 py-0.5 ${ev.not_replied > 0 ? 'bg-amber-100 text-amber-800' : 'bg-neutral-100 text-neutral-600'}`}>
-          {ev.not_replied} no reply
-        </span>
-      </div>
-    </li>
   );
 }
