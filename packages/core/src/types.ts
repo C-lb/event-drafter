@@ -5,6 +5,7 @@ export const JOB_KINDS = [
   'draft_response',
   'generate_follow_up',
   'import_contacts',
+  'draft_invite',
 ] as const;
 export type JobKind = (typeof JOB_KINDS)[number];
 

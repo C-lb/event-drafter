@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@vip/core": "*",
+    "@anthropic-ai/sdk": "^0.35.0",
     "drizzle-orm": "^0.36.0",
     "googleapis": "^144.0.0"
   },
