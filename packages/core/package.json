@@ -15,7 +15,7 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "migrate": "tsx src/migrate.ts",
-    "drizzle:generate": "drizzle-kit generate"
+    "drizzle:generate": "node --import tsx/esm ../../node_modules/.bin/drizzle-kit generate"
   },
   "dependencies": {
     "better-sqlite3": "^11.5.0",
