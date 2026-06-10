@@ -10,7 +10,7 @@ export interface AttendanceFact {
 
 export interface DraftPromptInput {
   event: Pick<Event, 'name' | 'event_date' | 'venue' | 'edm_subject' | 'edm_body'>;
-  contact: Pick<Contact, 'full_name' | 'preferred_name' | 'personal_note' | 'interests'>;
+  contact: Pick<Contact, 'first_name' | 'last_name' | 'remarks'>;
   attendance_history: AttendanceFact[];
   style_guide: string;
   operator_first_name?: string;
@@ -22,7 +22,7 @@ const GENERIC_RULES = `You are drafting a personal WhatsApp invitation message t
 
 Hard rules:
 - 2-4 sentences. Hard cap.
-- Use the supplied personal hook naturally in one sentence; do not list interests like a CV.
+- Use the supplied Remarks naturally in one sentence; do not list them like a CV.
 - If attendance history is supplied, you may reference at most ONE prior event lightly.
 - Do not repeat the formal EDM verbatim — assume the recipient will also receive that email separately.
 - Output plain text. No emoji unless the style guide explicitly allows them.`;
@@ -63,12 +63,12 @@ ${input.operator_first_name ? `Sign off with: "${input.operator_first_name}"` : 
         .join('\n')
     : '(no prior events on record)';
 
+  const fullName = `${input.contact.first_name}${input.contact.last_name ? ' ' + input.contact.last_name : ''}`;
   const userMessage = `# Contact
 
-Full name: ${input.contact.full_name}
-Preferred name: ${input.contact.preferred_name ?? input.contact.full_name.split(' ')[0]}
-Personal hook: ${input.contact.personal_note ?? '(none — keep the message warm but generic)'}
-Interests: ${input.contact.interests ?? '(none)'}
+Full name: ${fullName}
+Preferred name: ${input.contact.first_name}
+Remarks: ${input.contact.remarks ?? '(none — keep the message warm but generic)'}
 
 # Attendance history
 
@@ -92,7 +92,7 @@ export const __prompt_version = PROMPT_VERSION;
 
 export interface ClassifyAndDraftInput {
   event: Pick<Event, 'name' | 'event_date' | 'venue'>;
-  contact: Pick<Contact, 'full_name' | 'preferred_name' | 'personal_note'>;
+  contact: Pick<Contact, 'first_name' | 'last_name' | 'remarks'>;
   original_invite_text: string;
   reply_text: string;
   style_guide: string;
@@ -145,9 +145,10 @@ Venue: ${input.event.venue ?? '(not specified)'}
 # Operator
 ${input.operator_first_name ? `Sign off responses with: "${input.operator_first_name}"` : 'Sign off with the operator\'s first name.'}`;
 
+  const fullName = `${input.contact.first_name}${input.contact.last_name ? ' ' + input.contact.last_name : ''}`;
   const userMessage = `# Contact
-Name: ${input.contact.full_name} (preferred: ${input.contact.preferred_name ?? input.contact.full_name.split(' ')[0]})
-Personal hook: ${input.contact.personal_note ?? '(none)'}
+Name: ${fullName} (preferred: ${input.contact.first_name})
+Remarks: ${input.contact.remarks ?? '(none)'}
 
 # Original invitation we sent
 ${input.original_invite_text}
@@ -181,7 +182,7 @@ export function parseClassifyAndDraft(raw: string): ClassifyAndDraftOutput {
 
 export interface FollowUpInput {
   event: Pick<Event, 'name' | 'event_date' | 'venue'>;
-  contact: Pick<Contact, 'full_name' | 'preferred_name' | 'personal_note'>;
+  contact: Pick<Contact, 'first_name' | 'last_name' | 'remarks'>;
   original_invite_text: string;
   days_since_sent: number;
   style_guide: string;
@@ -218,9 +219,10 @@ Venue: ${input.event.venue ?? '(not specified)'}
 # Operator
 ${input.operator_first_name ? `Sign off with: "${input.operator_first_name}"` : 'Sign off with the operator\'s first name.'}`;
 
+  const fullName = `${input.contact.first_name}${input.contact.last_name ? ' ' + input.contact.last_name : ''}`;
   const userMessage = `# Contact
-Name: ${input.contact.full_name} (preferred: ${input.contact.preferred_name ?? input.contact.full_name.split(' ')[0]})
-Personal hook: ${input.contact.personal_note ?? '(none)'}
+Name: ${fullName} (preferred: ${input.contact.first_name})
+Remarks: ${input.contact.remarks ?? '(none)'}
 
 # Original invite (sent ${input.days_since_sent} day${input.days_since_sent === 1 ? '' : 's'} ago, no reply)
 ${input.original_invite_text}

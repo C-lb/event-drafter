@@ -13,12 +13,12 @@ export interface ContactsSheet {
   spreadsheet_id: string;
   range: string;
   column_mapping: {
-    full_name: string;
-    preferred_name?: string;
+    first_name: string;
+    last_name?: string;
     phone_e164: string;
+    secondary_phone_e164?: string;
     email?: string;
-    personal_note?: string;
-    interests?: string;
+    remarks?: string;
   };
 }
 

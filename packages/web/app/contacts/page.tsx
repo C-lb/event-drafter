@@ -15,7 +15,7 @@ export default async function ContactsPage() {
   }
 
   return (
-    <section className="max-w-4xl space-y-4">
+    <section className="max-w-5xl space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Contacts ({all.length})</h2>
         <form action={resync}>
@@ -25,19 +25,23 @@ export default async function ContactsPage() {
       <table className="w-full text-sm">
         <thead className="bg-neutral-100">
           <tr>
-            <th className="border px-2 py-1 text-left">Name</th>
+            <th className="border px-2 py-1 text-left">First name</th>
+            <th className="border px-2 py-1 text-left">Last name</th>
             <th className="border px-2 py-1 text-left">Phone</th>
-            <th className="border px-2 py-1 text-left">Note</th>
-            <th className="border px-2 py-1 text-left">Interests</th>
+            <th className="border px-2 py-1 text-left">Secondary phone</th>
+            <th className="border px-2 py-1 text-left">Email</th>
+            <th className="border px-2 py-1 text-left">Remarks</th>
           </tr>
         </thead>
         <tbody>
           {all.map((c) => (
             <tr key={c.id}>
-              <td className="border px-2 py-1">{c.full_name}</td>
+              <td className="border px-2 py-1">{c.first_name}</td>
+              <td className="border px-2 py-1">{c.last_name ?? ''}</td>
               <td className="border px-2 py-1">{c.phone_e164}</td>
-              <td className="border px-2 py-1">{c.personal_note ?? ''}</td>
-              <td className="border px-2 py-1">{c.interests ?? ''}</td>
+              <td className="border px-2 py-1">{c.secondary_phone_e164 ?? ''}</td>
+              <td className="border px-2 py-1">{c.email ?? ''}</td>
+              <td className="border px-2 py-1">{c.remarks ?? ''}</td>
             </tr>
           ))}
         </tbody>

@@ -13,7 +13,7 @@ export async function listFollowUps() {
       invite_id: invites.id,
       event_id: invites.event_id,
       event_name: events.name,
-      contact_name: contacts.full_name,
+      contact_name: sql<string>`${contacts.first_name} || ' ' || COALESCE(${contacts.last_name}, '')`,
       contact_id: contacts.id,
       draft_text: follow_ups.draft_text,
       status: follow_ups.status,

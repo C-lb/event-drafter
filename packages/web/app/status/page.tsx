@@ -87,7 +87,7 @@ export default async function StatusPage() {
             type="submit"
             disabled={cleanupInFlight}
             className="rounded bg-neutral-700 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
-            title={lastCleanup ? `Last cleanup: ${lastCleanup.status} ${ago(lastCleanup.finished_at ?? lastCleanup.created_at)}` : 'No prior cleanup'}
+            title={lastCleanup ? `Last cleanup: ${lastCleanup.status} ${ago(((lastCleanup.finished_at ?? lastCleanup.created_at) as Date | null)?.getTime() ?? null)}` : 'No prior cleanup'}
           >
             {cleanupInFlight ? 'Cleaning up…' : 'Run cleanup now'}
           </button>
@@ -146,13 +146,13 @@ export default async function StatusPage() {
           <tbody>
             {sortedKinds.map((k) => {
               const row = breakdown.get(k)!;
-              const total = STATUSES.reduce((acc, s) => acc + row[s], 0);
+              const total = STATUSES.reduce((acc, s) => acc + (row[s] ?? 0), 0);
               return (
                 <tr key={k}>
                   <td className="border px-2 py-1 font-mono">{k}</td>
                   {STATUSES.map((s) => (
-                    <td key={s} className={`border px-2 py-1 text-right ${row[s] > 0 && s === 'failed' ? 'bg-red-50 text-red-800' : row[s] > 0 && (s === 'queued' || s === 'running') ? 'bg-amber-50' : ''}`}>
-                      {row[s] || ''}
+                    <td key={s} className={`border px-2 py-1 text-right ${(row[s] ?? 0) > 0 && s === 'failed' ? 'bg-red-50 text-red-800' : (row[s] ?? 0) > 0 && (s === 'queued' || s === 'running') ? 'bg-amber-50' : ''}`}>
+                      {row[s] ? row[s] : ''}
                     </td>
                   ))}
                   <td className="border px-2 py-1 text-right font-semibold">{total}</td>

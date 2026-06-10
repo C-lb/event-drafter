@@ -10,6 +10,17 @@ interface PreviewState {
   preview: { headers: string[]; rows: string[][] };
 }
 
+const FIELDS = [
+  'first_name',
+  'last_name',
+  'phone_e164',
+  'secondary_phone_e164',
+  'email',
+  'remarks',
+] as const;
+type Field = (typeof FIELDS)[number];
+const REQUIRED: Field[] = ['first_name', 'phone_e164'];
+
 export default function SheetPickerPage() {
   const [url, setUrl] = useState('');
   const [range, setRange] = useState('Contacts!A1:F');
@@ -28,7 +39,7 @@ export default function SheetPickerPage() {
         const defaults: Record<string, string> = {};
         for (const h of r.preview.headers) {
           const low = h.toLowerCase().replace(/\s+/g, '_');
-          if (['full_name', 'preferred_name', 'phone_e164', 'email', 'personal_note', 'interests'].includes(low)) {
+          if ((FIELDS as readonly string[]).includes(low)) {
             defaults[low] = h;
           }
         }
@@ -48,12 +59,12 @@ export default function SheetPickerPage() {
           spreadsheet_id: preview.spreadsheet_id,
           range: preview.range,
           column_mapping: {
-            full_name: mapping.full_name!,
-            preferred_name: mapping.preferred_name,
+            first_name: mapping.first_name!,
+            last_name: mapping.last_name,
             phone_e164: mapping.phone_e164!,
+            secondary_phone_e164: mapping.secondary_phone_e164,
             email: mapping.email,
-            personal_note: mapping.personal_note,
-            interests: mapping.interests,
+            remarks: mapping.remarks,
           },
         });
         setSaved(true);
@@ -103,11 +114,11 @@ export default function SheetPickerPage() {
           </table>
 
           <h3 className="text-sm font-semibold">Column mapping</h3>
-          <p className="text-xs text-neutral-600">For each app field, pick the matching Sheet column.</p>
+          <p className="text-xs text-neutral-600">For each app field, pick the matching Sheet column. * = required.</p>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            {(['full_name', 'preferred_name', 'phone_e164', 'email', 'personal_note', 'interests'] as const).map((f) => (
+            {FIELDS.map((f) => (
               <label key={f} className="flex items-center gap-2">
-                <span className="w-32">{f}{(f === 'full_name' || f === 'phone_e164') && '*'}</span>
+                <span className="w-44">{f}{REQUIRED.includes(f) && '*'}</span>
                 <select
                   className="flex-1 rounded border border-neutral-300 px-2 py-1"
                   value={mapping[f] ?? ''}
@@ -121,7 +132,7 @@ export default function SheetPickerPage() {
           </div>
           <button
             onClick={doSave}
-            disabled={isPending || !mapping.full_name || !mapping.phone_e164}
+            disabled={isPending || !mapping.first_name || !mapping.phone_e164}
             className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             Save binding

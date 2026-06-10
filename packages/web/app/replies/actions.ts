@@ -48,7 +48,7 @@ export async function listAllReplies() {
       reply_text: replies.wa_message_text,
       response_status: replies.response_status,
       detected_at: replies.detected_at,
-      contact_name: contacts.full_name,
+      contact_name: sql<string>`${contacts.first_name} || ' ' || COALESCE(${contacts.last_name}, '')`,
     })
     .from(replies)
     .innerJoin(invites, eq(replies.invite_id, invites.id))

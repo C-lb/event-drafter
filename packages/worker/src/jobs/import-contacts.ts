@@ -27,11 +27,11 @@ export async function importContactsHandler(_job: Job): Promise<void> {
       } else if (existing.sheet_row_hash !== row.sheet_row_hash) {
         tx.update(contacts)
           .set({
-            full_name: row.full_name,
-            preferred_name: row.preferred_name,
+            first_name: row.first_name,
+            last_name: row.last_name,
             email: row.email,
-            personal_note: row.personal_note,
-            interests: row.interests,
+            secondary_phone_e164: row.secondary_phone_e164,
+            remarks: row.remarks,
             sheet_row_hash: row.sheet_row_hash,
             updated_at: sql`(unixepoch() * 1000)`,
           })

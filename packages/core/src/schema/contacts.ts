@@ -5,13 +5,12 @@ export const contacts = sqliteTable(
   'contacts',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
-    full_name: text('full_name').notNull(),
-    preferred_name: text('preferred_name'),
+    first_name: text('first_name').notNull(),
+    last_name: text('last_name'),
     phone_e164: text('phone_e164').notNull(),
+    secondary_phone_e164: text('secondary_phone_e164'),
     email: text('email'),
-    personal_note: text('personal_note'),
-    interests: text('interests'),
-    relationship_notes: text('relationship_notes'),
+    remarks: text('remarks'),
     sheet_row_hash: text('sheet_row_hash'),
     created_at: integer('created_at', { mode: 'timestamp_ms' })
       .notNull()

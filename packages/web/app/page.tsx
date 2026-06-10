@@ -12,8 +12,12 @@ export default async function HomePage() {
     .from(jobs)
     .groupBy(jobs.status)
     .all();
-  const jobBy: Record<string, number> = { queued: 0, running: 0, succeeded: 0, failed: 0 };
-  for (const r of jobStatusRows) jobBy[r.status] = Number(r.count);
+  const jobBy: { queued: number; running: number; succeeded: number; failed: number } = {
+    queued: 0, running: 0, succeeded: 0, failed: 0,
+  };
+  for (const r of jobStatusRows) {
+    if (r.status in jobBy) jobBy[r.status as keyof typeof jobBy] = Number(r.count);
+  }
   const jobActive = jobBy.queued + jobBy.running;
   const contactCount = db.select({ count: sql<number>`count(*)` }).from(contacts).all()[0]?.count ?? 0;
   const eventCount = db.select({ count: sql<number>`count(*)` }).from(events).all()[0]?.count ?? 0;

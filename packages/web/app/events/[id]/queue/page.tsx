@@ -56,10 +56,10 @@ export default function QueuePage() {
           return (
             <li key={r.invite_id} className="rounded border border-neutral-200 bg-white p-3 space-y-2">
               <div className="flex items-baseline justify-between">
-                <p className="font-medium">{r.contact_name} <span className="text-xs text-neutral-500">{r.phone_e164}</span></p>
+                <p className="font-medium">{r.first_name}{r.last_name ? ' ' + r.last_name : ''} <span className="text-xs text-neutral-500">{r.phone_e164}</span></p>
                 <span className="rounded bg-neutral-100 px-2 py-0.5 text-xs">{r.status}</span>
               </div>
-              {r.personal_note && <p className="text-xs text-neutral-600 italic">hook: {r.personal_note}</p>}
+              {r.remarks && <p className="text-xs text-neutral-600 italic">remarks: {r.remarks}</p>}
 
               {r.status === 'pending' ? (
                 <p className="text-xs text-neutral-500">Drafting… (refreshes every 2s)</p>

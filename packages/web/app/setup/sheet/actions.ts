@@ -20,12 +20,12 @@ const saveSchema = z.object({
   spreadsheet_id: z.string(),
   range: z.string(),
   column_mapping: z.object({
-    full_name: z.string(),
-    preferred_name: z.string().optional(),
+    first_name: z.string(),
+    last_name: z.string().optional(),
     phone_e164: z.string(),
+    secondary_phone_e164: z.string().optional(),
     email: z.string().optional(),
-    personal_note: z.string().optional(),
-    interests: z.string().optional(),
+    remarks: z.string().optional(),
   }),
 });
 

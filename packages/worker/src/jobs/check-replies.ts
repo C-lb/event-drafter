@@ -18,7 +18,7 @@ export async function checkRepliesHandler(_job: Job): Promise<void> {
     .select({
       invite_id: invites.id,
       phone: contacts.phone_e164,
-      contact_name: contacts.full_name,
+      contact_name: contacts.first_name,
       sent_at: invites.sent_at,
     })
     .from(invites)

@@ -4,12 +4,12 @@ import { createHash } from 'node:crypto';
 import type { ContactsSheet } from '@vip/core/settings';
 
 export interface SheetRow {
-  full_name: string;
-  preferred_name: string | null;
+  first_name: string;
+  last_name: string | null;
   phone_e164: string;
+  secondary_phone_e164: string | null;
   email: string | null;
-  personal_note: string | null;
-  interests: string | null;
+  remarks: string | null;
   sheet_row_hash: string;
 }
 
@@ -51,31 +51,31 @@ export async function fetchAllRows(cfg: ContactsSheet): Promise<SheetRow[]> {
   const headers = (all[0] ?? []).map((h) => String(h));
   const headerIdx = (name: string): number => headers.indexOf(name);
   const idx = {
-    full_name: headerIdx(cfg.column_mapping.full_name),
-    preferred_name: cfg.column_mapping.preferred_name ? headerIdx(cfg.column_mapping.preferred_name) : -1,
+    first_name: headerIdx(cfg.column_mapping.first_name),
+    last_name: cfg.column_mapping.last_name ? headerIdx(cfg.column_mapping.last_name) : -1,
     phone_e164: headerIdx(cfg.column_mapping.phone_e164),
+    secondary_phone_e164: cfg.column_mapping.secondary_phone_e164 ? headerIdx(cfg.column_mapping.secondary_phone_e164) : -1,
     email: cfg.column_mapping.email ? headerIdx(cfg.column_mapping.email) : -1,
-    personal_note: cfg.column_mapping.personal_note ? headerIdx(cfg.column_mapping.personal_note) : -1,
-    interests: cfg.column_mapping.interests ? headerIdx(cfg.column_mapping.interests) : -1,
+    remarks: cfg.column_mapping.remarks ? headerIdx(cfg.column_mapping.remarks) : -1,
   };
 
-  if (idx.full_name === -1) throw new Error(`Mapped column not found: ${cfg.column_mapping.full_name}`);
+  if (idx.first_name === -1) throw new Error(`Mapped column not found: ${cfg.column_mapping.first_name}`);
   if (idx.phone_e164 === -1) throw new Error(`Mapped column not found: ${cfg.column_mapping.phone_e164}`);
 
   const out: SheetRow[] = [];
   for (const raw of all.slice(1)) {
     const get = (i: number): string | null => (i >= 0 ? String(raw[i] ?? '').trim() || null : null);
-    const full_name = get(idx.full_name);
+    const first_name = get(idx.first_name);
     const phone_e164 = get(idx.phone_e164);
-    if (!full_name || !phone_e164) continue;
+    if (!first_name || !phone_e164) continue;
 
     const fields = {
-      full_name,
-      preferred_name: get(idx.preferred_name),
+      first_name,
+      last_name: get(idx.last_name),
       phone_e164,
+      secondary_phone_e164: get(idx.secondary_phone_e164),
       email: get(idx.email),
-      personal_note: get(idx.personal_note),
-      interests: get(idx.interests),
+      remarks: get(idx.remarks),
     };
     const hash = createHash('sha256').update(JSON.stringify(fields)).digest('hex');
     out.push({ ...fields, sheet_row_hash: hash });

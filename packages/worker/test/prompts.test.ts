@@ -10,10 +10,9 @@ const baseInput = {
     edm_body: 'Please join us for a curated afternoon...',
   },
   contact: {
-    full_name: 'Ada Lovelace',
-    preferred_name: 'Ada',
-    personal_note: 'just exited her fintech startup',
-    interests: 'classical music, mathematics',
+    first_name: 'Ada',
+    last_name: 'Lovelace',
+    remarks: 'just exited her fintech startup',
   },
   attendance_history: [
     {
@@ -53,19 +52,25 @@ describe('buildDraftPrompt', () => {
   it('handles missing optional fields gracefully', () => {
     const p = buildDraftPrompt({
       ...baseInput,
-      contact: { ...baseInput.contact, personal_note: null, interests: null },
+      contact: { ...baseInput.contact, remarks: null },
       attendance_history: [],
     });
     expect(p.user).toContain('(no prior events on record)');
     expect(p.user).toContain('(none — keep the message warm but generic)');
   });
 
-  it('falls back to first word of full name when preferred_name missing', () => {
+  it('uses first_name as the preferred name', () => {
+    const p = buildDraftPrompt(baseInput);
+    expect(p.user).toContain('Preferred name: Ada');
+  });
+
+  it('handles a contact with no last_name', () => {
     const p = buildDraftPrompt({
       ...baseInput,
-      contact: { ...baseInput.contact, preferred_name: null },
+      contact: { ...baseInput.contact, last_name: null },
     });
-    expect(p.user).toContain('Preferred name: Ada');
+    expect(p.user).toContain('Full name: Ada');
+    expect(p.user).not.toContain('Full name: Ada Lovelace');
   });
 });
 
@@ -101,7 +106,7 @@ describe('buildClassifyAndDraftPrompt', () => {
   it('includes contact + original invite + reply in user message', () => {
     const p = buildClassifyAndDraftPrompt({
       event: { name: 'Gala', event_date: new Date(), venue: null },
-      contact: { full_name: 'Ada', preferred_name: 'Ada', personal_note: 'pianist' },
+      contact: { first_name: 'Ada', last_name: null, remarks: 'pianist' },
       original_invite_text: 'Hi Ada, would love to see you at Gala…',
       reply_text: 'unfortunately out of town that weekend',
       style_guide: 'Brief and warm.',

@@ -21,15 +21,15 @@ export async function listInvitesForEvent(event_id: number) {
       draft_text: invites.draft_text,
       sent_at: invites.sent_at,
       contact_id: contacts.id,
-      contact_name: contacts.full_name,
-      preferred_name: contacts.preferred_name,
+      first_name: contacts.first_name,
+      last_name: contacts.last_name,
       phone_e164: contacts.phone_e164,
-      personal_note: contacts.personal_note,
+      remarks: contacts.remarks,
     })
     .from(invites)
     .innerJoin(contacts, eq(invites.contact_id, contacts.id))
     .where(eq(invites.event_id, event_id))
-    .orderBy(contacts.full_name)
+    .orderBy(contacts.first_name)
     .all();
 }
 
@@ -53,14 +53,18 @@ export async function listCandidatesForEvent(event_id: number, filter: unknown) 
   }
 
   const baseFilter = search
-    ? or(like(contacts.full_name, `%${search}%`), like(contacts.interests, `%${search}%`))
+    ? or(
+        like(contacts.first_name, `%${search}%`),
+        like(contacts.last_name, `%${search}%`),
+        like(contacts.remarks, `%${search}%`),
+      )
     : sql`1=1`;
 
   const whereExpr = alreadyInvited.length
     ? and(baseFilter, notInArray(contacts.id, alreadyInvited))
     : baseFilter;
 
-  return db.select().from(contacts).where(whereExpr).orderBy(contacts.full_name).all();
+  return db.select().from(contacts).where(whereExpr).orderBy(contacts.first_name).all();
 }
 
 const generateSchema = z.object({
@@ -168,7 +172,7 @@ export async function listRepliesForEvent(event_id: number) {
       response_status: replies.response_status,
       response_prefilled_at: replies.response_prefilled_at,
       response_sent_at: replies.response_sent_at,
-      contact_name: contacts.full_name,
+      contact_name: sql<string>`${contacts.first_name} || ' ' || COALESCE(${contacts.last_name}, '')`,
       contact_id: contacts.id,
     })
     .from(replies)

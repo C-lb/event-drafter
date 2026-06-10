@@ -39,7 +39,7 @@ export default function PickContactsPage() {
       <div className="flex gap-2">
         <input
           className="flex-1 rounded border border-neutral-300 px-3 py-2 text-sm"
-          placeholder="search name or interest…"
+          placeholder="search name or remarks…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') load(); }}
@@ -58,8 +58,8 @@ export default function PickContactsPage() {
             onClick={() => toggle(c.id)}
             className={`cursor-pointer rounded border p-2 text-sm ${picked.has(c.id) ? 'border-blue-500 bg-blue-50' : 'border-neutral-200 bg-white'}`}
           >
-            <p className="font-medium">{c.full_name} <span className="text-xs text-neutral-500">{c.phone_e164}</span></p>
-            {c.personal_note && <p className="text-xs text-neutral-600">{c.personal_note}</p>}
+            <p className="font-medium">{c.first_name}{c.last_name ? ' ' + c.last_name : ''} <span className="text-xs text-neutral-500">{c.phone_e164}</span></p>
+            {c.remarks && <p className="text-xs text-neutral-600">{c.remarks}</p>}
           </li>
         ))}
       </ul>
