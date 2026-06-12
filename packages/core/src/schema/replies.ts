@@ -24,6 +24,10 @@ export const replies = sqliteTable(
     response_prefilled_at: integer('response_prefilled_at', { mode: 'timestamp_ms' }),
     response_sent_at: integer('response_sent_at', { mode: 'timestamp_ms' }),
     response_status: text('response_status').$type<ResponseStatus>().default('pending'),
+    // Operator-facing "this thread is done with, hide from the feed". Independent
+    // of response_status so a row can be auto-sent + marked resolved separately.
+    resolved: integer('resolved', { mode: 'boolean' }).notNull().default(false),
+    resolved_at: integer('resolved_at', { mode: 'timestamp_ms' }),
   },
   (t) => ({
     inviteMessageIdx: uniqueIndex('replies_invite_msg_idx').on(t.invite_id, t.wa_message_id),

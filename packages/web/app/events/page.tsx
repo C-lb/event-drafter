@@ -22,12 +22,23 @@ export default async function EventsPage() {
   const past = all.filter((e) => daysUntil(e.event_date).expired);
 
   return (
-    <section className="max-w-3xl space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Events</h2>
-        <Link href="/events/new" className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white">
-          Create from Gmail
-        </Link>
+    <section className="max-w-7xl space-y-6">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-3xl font-semibold tracking-tight">Events</h2>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/events/new"
+            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            Create from Gmail
+          </Link>
+          <Link
+            href="/events/new/blank"
+            className="rounded border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
+          >
+            Create blank
+          </Link>
+        </div>
       </div>
 
       {all.length === 0 ? (
@@ -52,9 +63,11 @@ export default async function EventsPage() {
                       venue: e.venue ?? null,
                       status: e.status,
                       total_invites: e.total_invites,
-                      sent_invites: e.sent_invites,
                       replied: e.replied,
-                      not_replied: e.not_replied,
+                      yes: e.yes,
+                      no: e.no,
+                      maybe: e.maybe,
+                      unclear: e.unclear,
                     }}
                     expired={false}
                     dateLabel={daysUntil(e.event_date).label}
@@ -80,9 +93,11 @@ export default async function EventsPage() {
                       venue: e.venue ?? null,
                       status: e.status,
                       total_invites: e.total_invites,
-                      sent_invites: e.sent_invites,
                       replied: e.replied,
-                      not_replied: e.not_replied,
+                      yes: e.yes,
+                      no: e.no,
+                      maybe: e.maybe,
+                      unclear: e.unclear,
                     }}
                     expired={true}
                     dateLabel={daysUntil(e.event_date).label}

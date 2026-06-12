@@ -20,7 +20,7 @@ export default function StyleGuidePage() {
 
   return (
     <section className="max-w-2xl space-y-4">
-      <h2 className="text-xl font-semibold">Voice & style guide</h2>
+      <h2 className="text-3xl font-semibold tracking-tight">Voice & style guide</h2>
       <p className="text-sm text-neutral-700">
         This block becomes part of the system prompt for every draft. It is cached on the Anthropic side,
         so editing it invalidates the cache (one-time cost on the next event&apos;s first draft).

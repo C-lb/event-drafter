@@ -16,5 +16,6 @@ export async function getSetupStatus() {
     google: getSetting('google_tokens') !== null,
     sheet: getSetting('contacts_sheet') !== null,
     completed: getSetting('setup_completed') === true,
+    wa: getSetting('wa_ready') === true,
   };
 }

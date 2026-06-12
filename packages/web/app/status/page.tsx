@@ -5,6 +5,7 @@ import { SCHEDULES } from '@vip/worker/scheduler';
 import { nextRunFor, ago } from '@/lib/cron-format';
 import { eq, sql } from 'drizzle-orm';
 import { triggerCleanup } from './actions';
+import { AutoRefresh } from '../components/AutoRefresh';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -26,7 +27,11 @@ export default async function StatusPage() {
 
   const tokens = getSetting('google_tokens');
   const tokenExpMs = tokens ? tokens.expiry_date - Date.now() : null;
-  const googleOk = Boolean(tokens && tokenExpMs && tokenExpMs > 0);
+  // Auth is healthy as long as we have a refresh_token — access tokens expire
+  // hourly but googleapis auto-refreshes them via the 'tokens' event in
+  // authorizedClient(). The "Expires:" line below still shows access-token
+  // lifetime for visibility.
+  const googleOk = Boolean(tokens?.refresh_token);
 
   const lastOk = getSetting('llm_last_ok');
   const lastErr = getSetting('llm_last_error');
@@ -62,7 +67,7 @@ export default async function StatusPage() {
     .all();
 
   const inFlight = db
-    .select({ id: jobs.id, kind: jobs.kind, status: jobs.status, created_at: jobs.created_at, started_at: jobs.started_at, attempts: jobs.attempts })
+    .select({ id: jobs.id, kind: jobs.kind, status: jobs.status, created_at: jobs.created_at, started_at: jobs.started_at, attempts: jobs.attempts, progress: jobs.progress })
     .from(jobs)
     .where(sql`${jobs.status} IN ('queued','running')`)
     .orderBy(sql`${jobs.id} ASC`)
@@ -79,9 +84,12 @@ export default async function StatusPage() {
     .get();
 
   return (
-    <section className="max-w-3xl space-y-6">
+    <section className="max-w-7xl space-y-6">
+      {/* Keep the page live whenever ANY job is queued or running, so progress
+          text (jobs.progress) and counters update without a manual reload. */}
+      <AutoRefresh active={inFlight.length > 0} />
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold">Status</h2>
+        <h2 className="text-3xl font-semibold tracking-tight">Status</h2>
         <form action={triggerCleanup}>
           <button
             type="submit"
@@ -175,6 +183,7 @@ export default async function StatusPage() {
                 <th className="border px-2 py-1 text-left">ID</th>
                 <th className="border px-2 py-1 text-left">Kind</th>
                 <th className="border px-2 py-1 text-left">Status</th>
+                <th className="border px-2 py-1 text-left">Progress</th>
                 <th className="border px-2 py-1 text-left">Created</th>
                 <th className="border px-2 py-1 text-right">Attempts</th>
               </tr>
@@ -185,6 +194,7 @@ export default async function StatusPage() {
                   <td className="border px-2 py-1">{j.id}</td>
                   <td className="border px-2 py-1 font-mono">{j.kind}</td>
                   <td className="border px-2 py-1">{j.status}</td>
+                  <td className="border px-2 py-1">{j.progress ?? <span className="text-neutral-400">—</span>}</td>
                   <td className="border px-2 py-1">{ago(j.created_at instanceof Date ? j.created_at.getTime() : Number(j.created_at))}</td>
                   <td className="border px-2 py-1 text-right">{j.attempts}</td>
                 </tr>

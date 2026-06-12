@@ -5,6 +5,7 @@ import { getSetting } from '@vip/core/settings';
 import { and, eq, isNotNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { complete, MODEL } from '../llm/client.js';
+import { sanitizeDraft } from '../llm/sanitize.js';
 import { buildDraftPrompt, type AttendanceFact } from '../llm/prompts.js';
 import { logger } from '../logger.js';
 
@@ -50,12 +51,15 @@ export async function draftInviteHandler(job: Job): Promise<void> {
     }));
 
   const style_guide = getSetting('style_guide') ?? DEFAULT_STYLE_GUIDE;
+  const persona_name = operator_first_name ?? getSetting('operator_persona_name') ?? 'Sara';
+  const persona_role = getSetting('operator_persona_role') ?? 'Community Manager @ SPARK';
   const prompt = buildDraftPrompt({
     event,
     contact,
     attendance_history,
     style_guide,
-    operator_first_name,
+    operator_first_name: persona_name,
+    operator_role: persona_role,
   });
 
   const result = await complete(prompt, 600);
@@ -71,7 +75,9 @@ export async function draftInviteHandler(job: Job): Promise<void> {
     .where(and(eq(invites.event_id, event_id), eq(invites.contact_id, contact_id)))
     .get();
 
-  const draft_text = result.text.trim();
+  // sanitizeDraft strips em/en-dashes the prompt forbids but the model
+  // occasionally still emits. See packages/worker/src/llm/sanitize.ts.
+  const draft_text = sanitizeDraft(result.text);
   const generation_meta = {
     model: MODEL,
     input_tokens: result.input_tokens,

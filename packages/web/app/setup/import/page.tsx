@@ -23,7 +23,7 @@ export default function ImportPage() {
 
   return (
     <section className="max-w-xl space-y-4">
-      <h2 className="text-xl font-semibold">Step 4 — Import contacts</h2>
+      <h2 className="text-3xl font-semibold tracking-tight">Step 4 — Import contacts</h2>
       <p className="text-sm text-neutral-700">
         Clicking import enqueues a job for the worker. Pull happens in the background; this page polls for status.
       </p>

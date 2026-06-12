@@ -8,6 +8,7 @@ const baseInput = {
     venue: 'The Glasshouse, Singapore',
     edm_subject: 'Q3 Garden Lunch invitation',
     edm_body: 'Please join us for a curated afternoon...',
+    edm_summary: 'Date: Wednesday, 15 July 2026\nVenue: The Glasshouse',
   },
   contact: {
     first_name: 'Ada',
@@ -38,6 +39,33 @@ describe('buildDraftPrompt', () => {
     expect(p.system[0]?.text).toContain('Warm but brief');
     expect(p.system[0]?.text).toContain('curated afternoon');
     expect(p.system[0]?.text).toContain('Q3 Garden Lunch');
+  });
+
+  it('includes the EDM summary as authoritative event facts', () => {
+    const p = buildDraftPrompt(baseInput);
+    expect(p.system[0]?.text).toContain('Event facts');
+    expect(p.system[0]?.text).toContain('Date: Wednesday, 15 July 2026');
+    expect(p.system[0]?.text).toContain('Venue: The Glasshouse');
+  });
+
+  it('renders the three-line SPARK sign-off block in the persona section', () => {
+    const p = buildDraftPrompt({ ...baseInput, operator_first_name: 'Sara', operator_role: 'Community Manager @ SPARK' });
+    expect(p.system[0]?.text).toContain('Regards,\nSara\nCommunity Manager @ SPARK');
+  });
+
+  it('defaults the persona to Sara / Community Manager @ SPARK when none supplied', () => {
+    const { operator_first_name: _n, operator_role: _r, ...rest } = baseInput;
+    void _n; void _r;
+    const p = buildDraftPrompt(rest);
+    expect(p.system[0]?.text).toContain('Regards,\nSara\nCommunity Manager @ SPARK');
+  });
+
+  it('teaches the LLM the salutation + paragraph + sign-off structure', () => {
+    const p = buildDraftPrompt(baseInput);
+    const sys = p.system[0]?.text ?? '';
+    expect(sys).toContain('Salutation line');
+    expect(sys).toMatch(/Sign-off block on three separate lines/);
+    expect(sys).toContain('Good morning [preferred_name],');
   });
 
   it('contains contact + attendance in user message only', () => {

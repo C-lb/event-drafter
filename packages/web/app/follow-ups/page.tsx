@@ -24,24 +24,30 @@ export default function FollowUpsPage() {
   const visible = rows.filter((r) => filter === 'all' || r.status === filter);
 
   return (
-    <section className="max-w-3xl space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Follow-ups</h2>
+    <section className="max-w-7xl space-y-6">
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-3xl font-semibold tracking-tight">Follow-ups</h2>
         <button
           onClick={() => start(async () => { await triggerFollowUpGeneration(); refresh(); })}
-          className="rounded border border-neutral-300 px-3 py-1 text-sm"
+          className="rounded border border-neutral-300 px-4 py-2 text-sm"
         >
           Generate now
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-2 text-xs">
+      <div className="flex flex-wrap gap-3 text-sm">
         {(['all', 'drafted', 'approved', 'prefilled', 'sent', 'skipped', 'failed'] as const).map((s) => (
-          <button key={s} onClick={() => setFilter(s)} className={`rounded px-2 py-1 ${filter === s ? 'bg-blue-600 text-white' : 'bg-neutral-200'}`}>
+          <button key={s} onClick={() => setFilter(s)} className={`rounded px-3 py-1.5 capitalize tracking-wide ${filter === s ? 'bg-blue-600 text-white' : 'bg-neutral-200'}`}>
             {s} ({rows.filter((r) => s === 'all' || r.status === s).length})
           </button>
         ))}
       </div>
+
+      {visible.length === 0 && (
+        <p className="rounded border border-dashed border-neutral-300 bg-neutral-50 p-6 text-center text-sm text-neutral-600">
+          No follow-ups for now.
+        </p>
+      )}
 
       <ul className="space-y-3">
         {visible.map((r) => {

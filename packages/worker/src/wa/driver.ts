@@ -1,6 +1,6 @@
 import { chromium, type BrowserContext, type Page } from 'playwright';
-import { resolve } from 'node:path';
-import { mkdirSync } from 'node:fs';
+import { resolve, join } from 'node:path';
+import { mkdirSync, unlinkSync, lstatSync, readlinkSync } from 'node:fs';
 import { SEL, WA_URL, WAIT } from './selectors.js';
 import {
   detectLoginState,
@@ -10,7 +10,63 @@ import {
 } from './session.js';
 import { logger } from '../logger.js';
 
-const PROFILE_DIR = resolve(process.cwd(), 'data/wa-profile');
+// Stable absolute path so the web (Next.js) and worker (tsx) processes share
+// one WA session — otherwise their different cwds give them different profiles
+// and scanning the QR in /setup/wa would not log the worker in.
+const PROFILE_DIR = process.env.VIP_WA_PROFILE_DIR ?? resolve(process.cwd(), 'data/wa-profile');
+
+export class WaProfileLocked extends Error {
+  constructor(public profileDir: string) {
+    super(
+      `WhatsApp profile at ${profileDir} is already in use by another Chromium. ` +
+        `Quit any open "Chrome for Testing" windows and try again.`,
+    );
+    this.name = 'WaProfileLocked';
+  }
+}
+
+/**
+ * Chromium leaves SingletonLock / SingletonSocket / SingletonCookie symlinks
+ * pointing at the owning pid. If the pid is gone (e.g., previous run crashed,
+ * or Next.js HMR threw away our module-level _ctx reference), the lock is
+ * stale and `launchPersistentContext` will fail with an unhelpful error.
+ * Clear stale ones only — never touch live ones.
+ */
+function clearStaleProfileLocks(dir: string): void {
+  for (const name of ['SingletonLock', 'SingletonSocket', 'SingletonCookie']) {
+    const lockPath = join(dir, name);
+    let isSymlink = false;
+    try {
+      isSymlink = lstatSync(lockPath).isSymbolicLink();
+    } catch {
+      continue; // file does not exist
+    }
+    if (isSymlink) {
+      // Symlink target on macOS is `<hostname>-<pid>` — if the pid is alive,
+      // the lock is real and we leave it. Otherwise it is stale.
+      try {
+        const target = readlinkSync(lockPath);
+        const pid = Number(target.split('-').pop());
+        if (Number.isFinite(pid) && pid > 0) {
+          try {
+            process.kill(pid, 0);
+            continue; // alive — keep the lock
+          } catch {
+            // ESRCH — pid is gone, fall through and delete
+          }
+        }
+      } catch {
+        // unreadable symlink, treat as stale
+      }
+    }
+    try {
+      unlinkSync(lockPath);
+      logger.info('wa: cleared stale profile lock', { lockPath });
+    } catch {
+      /* ignore */
+    }
+  }
+}
 
 // See CONTEXT.md → "UI interaction timing". 300–500 ms between any two
 // interactions with WA Web (clicks, fills, navigations). Do not lower.
@@ -30,12 +86,21 @@ async function ensureContext(): Promise<{ ctx: BrowserContext; page: Page }> {
   if (_ctx && _page && !_page.isClosed()) return { ctx: _ctx, page: _page };
 
   mkdirSync(PROFILE_DIR, { recursive: true });
+  clearStaleProfileLocks(PROFILE_DIR);
   logger.info('wa: launching persistent context', { profile: PROFILE_DIR });
-  _ctx = await chromium.launchPersistentContext(PROFILE_DIR, {
-    headless: false,
-    viewport: { width: 1280, height: 820 },
-    args: ['--disable-blink-features=AutomationControlled'],
-  });
+  try {
+    _ctx = await chromium.launchPersistentContext(PROFILE_DIR, {
+      headless: false,
+      viewport: { width: 1280, height: 820 },
+      args: ['--disable-blink-features=AutomationControlled'],
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/ProcessSingleton|profile is already in use|SingletonLock/i.test(msg)) {
+      throw new WaProfileLocked(PROFILE_DIR);
+    }
+    throw err;
+  }
   _page = _ctx.pages()[0] ?? (await _ctx.newPage());
   return { ctx: _ctx, page: _page };
 }
@@ -108,11 +173,58 @@ export async function prefillDraft(phoneE164: string, text: string): Promise<voi
   throw new WaSelectorMismatch('input box did not receive prefilled text');
 }
 
-import { openChatAndReadInbound as _read } from './reader.js';
+import { openChatAndReadInbound as _read, type ReadOpts } from './reader.js';
 
-export async function readChatInbound(phoneE164: string) {
+export async function readChatInbound(
+  phoneE164: string,
+  contactDisplayName?: string,
+  opts: ReadOpts = {},
+) {
   const { page } = await ensureContext();
-  return _read(page, phoneE164);
+  return _read(page, phoneE164, contactDisplayName, opts);
+}
+
+/**
+ * One-shot login check + WA.base navigation. Call once at the start of any
+ * batch read loop (e.g. check_replies) and pass `skipPrelude: true` to the
+ * subsequent `readChatInbound` calls. Throws `WaNotLoggedIn` so callers can
+ * defer the whole job.
+ */
+export async function ensureWaLoggedIn(): Promise<void> {
+  const { page } = await ensureContext();
+  await page.goto(WA_URL.base, { waitUntil: 'domcontentloaded' });
+  const state = await detectLoginState(page);
+  if (state !== 'logged-in') {
+    throw new WaNotLoggedIn();
+  }
+}
+
+/**
+ * Auto-send mode: clicks the WA Web send button in the currently-focused chat
+ * (which `prefillDraft` left ready). The caller MUST have just prefilled this
+ * very chat; we don't re-verify the target number here — clicking send blindly
+ * in the wrong chat would deliver the wrong message.
+ *
+ * NOTE: This overrides the prior "human always clicks send" constraint in
+ * CONTEXT.md. The rate limiter (≥2:59 between sends, batches of 5-8,
+ * cool-down 15-30 min) still applies, but auto-send removes one of the
+ * human-fingerprint signals WA looks for. Toggle off via auto_send_enabled
+ * if WA Web starts challenging the account.
+ */
+export async function clickSendInPrefilledChat(): Promise<void> {
+  const { page } = await ensureContext();
+  await humanPause(page);
+  const sendBtn = page.locator(SEL.sendButton).first();
+  try {
+    await sendBtn.waitFor({ state: 'visible', timeout: WAIT.inputReadyMs });
+  } catch {
+    throw new WaSelectorMismatch('sendButton');
+  }
+  await humanPause(page);
+  await sendBtn.click();
+  // Give WA a moment to deliver the message and clear the compose box.
+  await page.waitForTimeout(1500);
+  logger.info('wa: send button clicked');
 }
 
 for (const sig of ['SIGINT', 'SIGTERM'] as const) {

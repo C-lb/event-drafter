@@ -3,14 +3,73 @@ import { jobs } from '@vip/core/schema';
 import { and, eq, gte, sql } from 'drizzle-orm';
 
 // See CONTEXT.md → "Sending cadence". Numbers calibrated to mimic a human
-// typing each message in WhatsApp Web. Do not lower without operator sign-off.
+// typing each message in WhatsApp Web. Operator-tunable.
+//
+// 2026-06-11: operator lowered MIN_GAP_MS from 179s to 30s (acknowledged
+// raised WA ban risk). Adjust together if relaxing further.
 
-const MIN_GAP_MS = 179_000;             // 2:59 floor between consecutive sends
-const MAX_GAP_MS = 5 * 60_000;          // upper bound on the randomised gap
+const MIN_GAP_MS = 30_000;              // 30 s floor between consecutive sends
+const MAX_GAP_MS = 60_000;              // upper bound on the randomised gap (1 min)
 const BATCH_LIMIT = 8;                  // after this many in a row, cool down
 const COOLDOWN_MIN_MS = 15 * 60_000;    // 15 min cool-down between batches
 const COOLDOWN_MAX_MS = 30 * 60_000;    // 30 min
 const MAX_SENDS_PER_HOUR = 18;          // hard hourly safety cap
+
+export const RATE_LIMIT_CONFIG = {
+  minGapMs: MIN_GAP_MS,
+  maxGapMs: MAX_GAP_MS,
+  batchLimit: BATCH_LIMIT,
+  cooldownMinMs: COOLDOWN_MIN_MS,
+  cooldownMaxMs: COOLDOWN_MAX_MS,
+  maxSendsPerHour: MAX_SENDS_PER_HOUR,
+};
+
+export type RateLimitReason = 'gap' | 'cooldown' | 'hourly';
+
+export interface RateLimitState {
+  delayMs: number | null;
+  reason: RateLimitReason | null;
+  inBatch: number;
+  sentLastHour: number;
+  lastSendAtMs: number | null;
+}
+
+/** Returns full rate-limit state for UI display (countdown + diagnostics). */
+export function getRateLimitState(now: Date = new Date()): RateLimitState {
+  const db = getDb();
+  const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+  const sentLastHour = (db
+    .select({ count: sql<number>`count(*)` })
+    .from(jobs)
+    .where(and(eq(jobs.kind, 'send_message'), eq(jobs.status, 'succeeded'), gte(jobs.finished_at, hourAgo)))
+    .all()[0]?.count ?? 0) as number;
+
+  const last = db
+    .select({ finished_at: jobs.finished_at })
+    .from(jobs)
+    .where(and(eq(jobs.kind, 'send_message'), eq(jobs.status, 'succeeded')))
+    .orderBy(sql`${jobs.finished_at} DESC`)
+    .limit(1)
+    .all()[0];
+  const lastSendAtMs = (last?.finished_at as Date | undefined)?.getTime() ?? null;
+
+  const delayMs = sendDelayMs(now);
+  let reason: RateLimitReason | null = null;
+  if (delayMs !== null) {
+    if (sentLastHour >= MAX_SENDS_PER_HOUR) reason = 'hourly';
+    else if (consecutiveSendsInBatch(now) >= BATCH_LIMIT) reason = 'cooldown';
+    else reason = 'gap';
+  }
+
+  return {
+    delayMs,
+    reason,
+    inBatch: consecutiveSendsInBatch(now),
+    sentLastHour: Number(sentLastHour),
+    lastSendAtMs,
+  };
+}
 
 /** Random gap in ms within [MIN_GAP_MS, MAX_GAP_MS]. */
 export function jitterMs(): number {

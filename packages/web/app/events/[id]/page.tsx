@@ -1,15 +1,36 @@
 import Link from 'next/link';
-import { getEventOrThrow, listInvitesForEvent, triggerReplyCheck, listRepliesForEvent } from './actions';
+import {
+  getEventOrThrow,
+  listInvitesForEvent,
+  triggerReplyCheck,
+  listRepliesForEvent,
+  getEventRsvpSummary,
+} from './actions';
+import { latestReplyCheck, maybeEnqueueAutoReplyCheck } from '../../replies/actions';
 import { EventEditPanel } from './EventEditPanel';
+import { SummaryPanel } from './SummaryPanel';
+import { RsvpSummarySection } from './RsvpSummary';
+import { StarterDrafts } from './StarterDrafts';
+import { AutoRefresh } from '../../components/AutoRefresh';
+import { extractEdmSummary } from '@vip/core/edm-extract';
+import { renderStarterDrafts } from '@vip/core/edm-templates';
 
 export const dynamic = 'force-dynamic';
 
 export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const eventId = Number(id);
+  // Same auto-trigger as /replies: if the last check finished more than 30
+  // min ago, enqueue one so this page's RSVP summary picks up any newer
+  // messages from previously-replied contacts.
+  await maybeEnqueueAutoReplyCheck();
+
   const event = await getEventOrThrow(eventId);
   const invitesList = await listInvitesForEvent(eventId);
   const allReplies = await listRepliesForEvent(eventId);
+  const rsvpSummary = await getEventRsvpSummary(eventId);
+  const lastCheck = await latestReplyCheck();
+  const checkInFlight = lastCheck?.status === 'queued' || lastCheck?.status === 'running';
 
   const counts = {
     total: invitesList.length,
@@ -32,11 +53,30 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     await triggerReplyCheck();
   }
 
+  // Build starter drafts from the stored summary; fall back to a fresh
+  // heuristic pass over the EDM body if no summary is persisted yet.
+  const eventDate = event.event_date instanceof Date ? event.event_date : new Date(event.event_date);
+  const fallbackYear = eventDate.getFullYear();
+  const summaryStruct = event.edm_summary
+    ? extractEdmSummary(event.edm_summary, event.edm_subject ?? '', fallbackYear)
+    : extractEdmSummary(event.edm_body ?? '', event.edm_subject ?? '', fallbackYear);
+  // Override the venue from the canonical event row when present — the
+  // event row's venue field is authoritative.
+  if (event.venue && !summaryStruct.venue) summaryStruct.venue = event.venue;
+  const starterDrafts = renderStarterDrafts({
+    event_name: event.name,
+    event_date: eventDate,
+    summary: summaryStruct,
+    operator_first_name: 'Sara',
+    operator_role: 'Community Manager @ SPARK',
+  });
+
   return (
-    <section className="max-w-3xl space-y-4">
+    <section className="max-w-7xl space-y-4">
+      <AutoRefresh active={checkInFlight} />
       <div className="space-y-1">
         <Link href="/events" className="text-xs text-neutral-500 hover:underline">← Events</Link>
-        <h2 className="text-xl font-semibold">{event.name}</h2>
+        <h2 className="text-3xl font-semibold tracking-tight">{event.name}</h2>
         <p className="text-xs text-neutral-600">
           {new Date(event.event_date).toLocaleString()} · {event.venue ?? '—'} · {event.status}
         </p>
@@ -69,10 +109,46 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
           Replies ({allReplies.length})
         </Link>
         <form action={check}>
-          <button type="submit" className="rounded border border-neutral-300 px-4 py-2 text-sm">
-            Check replies now
+          <button
+            type="submit"
+            disabled={checkInFlight}
+            className="rounded border border-neutral-300 px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {checkInFlight ? 'Checking…' : 'Check replies now'}
           </button>
         </form>
+        {checkInFlight && (
+          <span className="self-center text-xs text-neutral-600">
+            worker running — page will refresh automatically
+          </span>
+        )}
+      </div>
+
+      {/* Two-column split on wide monitors: RSVP roster on the left, EDM
+          context + starter drafts stacked on the right. Stacks vertically
+          below the `lg` breakpoint (1024px viewport). */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="space-y-4">
+          <RsvpSummarySection data={rsvpSummary} />
+        </div>
+        <div className="space-y-4">
+          <SummaryPanel
+            event={{
+              id: event.id,
+              name: event.name,
+              event_date: event.event_date as Date,
+              venue: event.venue ?? null,
+              edm_subject: event.edm_subject ?? null,
+              edm_body: event.edm_body ?? null,
+              edm_summary: event.edm_summary ?? null,
+            }}
+          />
+          <StarterDrafts
+            eventId={event.id}
+            drafts={starterDrafts}
+            overrides={(event.draft_overrides as Partial<Record<string, string>>) ?? {}}
+          />
+        </div>
       </div>
 
       <EventEditPanel
@@ -83,6 +159,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
           venue: event.venue ?? null,
           edm_subject: event.edm_subject ?? null,
           edm_body: event.edm_body ?? null,
+          edm_summary: event.edm_summary ?? null,
         }}
       />
     </section>

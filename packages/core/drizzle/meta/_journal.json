@@ -43,6 +43,34 @@
       "when": 1781110000000,
       "tag": "0005_contacts_first_last",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1781200000000,
+      "tag": "0006_event_summary",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1781210000000,
+      "tag": "0007_event_draft_overrides",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1781220000000,
+      "tag": "0008_reply_resolved",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1781230000000,
+      "tag": "0009_jobs_progress",
+      "breakpoints": true
     }
   ]
 }

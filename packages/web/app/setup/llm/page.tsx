@@ -40,7 +40,7 @@ export default async function LLMSetupPage() {
 
   return (
     <section className="max-w-xl space-y-4">
-      <h2 className="text-xl font-semibold">Step 1 — LLM provider</h2>
+      <h2 className="text-3xl font-semibold tracking-tight">Step 1 — LLM provider</h2>
       <p className="text-sm text-neutral-700">
         Active provider: <strong>{PROVIDER}</strong>
         {' · '}

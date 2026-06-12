@@ -5,6 +5,7 @@ import { and, eq, isNotNull, lte, notInArray } from 'drizzle-orm';
 import { getSetting } from '@vip/core/settings';
 import { complete } from '../llm/client.js';
 import { buildFollowUpPrompt } from '../llm/prompts.js';
+import { sanitizeDraft } from '../llm/sanitize.js';
 import { logger } from '../logger.js';
 
 const MIN_DAYS_SINCE_SENT = 3;
@@ -71,7 +72,7 @@ export async function generateFollowUpsHandler(_job: Job): Promise<void> {
       const result = await complete(prompt, 400);
       db.insert(follow_ups).values({
         invite_id: c.invite_id,
-        draft_text: result.text.trim(),
+        draft_text: sanitizeDraft(result.text),
         status: 'drafted',
       }).run();
       drafted++;

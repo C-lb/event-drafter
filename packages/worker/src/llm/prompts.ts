@@ -1,5 +1,6 @@
 import type { PromptBlock } from './client.js';
 import type { Contact, Event } from '@vip/core';
+import { sanitizeDraft } from './sanitize.js';
 
 export interface AttendanceFact {
   event_name: string;
@@ -9,23 +10,70 @@ export interface AttendanceFact {
 }
 
 export interface DraftPromptInput {
-  event: Pick<Event, 'name' | 'event_date' | 'venue' | 'edm_subject' | 'edm_body'>;
+  event: Pick<Event, 'name' | 'event_date' | 'venue' | 'edm_subject' | 'edm_body' | 'edm_summary'>;
   contact: Pick<Contact, 'first_name' | 'last_name' | 'remarks'>;
   attendance_history: AttendanceFact[];
   style_guide: string;
+  /** Persona signed at the bottom of every WA message. Defaults to "Sara". */
   operator_first_name?: string;
+  /** Role line after the name in the sign-off. Defaults to "Community Manager @ SPARK". */
+  operator_role?: string;
 }
 
-const PROMPT_VERSION = 'v1';
+const PROMPT_VERSION = 'v2';
 
-const GENERIC_RULES = `You are drafting a personal WhatsApp invitation message that will be reviewed and manually sent by the operator. Output ONLY the message body — no greeting metadata, no "Here is the message:", no quotes around the message, no Markdown formatting.
+/**
+ * Voice rules shared by every prompt that drafts text for a human recipient.
+ * Each draft also passes through `sanitizeDraft()` after generation, so any
+ * em/en-dash that slips through is mechanically stripped — but the goal here
+ * is to never need that fallback in the first place.
+ */
+const HUMAN_VOICE_RULES = `Write like a real person typing on WhatsApp, not a press release or an AI assistant. The recipient should not be able to guess this was machine-drafted.
 
-Hard rules:
-- 2-4 sentences. Hard cap.
-- Use the supplied Remarks naturally in one sentence; do not list them like a CV.
+Punctuation:
+- ABSOLUTELY NO em dashes (—) or en dashes (–). Not in any form. Use a comma, a period, or split into two sentences. This rule is enforced post-hoc; if you emit a dash it will be stripped, leaving awkward output.
+- No semicolons. Break the sentence.
+- No double-spaces after periods.
+
+Vocabulary to AVOID (these are dead giveaways of AI writing):
+- "I trust this finds you well", "I hope this message finds you well"
+- "Reaching out to", "Just wanted to reach out", "Just a quick note"
+- "We would be delighted", "We are pleased to", "It is our pleasure"
+- "Kindly", "Please find attached", "Should you have any queries"
+- "Looking forward to hearing from you" (as a sign-off — too formal)
+- "Esteemed", "valued", "cherished"
+- "Moreover", "Furthermore", "Additionally", "In conclusion"
+- Long flowery openers about the event's significance.
+
+Vocabulary to PREFER:
+- Warm, direct, present-tense phrasing.
+- Contractions: "it's", "we're", "don't", "you'll".
+- Short clauses.
+- One concrete detail that shows this isn't a form letter — name them, mention the venue or what they said before, reference a remark naturally.
+
+Tone calibration: imagine a friend who happens to run events texting a senior contact. Warm, not gushing. Confident, not stiff. Personal, not mass-blast.`;
+
+const GENERIC_RULES = `You are drafting a personal WhatsApp invitation message that will be reviewed and manually sent by the operator. Output ONLY the message body. No greeting metadata, no "Here is the message:", no quotes around the message, no Markdown formatting.
+
+Body length:
+- 2-4 sentences in the message body. Hard cap.
+- Use the supplied Remarks naturally in one sentence. Do not list them like a CV.
 - If attendance history is supplied, you may reference at most ONE prior event lightly.
-- Do not repeat the formal EDM verbatim — assume the recipient will also receive that email separately.
-- Output plain text. No emoji unless the style guide explicitly allows them.`;
+- Do not repeat the formal EDM verbatim. Assume the recipient will also receive that email separately.
+- Output plain text. No emoji unless the style guide explicitly allows them.
+
+Structure (mandatory — match the SPARK draft templates):
+1. Salutation line on its own: "Good morning [preferred_name]," before 12:00 SGT, "Good afternoon [preferred_name]," from 12:00 onwards.
+2. ONE blank line.
+3. The body (the 2-4 sentences above), split across 1-2 short paragraphs separated by a blank line. Use real "\\n\\n" line breaks between paragraphs.
+4. ONE blank line.
+5. Sign-off block on three separate lines, exactly:
+   Regards,
+   <Operator name>
+   <Operator role>
+   No extra blank line inside the sign-off.
+
+${HUMAN_VOICE_RULES}`;
 
 export function buildDraftPrompt(input: DraftPromptInput): PromptBlock {
   const eventDateStr = new Date(input.event.event_date).toLocaleDateString('en-SG', {
@@ -46,14 +94,21 @@ Event: ${input.event.name}
 When: ${eventDateStr}
 Venue: ${input.event.venue ?? '(not specified — do not invent one)'}
 
+## Event facts (extracted from EDM — use these as the authoritative reference)
+
+${input.event.edm_summary ?? '(no structured summary supplied — rely on the EDM body below)'}
+
 ## Formal invitation (EDM) for reference
 
 Subject: ${input.event.edm_subject ?? '(none)'}
 
 ${input.event.edm_body ?? '(no EDM body supplied — keep the message generic about the event)'}
 
-# Operator
-${input.operator_first_name ? `Sign off with: "${input.operator_first_name}"` : 'Sign off with the operator\'s first name (assume they will edit if wrong).'}
+# Operator persona
+Sign off with the three-line sign-off block, using exactly:
+Regards,
+${input.operator_first_name ?? 'Sara'}
+${input.operator_role ?? 'Community Manager @ SPARK'}
 
 # Prompt version: ${PROMPT_VERSION}`;
 
@@ -121,7 +176,11 @@ Classification rules:
 - "maybe": tentative, conditional, or asking for info (e.g. "let me check", "what time again?")
 - "unclear": cannot determine, off-topic, or just acknowledgement (e.g. "ok", "thanks", "haha")
 
-The response_draft must be brief, match the supplied style guide, and not promise anything specific (no times, no logistics) unless the reply asked for it.`;
+The response_draft must be brief, match the supplied style guide, and not promise anything specific (no times, no logistics) unless the reply asked for it.
+
+Sign-off: do NOT append the operator's name, role, "Regards,", or any closing block. The recipient already received the original invitation in this same WhatsApp thread, so they know who is replying. The response_draft is just the body, a sentence or two that reads like a quick personal message, not a formal letter.
+
+${HUMAN_VOICE_RULES}`;
 
 export function buildClassifyAndDraftPrompt(input: ClassifyAndDraftInput): PromptBlock {
   const eventDateStr = new Date(input.event.event_date).toLocaleDateString('en-SG', {
@@ -140,10 +199,7 @@ ${CLASSIFY_RULES}
 
 Event: ${input.event.name}
 When: ${eventDateStr}
-Venue: ${input.event.venue ?? '(not specified)'}
-
-# Operator
-${input.operator_first_name ? `Sign off responses with: "${input.operator_first_name}"` : 'Sign off with the operator\'s first name.'}`;
+Venue: ${input.event.venue ?? '(not specified)'}`;
 
   const fullName = `${input.contact.first_name}${input.contact.last_name ? ' ' + input.contact.last_name : ''}`;
   const userMessage = `# Contact
@@ -175,7 +231,15 @@ export function parseClassifyAndDraft(raw: string): ClassifyAndDraftOutput {
   const summary = String(obj.summary ?? '').slice(0, 80);
   const response_draft = String(obj.response_draft ?? '').trim();
   if (!response_draft) throw new Error('classify: empty response_draft');
-  return { classification: c, confidence, summary, response_draft };
+  // Sanitize at the parse boundary so every downstream consumer (the job
+  // handler, the editResponse server action that re-uses parsed text) gets
+  // the same em-dash-free output. See packages/worker/src/llm/sanitize.ts.
+  return {
+    classification: c,
+    confidence,
+    summary,
+    response_draft: sanitizeDraft(response_draft),
+  };
 }
 
 // ===== Follow-up (Plan 6) =====
@@ -196,7 +260,10 @@ Hard rules:
 - Acknowledge gently that they might have missed the first message; do NOT guilt-trip.
 - Reference the event briefly but do not re-paste the original invite.
 - Leave the door open ("no pressure at all, just floating it back up").
-- Match the style guide's tone exactly.`;
+- Match the style guide's tone exactly.
+- Do NOT append the operator's name, role, "Regards,", or any closing block. The original invite in this WhatsApp thread already carried the sign-off, so the follow-up reads as a continuation, not a new formal letter.
+
+${HUMAN_VOICE_RULES}`;
 
 export function buildFollowUpPrompt(input: FollowUpInput): PromptBlock {
   const eventDateStr = new Date(input.event.event_date).toLocaleDateString('en-SG', {
@@ -214,10 +281,7 @@ ${FOLLOW_UP_RULES}
 # Event context
 Event: ${input.event.name}
 When: ${eventDateStr}
-Venue: ${input.event.venue ?? '(not specified)'}
-
-# Operator
-${input.operator_first_name ? `Sign off with: "${input.operator_first_name}"` : 'Sign off with the operator\'s first name.'}`;
+Venue: ${input.event.venue ?? '(not specified)'}`;
 
   const fullName = `${input.contact.first_name}${input.contact.last_name ? ' ' + input.contact.last_name : ''}`;
   const userMessage = `# Contact

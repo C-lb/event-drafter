@@ -156,7 +156,7 @@ export default function SheetPickerPage() {
 
   return (
     <section className="max-w-3xl space-y-4">
-      <h2 className="text-xl font-semibold">Pick Contacts Sheet</h2>
+      <h2 className="text-3xl font-semibold tracking-tight">Pick Contacts Sheet</h2>
 
       <div className="space-y-2">
         <label className="block text-sm font-medium">Sheet URL or ID</label>

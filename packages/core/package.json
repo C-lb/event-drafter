@@ -11,7 +11,9 @@
     "./db": "./dist/db.js",
     "./types": "./dist/types.js",
     "./migrate": "./dist/migrate.js",
-    "./settings": "./dist/settings.js"
+    "./settings": "./dist/settings.js",
+    "./edm-extract": "./dist/edm-extract.js",
+    "./edm-templates": "./dist/edm-templates.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

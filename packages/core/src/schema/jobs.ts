@@ -11,6 +11,7 @@ export const jobs = sqliteTable(
     status: text('status').notNull().$type<JobStatus>().default('queued'),
     attempts: integer('attempts').notNull().default(0),
     last_error: text('last_error'),
+    progress: text('progress'),
     run_after: integer('run_after', { mode: 'timestamp_ms' }),
     created_at: integer('created_at', { mode: 'timestamp_ms' })
       .notNull()

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { updateEvent, deleteEvent } from '../actions';
 
@@ -12,6 +12,7 @@ interface Props {
     venue: string | null;
     edm_subject: string | null;
     edm_body: string | null;
+    edm_summary: string | null;
   };
 }
 
@@ -34,6 +35,20 @@ export function EventEditPanel({ event }: Props) {
   const [venue, setVenue] = useState(event.venue ?? '');
   const [edmSubject, setEdmSubject] = useState(event.edm_subject ?? '');
   const [edmBody, setEdmBody] = useState(event.edm_body ?? '');
+  const [edmSummary, setEdmSummary] = useState(event.edm_summary ?? '');
+
+  // The "Edit" button on /events cards links here with #edit so the form
+  // auto-opens and the page scrolls to it. Without this hook the operator
+  // lands on the detail page with the form collapsed and nothing visible.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.location.hash === '#edit') {
+      setEditing(true);
+      requestAnimationFrame(() => {
+        document.getElementById('edit')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  }, []);
 
   const save = () => {
     setBanner(null);
@@ -45,6 +60,7 @@ export function EventEditPanel({ event }: Props) {
         venue,
         edm_subject: edmSubject,
         edm_body: edmBody,
+        edm_summary: edmSummary,
       });
       if (!res.ok) { setBanner({ kind: 'err', text: res.error }); return; }
       setBanner({ kind: 'ok', text: 'Saved.' });
@@ -63,7 +79,7 @@ export function EventEditPanel({ event }: Props) {
   };
 
   return (
-    <div className="space-y-2">
+    <div id="edit" className="space-y-2 scroll-mt-4">
       {banner && (
         <div className={`rounded p-2 text-sm ${banner.kind === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
           {banner.text}
@@ -90,7 +106,7 @@ export function EventEditPanel({ event }: Props) {
       {editing && (
         <div className="space-y-2 rounded border border-blue-200 bg-blue-50/50 p-3">
           <label className="block text-xs">
-            <span className="font-medium">Name</span>
+            <span className="font-medium">Event title</span>
             <input className="mt-0.5 w-full rounded border border-neutral-300 px-2 py-1 text-sm" value={name} onChange={(e) => setName(e.target.value)} />
           </label>
           <label className="block text-xs">
@@ -108,6 +124,10 @@ export function EventEditPanel({ event }: Props) {
           <label className="block text-xs">
             <span className="font-medium">EDM body</span>
             <textarea className="mt-0.5 h-40 w-full rounded border border-neutral-300 px-2 py-1 text-sm font-mono" value={edmBody} onChange={(e) => setEdmBody(e.target.value)} />
+          </label>
+          <label className="block text-xs">
+            <span className="font-medium">EDM summary</span>
+            <textarea className="mt-0.5 h-32 w-full rounded border border-neutral-300 px-2 py-1 text-sm font-mono" value={edmSummary} onChange={(e) => setEdmSummary(e.target.value)} placeholder="Date: ... | Venue: ... | etc." />
           </label>
           <button
             onClick={save}

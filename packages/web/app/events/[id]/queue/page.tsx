@@ -6,11 +6,15 @@ import {
   listInvitesForEvent,
   editDraft,
   approveDraft,
+  approveBatch,
   skipDraft,
   regenerateDraft,
   markSent,
   reprefill,
+  getAutoSendEnabled,
+  setAutoSendEnabled,
 } from '../actions';
+import { RateLimitTimer } from './RateLimitTimer';
 
 type Row = Awaited<ReturnType<typeof listInvitesForEvent>>[number];
 
@@ -23,7 +27,11 @@ export default function QueuePage() {
   const [isPending, start] = useTransition();
   const [filter, setFilter] = useState<'all' | 'pending' | 'drafted' | 'approved' | 'prefilled' | 'sent' | 'skipped' | 'failed'>('drafted');
 
-  const refresh = () => start(async () => setRows(await listInvitesForEvent(eventId)));
+  const [autoSend, setAutoSend] = useState<boolean | null>(null);
+  const refresh = () => start(async () => {
+    setRows(await listInvitesForEvent(eventId));
+    setAutoSend(await getAutoSendEnabled());
+  });
 
   useEffect(() => {
     refresh();
@@ -31,11 +39,86 @@ export default function QueuePage() {
     return () => clearInterval(t);
   }, []);
 
+  const toggleAutoSend = () => {
+    const next = !(autoSend ?? false);
+    start(async () => {
+      const r = await setAutoSendEnabled({ enabled: next });
+      setAutoSend(r.enabled);
+    });
+  };
+
   const visible = rows.filter((r) => filter === 'all' || r.status === filter);
+  const draftedCount = rows.filter((r) => r.status === 'drafted').length;
+  const batchSize = Math.min(5, draftedCount);
+  const [batchBanner, setBatchBanner] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+
+  const approveNext = () => {
+    if (batchSize === 0) return;
+    setBatchBanner(null);
+    start(async () => {
+      try {
+        const r = await approveBatch({ event_id: eventId, limit: batchSize });
+        setBatchBanner({ kind: 'ok', text: `Approved ${r.approved} draft${r.approved === 1 ? '' : 's'}. Worker will pre-fill them on its rate-limited cadence (CONTEXT.md).` });
+        refresh();
+      } catch (e) {
+        setBatchBanner({ kind: 'err', text: e instanceof Error ? e.message : 'unknown' });
+      }
+    });
+  };
 
   return (
-    <section className="max-w-3xl space-y-4">
-      <h2 className="text-xl font-semibold">Review queue</h2>
+    <section className="max-w-7xl space-y-4">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-3xl font-semibold tracking-tight">Review queue</h2>
+        <button
+          onClick={approveNext}
+          disabled={isPending || batchSize === 0}
+          className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+          title={
+            batchSize === 0
+              ? 'No drafted invites to approve.'
+              : `Approves the next ${batchSize} drafted invite${batchSize === 1 ? '' : 's'} (oldest first). Send cadence still applies per CONTEXT.md.`
+          }
+        >
+          Approve next {batchSize || 5}
+        </button>
+      </div>
+
+      {batchBanner && (
+        <div className={`rounded p-2 text-xs ${batchBanner.kind === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+          {batchBanner.text}
+        </div>
+      )}
+
+      <RateLimitTimer />
+
+      <div
+        className={`flex items-center justify-between gap-3 rounded border p-2 text-xs ${
+          autoSend ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-neutral-200 bg-neutral-50 text-neutral-700'
+        }`}
+      >
+        <div>
+          <strong>Send mode:</strong>{' '}
+          {autoSend === null
+            ? '…'
+            : autoSend
+            ? 'AUTO-SEND ON — worker clicks WA send button after pre-fill.'
+            : 'Manual — worker pre-fills only; you click send in WA.'}{' '}
+          {autoSend && (
+            <span className="opacity-80">
+              Rate limiter still enforces ≥2:59 between sends and 5–8 per batch (CONTEXT.md).
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={toggleAutoSend}
+          disabled={isPending || autoSend === null}
+          className="rounded border border-neutral-400 bg-white px-2 py-1 hover:bg-neutral-100 disabled:opacity-50"
+        >
+          {autoSend ? 'Switch to manual' : 'Enable auto-send'}
+        </button>
+      </div>
 
       <div className="flex flex-wrap gap-2 text-xs">
         {(['all', 'pending', 'drafted', 'approved', 'prefilled', 'sent', 'skipped', 'failed'] as const).map((s) => (

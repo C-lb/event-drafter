@@ -14,7 +14,7 @@ export default function GoogleSetupPage({
 
   return (
     <section className="max-w-xl space-y-4">
-      <h2 className="text-xl font-semibold">Step 2 — Connect Google</h2>
+      <h2 className="text-3xl font-semibold tracking-tight">Step 2 — Connect Google</h2>
       <p className="text-sm text-neutral-700">
         See <code>docs/setup/google-oauth.md</code> for the one-time GCP setup.
         After that, click below to authorize this app.

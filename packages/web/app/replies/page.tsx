@@ -1,5 +1,13 @@
 import Link from 'next/link';
-import { listAllReplies, latestReplyCheck, triggerReplyCheck } from './actions';
+import {
+  listAllReplies,
+  latestReplyCheck,
+  maybeEnqueueAutoReplyCheck,
+  triggerReplyCheck,
+  resolvedReplyCount,
+} from './actions';
+import { ReplyCard, type ReplyRow } from './ReplyCard';
+import { AutoRefresh } from '../components/AutoRefresh';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,23 +20,52 @@ function ago(ts: Date | number | null | undefined): string {
   return `${Math.round(ms / 86_400_000)}d ago`;
 }
 
-export default async function AllRepliesPage() {
-  const [all, last] = await Promise.all([listAllReplies(), latestReplyCheck()]);
+interface PageProps {
+  searchParams: Promise<{ resolved?: string }>;
+}
+
+export default async function AllRepliesPage({ searchParams }: PageProps) {
+  const { resolved: resolvedParam } = await searchParams;
+  const includeResolved = resolvedParam === '1';
+
+  // Kick a check_replies job ourselves if the last one finished over 30 min
+  // ago, so a yes/no contact who later sent a follow-up question lands in
+  // the dashboard without the operator having to click "Check now".
+  await maybeEnqueueAutoReplyCheck();
+
+  const [all, last, resolvedCount] = await Promise.all([
+    listAllReplies({ includeResolved }),
+    latestReplyCheck(),
+    resolvedReplyCount(),
+  ]);
   const inFlight = last?.status === 'queued' || last?.status === 'running';
 
   return (
-    <section className="max-w-3xl space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold">All replies</h2>
-        <form action={triggerReplyCheck}>
-          <button
-            type="submit"
-            disabled={inFlight}
-            className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-          >
-            {inFlight ? 'Checking…' : 'Check now'}
-          </button>
-        </form>
+    <section className="max-w-7xl space-y-3">
+      <AutoRefresh active={inFlight} />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-3xl font-semibold tracking-tight">
+          {includeResolved ? 'All replies (incl. resolved)' : 'All replies'}
+        </h2>
+        <div className="flex items-center gap-2">
+          {resolvedCount > 0 && (
+            <Link
+              href={includeResolved ? '/replies' : '/replies?resolved=1'}
+              className="rounded border border-neutral-300 bg-white px-3 py-1.5 text-xs text-neutral-700 hover:bg-neutral-50"
+            >
+              {includeResolved ? `Hide resolved (${resolvedCount})` : `Show resolved (${resolvedCount})`}
+            </Link>
+          )}
+          <form action={triggerReplyCheck}>
+            <button
+              type="submit"
+              disabled={inFlight}
+              className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            >
+              {inFlight ? 'Checking…' : 'Check now'}
+            </button>
+          </form>
+        </div>
       </div>
 
       {last ? (
@@ -41,24 +78,19 @@ export default async function AllRepliesPage() {
         <p className="text-xs text-neutral-600">No checks have run yet.</p>
       )}
 
-      <ul className="space-y-2">
-        {all.map((r) => (
-          <li key={r.reply_id} className="rounded border border-neutral-200 bg-white p-3 text-sm">
-            <p>
-              <strong>{r.contact_name}</strong> ·{' '}
-              <Link href={`/events/${r.event_id}/replies`} className="text-blue-700 underline">
-                {r.event_name}
-              </Link>{' '}
-              · <span className="rounded bg-neutral-100 px-2 py-0.5 text-xs">{r.classification ?? 'unclassified'}</span>
-            </p>
-            {r.summary && <p className="text-xs italic text-neutral-600">{r.summary}</p>}
-            <p className="mt-1 line-clamp-2 text-neutral-700">{r.reply_text}</p>
-            <p className="mt-1 text-xs text-neutral-500">
-              {r.detected_at ? new Date(r.detected_at as unknown as Date).toLocaleString() : ''} · response: {r.response_status ?? 'pending'}
-            </p>
-          </li>
-        ))}
-      </ul>
+      {all.length === 0 ? (
+        <p className="rounded border border-dashed border-neutral-300 bg-neutral-50 p-4 text-sm text-neutral-600">
+          {includeResolved
+            ? 'No replies yet.'
+            : 'No active replies. Anything resolved is hidden — toggle the button above to show them.'}
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {all.map((r) => (
+            <ReplyCard key={r.reply_id} r={r as ReplyRow} />
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

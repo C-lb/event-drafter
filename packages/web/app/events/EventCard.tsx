@@ -12,9 +12,11 @@ interface CardEvent {
   venue: string | null;
   status: string;
   total_invites: number;
-  sent_invites: number;
   replied: number;
-  not_replied: number;
+  yes: number;
+  no: number;
+  maybe: number;
+  unclear: number;
 }
 
 interface Props {
@@ -58,15 +60,46 @@ export function EventCard({ ev, expired, dateLabel }: Props) {
         {new Date(ev.event_date).toLocaleString()} · {ev.venue ?? '—'} · {ev.status}
       </p>
 
-      <div className="mt-2 flex flex-wrap gap-2 text-xs">
-        <span className="rounded bg-neutral-100 px-2 py-0.5">
-          {ev.total_invites} invited · {ev.sent_invites} sent
-        </span>
-        <span className={`rounded px-2 py-0.5 ${ev.replied > 0 ? 'bg-green-100 text-green-800' : 'bg-neutral-100 text-neutral-600'}`}>
+      <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+        <span className="rounded bg-neutral-100 px-2 py-0.5">{ev.total_invites} invited</span>
+        <span
+          className={`rounded px-2 py-0.5 ${
+            ev.replied > 0 ? 'bg-blue-100 text-blue-800' : 'bg-neutral-100 text-neutral-600'
+          }`}
+        >
           {ev.replied} replied
         </span>
-        <span className={`rounded px-2 py-0.5 ${ev.not_replied > 0 ? 'bg-amber-100 text-amber-800' : 'bg-neutral-100 text-neutral-600'}`}>
-          {ev.not_replied} no reply
+        <span
+          className={`rounded px-2 py-0.5 ${
+            ev.yes > 0 ? 'bg-green-100 text-green-800' : 'bg-neutral-100 text-neutral-600'
+          }`}
+          title="Replies classified yes"
+        >
+          ✓ {ev.yes} yes
+        </span>
+        <span
+          className={`rounded px-2 py-0.5 ${
+            ev.no > 0 ? 'bg-red-100 text-red-800' : 'bg-neutral-100 text-neutral-600'
+          }`}
+          title="Replies classified no"
+        >
+          ✕ {ev.no} no
+        </span>
+        <span
+          className={`rounded px-2 py-0.5 ${
+            ev.maybe > 0 ? 'bg-amber-100 text-amber-800' : 'bg-neutral-100 text-neutral-600'
+          }`}
+          title="Replies classified maybe"
+        >
+          ? {ev.maybe} maybe
+        </span>
+        <span
+          className={`rounded px-2 py-0.5 ${
+            ev.unclear > 0 ? 'bg-neutral-200 text-neutral-700' : 'bg-neutral-100 text-neutral-600'
+          }`}
+          title="Replies classified unclear"
+        >
+          … {ev.unclear} unclear
         </span>
       </div>
 

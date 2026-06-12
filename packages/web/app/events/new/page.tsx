@@ -334,7 +334,12 @@ export default function NewEventPage() {
 
   return (
     <section className="max-w-6xl space-y-4">
-      <h2 className="text-xl font-semibold">New event from Gmail</h2>
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-3xl font-semibold tracking-tight">New event from Gmail</h2>
+        <a href="/events/new/blank" className="text-xs text-blue-700 underline">
+          No email to pull from? Create blank →
+        </a>
+      </div>
 
       <div className="space-y-2">
         <label className="block text-sm font-medium">Quick filters</label>

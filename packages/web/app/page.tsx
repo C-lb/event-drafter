@@ -80,7 +80,9 @@ export default async function HomePage() {
         {upcoming.length === 0 ? (
           <p className="rounded border border-neutral-200 bg-white p-3 text-sm text-neutral-600">
             No upcoming events.{' '}
-            <Link href="/events/new" className="text-blue-700 underline">Create one from Gmail</Link>.
+            <Link href="/events/new" className="text-blue-700 underline">Create from Gmail</Link>
+            {' '}or{' '}
+            <Link href="/events/new/blank" className="text-blue-700 underline">create a blank one</Link>.
           </p>
         ) : (
           <ul className="space-y-2">
@@ -98,12 +100,21 @@ export default async function HomePage() {
                     {new Date(ev.event_date).toLocaleString()} · {ev.venue ?? '—'}
                   </p>
                   <div className="mt-1 flex flex-wrap gap-1.5 text-xs">
-                    <span className="rounded bg-neutral-100 px-2 py-0.5">{ev.total_invites} invited · {ev.sent_invites} sent</span>
-                    <span className={`rounded px-2 py-0.5 ${ev.replied > 0 ? 'bg-green-100 text-green-800' : 'bg-neutral-100 text-neutral-600'}`}>
+                    <span className="rounded bg-neutral-100 px-2 py-0.5">{ev.total_invites} invited</span>
+                    <span className={`rounded px-2 py-0.5 ${ev.replied > 0 ? 'bg-blue-100 text-blue-800' : 'bg-neutral-100 text-neutral-600'}`}>
                       {ev.replied} replied
                     </span>
-                    <span className={`rounded px-2 py-0.5 ${ev.not_replied > 0 ? 'bg-amber-100 text-amber-800' : 'bg-neutral-100 text-neutral-600'}`}>
-                      {ev.not_replied} no reply
+                    <span className={`rounded px-2 py-0.5 ${ev.yes > 0 ? 'bg-green-100 text-green-800' : 'bg-neutral-100 text-neutral-600'}`}>
+                      ✓ {ev.yes}
+                    </span>
+                    <span className={`rounded px-2 py-0.5 ${ev.no > 0 ? 'bg-red-100 text-red-800' : 'bg-neutral-100 text-neutral-600'}`}>
+                      ✕ {ev.no}
+                    </span>
+                    <span className={`rounded px-2 py-0.5 ${ev.maybe > 0 ? 'bg-amber-100 text-amber-800' : 'bg-neutral-100 text-neutral-600'}`}>
+                      ? {ev.maybe}
+                    </span>
+                    <span className={`rounded px-2 py-0.5 ${ev.unclear > 0 ? 'bg-neutral-200 text-neutral-700' : 'bg-neutral-100 text-neutral-600'}`}>
+                      … {ev.unclear}
                     </span>
                   </div>
                 </li>

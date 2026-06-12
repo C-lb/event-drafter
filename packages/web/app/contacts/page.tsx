@@ -1,24 +1,31 @@
 import { listContactsAll } from './actions';
-import { enqueueImport } from '../setup/import/actions';
+import { enqueueImport, importStatus } from '../setup/import/actions';
 import { ContactsTable } from './ContactsTable';
+import { ResyncButton, type ResyncJobView } from './ResyncButton';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ContactsPage() {
   const all = await listContactsAll();
+  const { job } = await importStatus();
 
   async function resync() {
     'use server';
     await enqueueImport();
   }
 
+  const jobView: ResyncJobView = job
+    ? {
+        status: job.status,
+        finishedAtMs: job.finished_at ? new Date(job.finished_at).getTime() : null,
+      }
+    : null;
+
   return (
     <section className="max-w-6xl space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Contacts ({all.length})</h2>
-        <form action={resync}>
-          <button type="submit" className="rounded border border-neutral-300 px-3 py-1 text-sm">Re-sync from Sheet</button>
-        </form>
+        <h2 className="text-3xl font-semibold tracking-tight">Contacts ({all.length})</h2>
+        <ResyncButton action={resync} job={jobView} />
       </div>
       <p className="text-xs text-neutral-600">
         Hand-edits override the Sheet locally. A re-sync will pull fresh values for any row whose Sheet content has changed since.

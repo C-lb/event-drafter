@@ -1,9 +1,10 @@
 import type { Job } from '@vip/core';
 import { getDb } from '@vip/core/db';
 import { contacts, invites, replies } from '@vip/core/schema';
+import { getSetting } from '@vip/core/settings';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { prefillDraft } from '../wa/driver.js';
+import { prefillDraft, clickSendInPrefilledChat } from '../wa/driver.js';
 import { WaInvalidNumber, WaNotLoggedIn, WaSelectorMismatch } from '../wa/session.js';
 import { sendDelayMs, jitterMs } from '../rate-limit.js';
 import { JobDeferred } from '../errors.js';
@@ -48,7 +49,35 @@ export async function sendResponseHandler(job: Job): Promise<void> {
     .where(eq(replies.id, reply_id))
     .run();
 
+  // Auto-send mode also applies to reply responses. Same opt-in setting
+  // as send-message — see CONTEXT.md "Send mode" section.
+  const autoSend = getSetting('auto_send_enabled') === true;
+  if (autoSend) {
+    try {
+      await clickSendInPrefilledChat();
+    } catch (err) {
+      if (err instanceof WaSelectorMismatch) {
+        logger.warn('send_response: auto-send selector mismatch — leaving as prefilled', {
+          reply_id, err: err.message,
+        });
+        const gap = jitterMs();
+        await new Promise((r) => setTimeout(r, gap));
+        return;
+      }
+      throw err;
+    }
+    // Per operator preference: after we reply in a thread, drop back to
+    // 'pending' (with response_sent_at as audit) so the row is conceptually
+    // "the conversation is open, waiting on them". When check-replies
+    // detects a newer inbound message it refreshes the draft for review.
+    db.update(replies)
+      .set({ response_status: 'pending', response_sent_at: new Date() })
+      .where(eq(replies.id, reply_id))
+      .run();
+    logger.info('send_response: auto-sent (held as pending until they reply again)', { reply_id });
+  }
+
   const gap = jitterMs();
-  logger.info('send_response: prefilled, sleeping jitter', { reply_id, gap });
+  logger.info('send_response: cycle complete, sleeping jitter', { reply_id, gap, autoSent: autoSend });
   await new Promise((r) => setTimeout(r, gap));
 }

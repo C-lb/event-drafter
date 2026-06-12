@@ -28,6 +28,10 @@ interface SettingTypes {
   contacts_sheet: ContactsSheet;
   style_guide: string;
   llm_ready: boolean;
+  wa_ready: boolean;
+  operator_persona_name: string;
+  operator_persona_role: string;
+  auto_send_enabled: boolean;
   setup_completed: boolean;
   worker_heartbeat: { ts: number; node: string };
   llm_last_ok: { ts: number };

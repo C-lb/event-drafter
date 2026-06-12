@@ -41,7 +41,7 @@ export default async function SetupHome() {
       href: '/setup/wa',
       label: 'Connect WhatsApp Web',
       description: 'Scan the QR with your phone so the worker can pre-fill messages and read replies.',
-      done: false,
+      done: s.wa,
     },
   ];
 
@@ -51,7 +51,7 @@ export default async function SetupHome() {
   return (
     <section className="max-w-2xl space-y-4">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-xl font-semibold">Setup Wizard</h2>
+        <h2 className="text-3xl font-semibold tracking-tight">Setup Wizard</h2>
         <span className="text-xs text-neutral-600">
           {completedCount} of {steps.length} complete
         </span>

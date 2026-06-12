@@ -9,6 +9,8 @@ export const events = sqliteTable('events', {
   venue: text('venue'),
   edm_subject: text('edm_subject'),
   edm_body: text('edm_body'),
+  edm_summary: text('edm_summary'),
+  draft_overrides: text('draft_overrides', { mode: 'json' }).$type<Partial<Record<string, string>>>(),
   gmail_message_id: text('gmail_message_id'),
   status: text('status').notNull().$type<EventStatus>().default('draft'),
   created_at: integer('created_at', { mode: 'timestamp_ms' })
