@@ -16,6 +16,9 @@ export const SEL = {
   // Compose-area send button. WA Web renders it as the airplane icon on the
   // right of the input box. Matches both the aria-label and the data-icon.
   sendButton: 'footer button[aria-label="Send" i], footer span[data-icon="send"]',
+  // Pending-clock icon WA shows on an outbound bubble until the server acks
+  // the message (it then flips to msg-check / msg-dblcheck).
+  pendingClock: 'span[data-icon="msg-time"]',
 
   // ===== Reply scraping (added in Plan 5) =====
   // WARNING: these selectors are heuristic. WA does not expose a public DOM
@@ -45,6 +48,9 @@ export const WAIT = {
   inputReadyMs: 20_000,
   inputFilledMs: 10_000,
   conversationReadyMs: 15_000,
+  // After clicking send: how long to wait for the draft to appear as an
+  // outbound bubble without the pending clock before refusing to mark sent.
+  sendVerifyMs: 20_000,
 };
 
 export const WA_URL = {

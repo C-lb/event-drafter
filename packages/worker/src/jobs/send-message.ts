@@ -5,7 +5,7 @@ import { getSetting } from '@vip/core/settings';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { prefillDraft, clickSendInPrefilledChat } from '../wa/driver.js';
-import { WaInvalidNumber, WaNotLoggedIn, WaSelectorMismatch } from '../wa/session.js';
+import { WaInvalidNumber, WaNotLoggedIn, WaSelectorMismatch, WaSendNotConfirmed } from '../wa/session.js';
 import { sendDelayMs, jitterMs } from '../rate-limit.js';
 import { JobDeferred } from '../errors.js';
 import { logger } from '../logger.js';
@@ -63,12 +63,13 @@ export async function sendMessageHandler(job: Job): Promise<void> {
   const autoSend = getSetting('auto_send_enabled') === true;
   if (autoSend) {
     try {
-      await clickSendInPrefilledChat();
+      await clickSendInPrefilledChat(inv.draft_text);
     } catch (err) {
-      if (err instanceof WaSelectorMismatch) {
-        // Pre-fill worked, send button didn't. Leave the invite in `prefilled`
-        // so the operator can click send manually and Mark Sent.
-        logger.warn('send_message: auto-send selector mismatch — leaving as prefilled', {
+      if (err instanceof WaSelectorMismatch || err instanceof WaSendNotConfirmed) {
+        // Pre-fill worked but we could not confirm the message left WA. Leave
+        // the invite in `prefilled` so the operator can check the chat and
+        // either Mark Sent or resend — never claim `sent` on an unverified click.
+        logger.warn('send_message: send not confirmed — leaving as prefilled', {
           invite_id, err: err.message,
         });
         const gap = jitterMs();

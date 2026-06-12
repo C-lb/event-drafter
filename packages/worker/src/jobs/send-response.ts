@@ -5,7 +5,7 @@ import { getSetting } from '@vip/core/settings';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { prefillDraft, clickSendInPrefilledChat } from '../wa/driver.js';
-import { WaInvalidNumber, WaNotLoggedIn, WaSelectorMismatch } from '../wa/session.js';
+import { WaInvalidNumber, WaNotLoggedIn, WaSelectorMismatch, WaSendNotConfirmed } from '../wa/session.js';
 import { sendDelayMs, jitterMs } from '../rate-limit.js';
 import { JobDeferred } from '../errors.js';
 import { logger } from '../logger.js';
@@ -54,10 +54,10 @@ export async function sendResponseHandler(job: Job): Promise<void> {
   const autoSend = getSetting('auto_send_enabled') === true;
   if (autoSend) {
     try {
-      await clickSendInPrefilledChat();
+      await clickSendInPrefilledChat(reply.response_draft);
     } catch (err) {
-      if (err instanceof WaSelectorMismatch) {
-        logger.warn('send_response: auto-send selector mismatch — leaving as prefilled', {
+      if (err instanceof WaSelectorMismatch || err instanceof WaSendNotConfirmed) {
+        logger.warn('send_response: send not confirmed — leaving as prefilled', {
           reply_id, err: err.message,
         });
         const gap = jitterMs();

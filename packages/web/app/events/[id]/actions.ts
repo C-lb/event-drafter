@@ -279,6 +279,23 @@ export async function markSent(input: unknown) {
     .run();
 }
 
+export async function resendInvite(input: unknown) {
+  const { invite_id } = markSentSchema.parse(input);
+  const db = getDb();
+  const inv = db.select().from(invites).where(eq(invites.id, invite_id)).get();
+  if (!inv) throw new Error('invite not found');
+  if (inv.status !== 'sent' && inv.status !== 'failed') {
+    throw new Error(`can only resend a sent or failed invite (status: ${inv.status})`);
+  }
+  db.transaction((tx) => {
+    tx.update(invites)
+      .set({ status: 'approved', approved_at: new Date(), prefilled_at: null, sent_at: null })
+      .where(eq(invites.id, invite_id))
+      .run();
+    tx.insert(jobs).values({ kind: 'send_message', payload: { invite_id } }).run();
+  });
+}
+
 export async function reprefill(input: unknown) {
   const { invite_id } = markSentSchema.parse(input);
   const db = getDb();

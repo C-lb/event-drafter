@@ -7,7 +7,9 @@ import {
   WaInvalidNumber,
   WaNotLoggedIn,
   WaSelectorMismatch,
+  WaSendNotConfirmed,
 } from './session.js';
+import { evaluateSendState, type SendObservation, type SendState } from './send-verify.js';
 import { logger } from '../logger.js';
 
 // Stable absolute path so the web (Next.js) and worker (tsx) processes share
@@ -211,7 +213,7 @@ export async function ensureWaLoggedIn(): Promise<void> {
  * human-fingerprint signals WA looks for. Toggle off via auto_send_enabled
  * if WA Web starts challenging the account.
  */
-export async function clickSendInPrefilledChat(): Promise<void> {
+export async function clickSendInPrefilledChat(draftText: string): Promise<void> {
   const { page } = await ensureContext();
   await humanPause(page);
   const sendBtn = page.locator(SEL.sendButton).first();
@@ -222,9 +224,35 @@ export async function clickSendInPrefilledChat(): Promise<void> {
   }
   await humanPause(page);
   await sendBtn.click();
-  // Give WA a moment to deliver the message and clear the compose box.
-  await page.waitForTimeout(1500);
-  logger.info('wa: send button clicked');
+  logger.info('wa: send button clicked — verifying delivery');
+
+  // Don't trust the click: poll until the draft shows up as the newest
+  // outbound bubble with no pending clock. Marking an invite `sent` on an
+  // unconfirmed click is how messages silently go missing (e.g. the browser
+  // shuts down while WA still has the message queued).
+  let state: SendState = 'pending';
+  const deadline = Date.now() + WAIT.sendVerifyMs;
+  while (Date.now() < deadline) {
+    state = evaluateSendState(await observeSendState(page), draftText);
+    if (state === 'confirmed') {
+      logger.info('wa: send confirmed', { bytes: draftText.length });
+      return;
+    }
+    await page.waitForTimeout(500);
+  }
+  throw new WaSendNotConfirmed(state);
+}
+
+async function observeSendState(page: Page): Promise<SendObservation> {
+  const composeText =
+    (await page.locator(SEL.messageInputBox).first().innerText().catch(() => '')) || '';
+  const lastBubble = page.locator(SEL.outboundBubble).last();
+  const lastOutboundText = await lastBubble.innerText().catch(() => null);
+  const lastOutboundPending =
+    lastOutboundText === null
+      ? false
+      : (await lastBubble.locator(SEL.pendingClock).count().catch(() => 0)) > 0;
+  return { composeText, lastOutboundText, lastOutboundPending };
 }
 
 for (const sig of ['SIGINT', 'SIGTERM'] as const) {

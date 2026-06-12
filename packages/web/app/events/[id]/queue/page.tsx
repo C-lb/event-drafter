@@ -11,6 +11,7 @@ import {
   regenerateDraft,
   markSent,
   reprefill,
+  resendInvite,
   getAutoSendEnabled,
   setAutoSendEnabled,
 } from '../actions';
@@ -106,7 +107,7 @@ export default function QueuePage() {
             : 'Manual — worker pre-fills only; you click send in WA.'}{' '}
           {autoSend && (
             <span className="opacity-80">
-              Rate limiter still enforces ≥2:59 between sends and 5–8 per batch (CONTEXT.md).
+              Rate limiter still paces sends (gap + batch cool-downs + hourly cap).
             </span>
           )}
         </div>
@@ -204,6 +205,15 @@ export default function QueuePage() {
                         >
                           Regenerate
                         </button>
+                        {(r.status === 'sent' || r.status === 'failed') && (
+                          <button
+                            disabled={isPending}
+                            onClick={() => start(async () => { await resendInvite({ invite_id: r.invite_id }); refresh(); })}
+                            className="rounded bg-orange-600 px-2 py-1 text-white disabled:opacity-50"
+                          >
+                            Resend
+                          </button>
+                        )}
                       </>
                     )}
                   </div>

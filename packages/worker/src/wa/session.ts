@@ -34,3 +34,13 @@ export class WaInvalidNumber extends Error {
     this.name = 'WaInvalidNumber';
   }
 }
+
+export class WaSendNotConfirmed extends Error {
+  constructor(public lastState: 'pending' | 'not-sent') {
+    super(
+      `Clicked WA send but could not confirm delivery (last observed: ${lastState}). ` +
+      'Not marking as sent — check the chat manually or resend.',
+    );
+    this.name = 'WaSendNotConfirmed';
+  }
+}
