@@ -7,9 +7,10 @@ import { and, eq, gte, sql } from 'drizzle-orm';
 //
 // 2026-06-11: operator lowered MIN_GAP_MS from 179s to 30s (acknowledged
 // raised WA ban risk). Adjust together if relaxing further.
+// 2026-06-12: operator lowered gap to 10 s (jitter to 15 s).
 
-const MIN_GAP_MS = 30_000;              // 30 s floor between consecutive sends
-const MAX_GAP_MS = 60_000;              // upper bound on the randomised gap (1 min)
+const MIN_GAP_MS = 10_000;              // 10 s floor between consecutive sends
+const MAX_GAP_MS = 15_000;              // upper bound on the randomised gap
 const BATCH_LIMIT = 8;                  // after this many in a row, cool down
 const COOLDOWN_MIN_MS = 15 * 60_000;    // 15 min cool-down between batches
 const COOLDOWN_MAX_MS = 30 * 60_000;    // 30 min

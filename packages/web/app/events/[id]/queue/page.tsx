@@ -25,7 +25,7 @@ export default function QueuePage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [edits, setEdits] = useState<Record<number, string>>({});
   const [isPending, start] = useTransition();
-  const [filter, setFilter] = useState<'all' | 'pending' | 'drafted' | 'approved' | 'prefilled' | 'sent' | 'skipped' | 'failed'>('drafted');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'drafted' | 'approved' | 'prefilled' | 'sent' | 'skipped' | 'failed'>('all');
 
   const [autoSend, setAutoSend] = useState<boolean | null>(null);
   const refresh = () => start(async () => {
