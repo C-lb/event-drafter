@@ -78,11 +78,12 @@ export async function sendMessageHandler(job: Job): Promise<void> {
       }
       throw err;
     }
+    const now = new Date();
     db.update(invites)
-      .set({ status: 'sent', sent_at: new Date() })
+      .set({ status: 'sent', sent_at: now, sent_confirmed_at: now })
       .where(eq(invites.id, invite_id))
       .run();
-    logger.info('send_message: auto-sent', { invite_id });
+    logger.info('send_message: auto-sent (verified)', { invite_id });
   }
 
   const gap = jitterMs();

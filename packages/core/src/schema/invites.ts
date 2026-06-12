@@ -19,6 +19,10 @@ export const invites = sqliteTable(
     approved_at: integer('approved_at', { mode: 'timestamp_ms' }),
     prefilled_at: integer('prefilled_at', { mode: 'timestamp_ms' }),
     sent_at: integer('sent_at', { mode: 'timestamp_ms' }),
+    // Set only when the worker visually confirmed the message as an outbound
+    // bubble in WA (no pending clock). NULL on a `sent` invite means the send
+    // was never verified (manual Mark Sent, or pre-verification rows).
+    sent_confirmed_at: integer('sent_confirmed_at', { mode: 'timestamp_ms' }),
     status: text('status').notNull().$type<InviteStatus>().default('pending'),
     rsvp: text('rsvp').notNull().$type<Rsvp>().default('none'),
     attended: integer('attended', { mode: 'boolean' }).notNull().default(false),

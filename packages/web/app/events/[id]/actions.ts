@@ -138,6 +138,7 @@ export async function listInvitesForEvent(event_id: number) {
       status: invites.status,
       draft_text: invites.draft_text,
       sent_at: invites.sent_at,
+      sent_confirmed_at: invites.sent_confirmed_at,
       contact_id: contacts.id,
       first_name: contacts.first_name,
       last_name: contacts.last_name,

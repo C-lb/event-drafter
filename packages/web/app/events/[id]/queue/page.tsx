@@ -141,7 +141,20 @@ export default function QueuePage() {
             <li key={r.invite_id} className="rounded border border-neutral-200 bg-white p-3 space-y-2">
               <div className="flex items-baseline justify-between">
                 <p className="font-medium">{r.first_name}{r.last_name ? ' ' + r.last_name : ''} <span className="text-xs text-neutral-500">{r.phone_e164}</span></p>
-                <span className="rounded bg-neutral-100 px-2 py-0.5 text-xs">{r.status}</span>
+                <span className="flex items-center gap-1.5 text-xs">
+                  {r.status === 'sent' && (
+                    r.sent_confirmed_at ? (
+                      <span className="rounded bg-green-100 px-2 py-0.5 text-green-800" title={`Confirmed on WhatsApp at ${new Date(r.sent_confirmed_at).toLocaleString()}`}>
+                        ✓ confirmed on WA
+                      </span>
+                    ) : (
+                      <span className="rounded bg-amber-100 px-2 py-0.5 text-amber-800" title="Marked sent, but delivery was never verified against WhatsApp — check the chat or use Resend.">
+                        ⚠ not verified
+                      </span>
+                    )
+                  )}
+                  <span className="rounded bg-neutral-100 px-2 py-0.5">{r.status}</span>
+                </span>
               </div>
               {r.remarks && <p className="text-xs text-neutral-600 italic">remarks: {r.remarks}</p>}
 

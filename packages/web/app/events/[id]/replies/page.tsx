@@ -11,8 +11,19 @@ import {
   regenerateResponse,
   setEventReplyResolved,
 } from '../actions';
+import { triggerReplyCheck, latestReplyCheck } from '../../../replies/actions';
 
 type Row = Awaited<ReturnType<typeof listRepliesForEvent>>[number];
+type LastCheck = Awaited<ReturnType<typeof latestReplyCheck>>;
+
+function ago(ts: Date | number | null | undefined): string {
+  if (!ts) return '—';
+  const ms = Date.now() - (ts instanceof Date ? ts.getTime() : Number(ts));
+  if (ms < 60_000) return `${Math.round(ms / 1000)}s ago`;
+  if (ms < 3_600_000) return `${Math.round(ms / 60_000)}m ago`;
+  if (ms < 86_400_000) return `${Math.round(ms / 3_600_000)}h ago`;
+  return `${Math.round(ms / 86_400_000)}d ago`;
+}
 
 interface ClassificationVisual { label: string; glyph: string; cls: string }
 
@@ -38,10 +49,21 @@ export default function EventRepliesPage() {
   const [edits, setEdits] = useState<Record<number, string>>({});
   const [filter, setFilter] = useState<'all' | 'yes' | 'no' | 'maybe' | 'unclear'>('all');
   const [showResolved, setShowResolved] = useState(false);
+  const [lastCheck, setLastCheck] = useState<LastCheck | null>(null);
   const [isPending, start] = useTransition();
 
   const refresh = () =>
-    start(async () => setRows(await listRepliesForEvent(eventId, showResolved)));
+    start(async () => {
+      const [r, lc] = await Promise.all([
+        listRepliesForEvent(eventId, showResolved),
+        latestReplyCheck(),
+      ]);
+      setRows(r);
+      setLastCheck(lc);
+    });
+
+  const checkInFlight = lastCheck?.status === 'queued' || lastCheck?.status === 'running';
+  const checkNow = () => start(async () => { await triggerReplyCheck(); refresh(); });
 
   useEffect(() => {
     refresh();
@@ -56,15 +78,34 @@ export default function EventRepliesPage() {
     <section className="max-w-7xl space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-3xl font-semibold tracking-tight">Replies</h2>
-        <label className="flex items-center gap-1 text-xs">
-          <input
-            type="checkbox"
-            checked={showResolved}
-            onChange={(e) => setShowResolved(e.target.checked)}
-          />
-          Show resolved
-        </label>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-1 text-xs">
+            <input
+              type="checkbox"
+              checked={showResolved}
+              onChange={(e) => setShowResolved(e.target.checked)}
+            />
+            Show resolved
+          </label>
+          <button
+            onClick={checkNow}
+            disabled={checkInFlight}
+            className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          >
+            {checkInFlight ? 'Checking…' : 'Check now'}
+          </button>
+        </div>
       </div>
+
+      {lastCheck ? (
+        <p className="text-xs text-neutral-600">
+          Last check: <strong>{lastCheck.status}</strong> · started {ago(lastCheck.created_at)}
+          {lastCheck.finished_at ? ` · finished ${ago(lastCheck.finished_at)}` : ''}
+          {lastCheck.last_error ? ` · error: ${lastCheck.last_error.slice(0, 120)}` : ''}
+        </p>
+      ) : (
+        <p className="text-xs text-neutral-600">No checks have run yet.</p>
+      )}
 
       <div className="flex gap-2 text-xs">
         {(['all', 'yes', 'no', 'maybe', 'unclear'] as const).map((s) => (
