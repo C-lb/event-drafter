@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { StarterDraft } from '@vip/core/edm-templates';
+import type { StarterDraft } from '@event-drafter/core/edm-templates';
 import { saveDraftOverride, resetDraftOverride } from '../actions';
 
 interface Props {

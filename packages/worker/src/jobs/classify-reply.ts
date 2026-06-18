@@ -1,11 +1,11 @@
-import type { Job } from '@vip/core';
-import { getDb } from '@vip/core/db';
-import { contacts, events, invites, replies } from '@vip/core/schema';
+import type { Job } from '@event-drafter/core';
+import { getDb } from '@event-drafter/core/db';
+import { contacts, events, invites, replies } from '@event-drafter/core/schema';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { complete } from '../llm/client.js';
 import { buildClassifyAndDraftPrompt, parseClassifyAndDraft } from '../llm/prompts.js';
-import { getSetting } from '@vip/core/settings';
+import { getSetting } from '@event-drafter/core/settings';
 import { logger } from '../logger.js';
 
 const payloadSchema = z.object({ reply_id: z.number(), operator_first_name: z.string().optional() });

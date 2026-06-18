@@ -1,7 +1,7 @@
 'use server';
 
-import { getDb } from '@vip/core/db';
-import { jobs } from '@vip/core/schema';
+import { getDb } from '@event-drafter/core/db';
+import { jobs } from '@event-drafter/core/schema';
 import { and, eq, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 

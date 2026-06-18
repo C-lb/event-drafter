@@ -1,6 +1,6 @@
 # Auto-start worker on login (optional)
 
-Without this, the worker only runs when you have `npm run dev` (or `npm -w @vip/worker run start`) in a terminal. With it, the worker runs in the background from login, and cron jobs always fire.
+Without this, the worker only runs when you have `npm run dev` (or `npm -w @event-drafter/worker run start`) in a terminal. With it, the worker runs in the background from login, and cron jobs always fire.
 
 ## Install
 
@@ -9,8 +9,8 @@ Without this, the worker only runs when you have `npm run dev` (or `npm -w @vip/
 ```
 
 This:
-1. Builds the worker (`npm -w @vip/worker run build`)
-2. Writes a launchd plist to `~/Library/LaunchAgents/com.vip-event-drafter.worker.plist`
+1. Builds the worker (`npm -w @event-drafter/worker run build`)
+2. Writes a launchd plist to `~/Library/LaunchAgents/com.event-drafter.worker.plist`
 3. Loads it (it'll start running immediately and auto-start on every login)
 
 ## Logs
@@ -22,14 +22,14 @@ tail -f ./data/worker.out.log ./data/worker.err.log
 ## Stop / uninstall
 
 ```bash
-launchctl bootout gui/$(id -u)/com.vip-event-drafter.worker
-rm ~/Library/LaunchAgents/com.vip-event-drafter.worker.plist
+launchctl bootout gui/$(id -u)/com.event-drafter.worker
+rm ~/Library/LaunchAgents/com.event-drafter.worker.plist
 ```
 
 ## Re-install after code changes
 
 ```bash
-launchctl bootout gui/$(id -u)/com.vip-event-drafter.worker
+launchctl bootout gui/$(id -u)/com.event-drafter.worker
 ./scripts/install-launchd.sh
 ```
 

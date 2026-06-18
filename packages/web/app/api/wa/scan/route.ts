@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { setSetting } from '@vip/core/settings';
-import { waitForLogin, shutdownWa } from '@vip/worker/wa/driver';
+import { setSetting } from '@event-drafter/core/settings';
+import { waitForLogin, shutdownWa } from '@event-drafter/worker/wa/driver';
 
 export async function POST() {
   try {

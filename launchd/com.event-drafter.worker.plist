@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.vip-event-drafter.worker</string>
+    <string>com.event-drafter.worker</string>
 
     <key>ProgramArguments</key>
     <array>

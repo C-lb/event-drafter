@@ -1,9 +1,9 @@
 'use server';
 
 import { z } from 'zod';
-import { getDb } from '@vip/core/db';
-import { contacts, events, follow_ups, invites, jobs, replies } from '@vip/core/schema';
-import { getSetting, setSetting } from '@vip/core/settings';
+import { getDb } from '@event-drafter/core/db';
+import { contacts, events, follow_ups, invites, jobs, replies } from '@event-drafter/core/schema';
+import { getSetting, setSetting } from '@event-drafter/core/settings';
 import { and, eq, like, notInArray, or, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
@@ -333,7 +333,7 @@ export async function getAutoSendEnabled(): Promise<boolean> {
 export async function getRateLimitSnapshot() {
   // Late-imported so the worker package's better-sqlite3 native binding
   // isn't loaded until the action is actually called.
-  const { getRateLimitState, RATE_LIMIT_CONFIG } = await import('@vip/worker/rate-limit');
+  const { getRateLimitState, RATE_LIMIT_CONFIG } = await import('@event-drafter/worker/rate-limit');
   const state = getRateLimitState();
   return {
     config: RATE_LIMIT_CONFIG,

@@ -1,6 +1,6 @@
 import { google } from 'googleapis';
 import type { OAuth2Client, Credentials } from 'google-auth-library';
-import { getSetting, setSetting } from '@vip/core/settings';
+import { getSetting, setSetting } from '@event-drafter/core/settings';
 
 export const SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets.readonly',

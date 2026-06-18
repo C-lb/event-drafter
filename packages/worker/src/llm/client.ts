@@ -1,4 +1,4 @@
-import { setSetting } from '@vip/core/settings';
+import { setSetting } from '@event-drafter/core/settings';
 
 export const LLM_PROVIDER = (process.env.LLM_PROVIDER ?? 'ollama') as 'ollama' | 'anthropic';
 

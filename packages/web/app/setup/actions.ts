@@ -1,6 +1,6 @@
 'use server';
 
-import { setSetting, getSetting } from '@vip/core/settings';
+import { setSetting, getSetting } from '@event-drafter/core/settings';
 
 export async function markLLMReady(ready: boolean): Promise<void> {
   setSetting('llm_ready', ready);

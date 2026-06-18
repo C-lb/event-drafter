@@ -1,7 +1,7 @@
-import type { Job } from '@vip/core';
-import { getDb } from '@vip/core/db';
-import { contacts, events, invites } from '@vip/core/schema';
-import { getSetting } from '@vip/core/settings';
+import type { Job } from '@event-drafter/core';
+import { getDb } from '@event-drafter/core/db';
+import { contacts, events, invites } from '@event-drafter/core/schema';
+import { getSetting } from '@event-drafter/core/settings';
 import { and, eq, isNotNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { complete, MODEL } from '../llm/client.js';

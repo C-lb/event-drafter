@@ -1,12 +1,12 @@
 'use server';
 
 import { z } from 'zod';
-import { getDb } from '@vip/core/db';
-import { events, invites, replies } from '@vip/core/schema';
-import { summarizeEdm } from '@vip/core/edm-extract';
+import { getDb } from '@event-drafter/core/db';
+import { events, invites, replies } from '@event-drafter/core/schema';
+import { summarizeEdm } from '@event-drafter/core/edm-extract';
 import { desc, eq, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-import { listRecentMessages, fetchMessage } from '@vip/worker/google/gmail';
+import { listRecentMessages, fetchMessage } from '@event-drafter/worker/google/gmail';
 
 export async function listEvents() {
   const db = getDb();

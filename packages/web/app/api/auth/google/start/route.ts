@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
-import { buildAuthUrl } from '@vip/worker/google/oauth';
+import { buildAuthUrl } from '@event-drafter/worker/google/oauth';
 
 export async function GET() {
   const state = randomUUID();

@@ -15,7 +15,7 @@ import { logger } from '../logger.js';
 // Stable absolute path so the web (Next.js) and worker (tsx) processes share
 // one WA session — otherwise their different cwds give them different profiles
 // and scanning the QR in /setup/wa would not log the worker in.
-const PROFILE_DIR = process.env.VIP_WA_PROFILE_DIR ?? resolve(process.cwd(), 'data/wa-profile');
+const PROFILE_DIR = process.env.ED_WA_PROFILE_DIR ?? resolve(process.cwd(), 'data/wa-profile');
 
 export class WaProfileLocked extends Error {
   constructor(public profileDir: string) {

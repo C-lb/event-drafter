@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getDb } from '@/lib/db';
-import { jobs, events, contacts, replies } from '@vip/core/schema';
+import { jobs, events, contacts, replies } from '@event-drafter/core/schema';
 import { sql } from 'drizzle-orm';
 import { listEventsWithStats } from './events/actions';
 

@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { getSetting, setSetting } from '@vip/core/settings';
+import { getSetting, setSetting } from '@event-drafter/core/settings';
 
 const DEFAULT_GUIDE = `Tone: warm but brief. Write the way you would to a friend who happens to also be a senior business contact.
 Length: 2-4 sentences. Never longer.

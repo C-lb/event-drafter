@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { exchangeCode } from '@vip/worker/google/oauth';
+import { exchangeCode } from '@event-drafter/worker/google/oauth';
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);

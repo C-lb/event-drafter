@@ -1,7 +1,7 @@
 import cron from 'node-cron';
-import { getDb } from '@vip/core/db';
-import { jobs } from '@vip/core/schema';
-import type { JobKind } from '@vip/core';
+import { getDb } from '@event-drafter/core/db';
+import { jobs } from '@event-drafter/core/schema';
+import type { JobKind } from '@event-drafter/core';
 import { and, eq, gte, sql } from 'drizzle-orm';
 import { logger } from './logger.js';
 

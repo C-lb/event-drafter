@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { use } from 'react';
-import { getSetting } from '@vip/core/settings';
+import { getSetting } from '@event-drafter/core/settings';
 
 export const dynamic = 'force-dynamic';
 

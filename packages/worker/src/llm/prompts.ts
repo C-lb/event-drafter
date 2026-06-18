@@ -1,5 +1,5 @@
 import type { PromptBlock } from './client.js';
-import type { Contact, Event } from '@vip/core';
+import type { Contact, Event } from '@event-drafter/core';
 import { sanitizeDraft } from './sanitize.js';
 
 export interface AttendanceFact {

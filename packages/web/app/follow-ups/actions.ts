@@ -1,8 +1,8 @@
 'use server';
 
 import { z } from 'zod';
-import { getDb } from '@vip/core/db';
-import { contacts, events, follow_ups, invites, jobs } from '@vip/core/schema';
+import { getDb } from '@event-drafter/core/db';
+import { contacts, events, follow_ups, invites, jobs } from '@event-drafter/core/schema';
 import { eq, sql } from 'drizzle-orm';
 
 export async function listFollowUps() {

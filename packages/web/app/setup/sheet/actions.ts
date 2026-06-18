@@ -1,8 +1,8 @@
 'use server';
 
 import { z } from 'zod';
-import { getSetting, setSetting } from '@vip/core/settings';
-import { parseSheetUrl, previewSheet, getSpreadsheetTitle } from '@vip/worker/google/sheets';
+import { getSetting, setSetting } from '@event-drafter/core/settings';
+import { parseSheetUrl, previewSheet, getSpreadsheetTitle } from '@event-drafter/worker/google/sheets';
 
 const HISTORY_LIMIT = 8;
 

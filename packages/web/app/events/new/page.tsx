@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { searchInbox, createEventFromMessage, previewGmailMessage } from '../actions';
-import type { GmailMessageSummary } from '@vip/worker/google/gmail';
+import type { GmailMessageSummary } from '@event-drafter/worker/google/gmail';
 
 interface FullMessage {
   id: string;

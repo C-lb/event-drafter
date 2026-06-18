@@ -1,7 +1,7 @@
-import type { Job } from '@vip/core';
-import { getDb } from '@vip/core/db';
-import { contacts } from '@vip/core/schema';
-import { getSetting } from '@vip/core/settings';
+import type { Job } from '@event-drafter/core';
+import { getDb } from '@event-drafter/core/db';
+import { contacts } from '@event-drafter/core/schema';
+import { getSetting } from '@event-drafter/core/settings';
 import { fetchAllRows } from '../google/sheets.js';
 import { logger } from '../logger.js';
 import { eq, sql } from 'drizzle-orm';

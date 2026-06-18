@@ -11,7 +11,7 @@ let tmp: string;
 
 beforeEach(() => {
   tmp = mkdtempSync(join(tmpdir(), 'vip-test-'));
-  process.env.VIP_DB_PATH = join(tmp, 'app.db');
+  process.env.ED_DB_PATH = join(tmp, 'app.db');
   runMigrations();
 });
 

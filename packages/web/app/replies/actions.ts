@@ -1,8 +1,8 @@
 'use server';
 
 import { z } from 'zod';
-import { getDb } from '@vip/core/db';
-import { replies, invites, contacts, events, jobs } from '@vip/core/schema';
+import { getDb } from '@event-drafter/core/db';
+import { replies, invites, contacts, events, jobs } from '@event-drafter/core/schema';
 import { eq, sql, and, inArray, isNull } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 

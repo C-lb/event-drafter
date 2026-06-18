@@ -1,5 +1,5 @@
-import type { Job } from '@vip/core';
-import { JOB_KINDS, type JobKind } from '@vip/core/types';
+import type { Job } from '@event-drafter/core';
+import { JOB_KINDS, type JobKind } from '@event-drafter/core/types';
 import { noopHandler } from './noop.js';
 import { importContactsHandler } from './import-contacts.js';
 import { draftInviteHandler } from './draft-invite.js';

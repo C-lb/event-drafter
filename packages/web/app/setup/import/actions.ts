@@ -1,7 +1,7 @@
 'use server';
 
-import { getDb } from '@vip/core/db';
-import { jobs, contacts } from '@vip/core/schema';
+import { getDb } from '@event-drafter/core/db';
+import { jobs, contacts } from '@event-drafter/core/schema';
 import { sql } from 'drizzle-orm';
 import { markSetupCompleted } from '../actions';
 

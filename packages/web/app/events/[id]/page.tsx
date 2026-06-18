@@ -12,8 +12,8 @@ import { SummaryPanel } from './SummaryPanel';
 import { RsvpSummarySection } from './RsvpSummary';
 import { StarterDrafts } from './StarterDrafts';
 import { AutoRefresh } from '../../components/AutoRefresh';
-import { extractEdmSummary } from '@vip/core/edm-extract';
-import { renderStarterDrafts } from '@vip/core/edm-templates';
+import { extractEdmSummary } from '@event-drafter/core/edm-extract';
+import { renderStarterDrafts } from '@event-drafter/core/edm-templates';
 
 export const dynamic = 'force-dynamic';
 

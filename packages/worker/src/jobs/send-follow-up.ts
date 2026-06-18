@@ -1,6 +1,6 @@
-import type { Job } from '@vip/core';
-import { getDb } from '@vip/core/db';
-import { contacts, follow_ups, invites } from '@vip/core/schema';
+import type { Job } from '@event-drafter/core';
+import { getDb } from '@event-drafter/core/db';
+import { contacts, follow_ups, invites } from '@event-drafter/core/schema';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { prefillDraft } from '../wa/driver.js';

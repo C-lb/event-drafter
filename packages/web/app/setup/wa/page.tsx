@@ -1,4 +1,4 @@
-import { getSetting } from '@vip/core/settings';
+import { getSetting } from '@event-drafter/core/settings';
 import { WaSetupClient } from './client';
 
 export const dynamic = 'force-dynamic';

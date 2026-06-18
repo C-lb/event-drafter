@@ -1,5 +1,5 @@
-import { getDb } from '@vip/core/db';
-import { jobs } from '@vip/core/schema';
+import { getDb } from '@event-drafter/core/db';
+import { jobs } from '@event-drafter/core/schema';
 import { and, eq, gte, sql } from 'drizzle-orm';
 
 // See CONTEXT.md → "Sending cadence". Numbers calibrated to mimic a human

@@ -1,8 +1,8 @@
-import type { Job } from '@vip/core';
-import { getDb } from '@vip/core/db';
-import { contacts, events, follow_ups, invites, replies } from '@vip/core/schema';
+import type { Job } from '@event-drafter/core';
+import { getDb } from '@event-drafter/core/db';
+import { contacts, events, follow_ups, invites, replies } from '@event-drafter/core/schema';
 import { and, eq, isNotNull, lte, notInArray } from 'drizzle-orm';
-import { getSetting } from '@vip/core/settings';
+import { getSetting } from '@event-drafter/core/settings';
 import { complete } from '../llm/client.js';
 import { buildFollowUpPrompt } from '../llm/prompts.js';
 import { sanitizeDraft } from '../llm/sanitize.js';

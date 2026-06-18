@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getSetting } from '@vip/core/settings';
+import { getSetting } from '@event-drafter/core/settings';
 
 interface StepStatus {
   label: string;

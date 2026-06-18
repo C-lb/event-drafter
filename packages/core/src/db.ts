@@ -10,7 +10,7 @@ let _db: DB | null = null;
 let _sqlite: Database.Database | null = null;
 
 export function getDbPath(): string {
-  return process.env.VIP_DB_PATH ?? resolve(process.cwd(), 'data/app.db');
+  return process.env.ED_DB_PATH ?? resolve(process.cwd(), 'data/app.db');
 }
 
 export function getDb(): DB {

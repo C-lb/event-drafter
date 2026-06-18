@@ -3,7 +3,7 @@ set -euo pipefail
 
 PROJECT_PATH=$(cd "$(dirname "$0")/.." && pwd)
 NODE_PATH=$(command -v node)
-LABEL="com.vip-event-drafter.worker"
+LABEL="com.event-drafter.worker"
 PLIST_TEMPLATE="$PROJECT_PATH/launchd/$LABEL.plist"
 PLIST_DEST="$HOME/Library/LaunchAgents/$LABEL.plist"
 
@@ -13,7 +13,7 @@ if [ ! -f "$PLIST_TEMPLATE" ]; then
 fi
 
 echo "Building worker..."
-( cd "$PROJECT_PATH" && npm -w @vip/worker run build )
+( cd "$PROJECT_PATH" && npm -w @event-drafter/worker run build )
 
 echo "Installing $PLIST_DEST"
 sed -e "s|__NODE_PATH__|$NODE_PATH|g" -e "s|__PROJECT_PATH__|$PROJECT_PATH|g" "$PLIST_TEMPLATE" > "$PLIST_DEST"

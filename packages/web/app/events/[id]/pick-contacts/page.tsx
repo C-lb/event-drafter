@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { listCandidatesForEvent, enqueueDraftsForContacts } from '../actions';
-import type { Contact } from '@vip/core';
+import type { Contact } from '@event-drafter/core';
 
 export default function PickContactsPage() {
   const params = useParams<{ id: string }>();

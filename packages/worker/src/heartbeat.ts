@@ -1,4 +1,4 @@
-import { setSetting } from '@vip/core/settings';
+import { setSetting } from '@event-drafter/core/settings';
 
 let _lastBeat = 0;
 const BEAT_INTERVAL_MS = 5000;

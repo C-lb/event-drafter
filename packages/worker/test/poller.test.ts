@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { runMigrations } from '@vip/core/migrate';
-import { closeDb, getDb } from '@vip/core/db';
-import { jobs } from '@vip/core/schema';
+import { runMigrations } from '@event-drafter/core/migrate';
+import { closeDb, getDb } from '@event-drafter/core/db';
+import { jobs } from '@event-drafter/core/schema';
 import { eq } from 'drizzle-orm';
 import { tick } from '../src/poller.js';
 import { handlers } from '../src/jobs/index.js';
@@ -13,7 +13,7 @@ let tmp: string;
 
 beforeEach(() => {
   tmp = mkdtempSync(join(tmpdir(), 'vip-worker-test-'));
-  process.env.VIP_DB_PATH = join(tmp, 'app.db');
+  process.env.ED_DB_PATH = join(tmp, 'app.db');
   runMigrations();
 });
 

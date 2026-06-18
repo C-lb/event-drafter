@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { summarizeEdm } from '@vip/core/edm-extract';
+import { summarizeEdm } from '@event-drafter/core/edm-extract';
 import { createEventBlank } from '../../actions';
 
 function nowLocalRoundedToHour(): string {

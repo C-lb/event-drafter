@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { getSetting, setSetting } from '@vip/core/settings';
-import { getLoginState, shutdownWa } from '@vip/worker/wa/driver';
+import { getSetting, setSetting } from '@event-drafter/core/settings';
+import { getLoginState, shutdownWa } from '@event-drafter/worker/wa/driver';
 
 export async function GET(req: NextRequest) {
   const live = req.nextUrl.searchParams.get('live') === '1';

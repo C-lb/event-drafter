@@ -1,4 +1,4 @@
-import type { Job } from '@vip/core';
+import type { Job } from '@event-drafter/core';
 import { logger } from '../logger.js';
 
 export async function noopHandler(job: Job): Promise<void> {

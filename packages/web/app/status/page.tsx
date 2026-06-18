@@ -1,7 +1,7 @@
 import { getDb } from '@/lib/db';
-import { jobs } from '@vip/core/schema';
-import { getSetting } from '@vip/core/settings';
-import { SCHEDULES } from '@vip/worker/scheduler';
+import { jobs } from '@event-drafter/core/schema';
+import { getSetting } from '@event-drafter/core/settings';
+import { SCHEDULES } from '@event-drafter/worker/scheduler';
 import { nextRunFor, ago } from '@/lib/cron-format';
 import { eq, sql } from 'drizzle-orm';
 import { triggerCleanup } from './actions';

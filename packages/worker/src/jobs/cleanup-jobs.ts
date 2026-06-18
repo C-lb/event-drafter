@@ -1,6 +1,6 @@
-import type { Job } from '@vip/core';
-import { getDb } from '@vip/core/db';
-import { jobs } from '@vip/core/schema';
+import type { Job } from '@event-drafter/core';
+import { getDb } from '@event-drafter/core/db';
+import { jobs } from '@event-drafter/core/schema';
 import { and, eq, lt, ne, sql } from 'drizzle-orm';
 import { logger } from '../logger.js';
 

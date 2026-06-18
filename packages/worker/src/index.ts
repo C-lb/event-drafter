@@ -1,4 +1,4 @@
-import { runMigrations } from '@vip/core/migrate';
+import { runMigrations } from '@event-drafter/core/migrate';
 import { runForever } from './poller.js';
 import { logger } from './logger.js';
 import { runMissedRunCheck, startScheduler } from './scheduler.js';

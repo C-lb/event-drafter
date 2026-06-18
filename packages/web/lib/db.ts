@@ -1,1 +1,1 @@
-export { getDb, closeDb, getDbPath } from '@vip/core/db';
+export { getDb, closeDb, getDbPath } from '@event-drafter/core/db';

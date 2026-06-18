@@ -1,6 +1,6 @@
-import type { Job } from '@vip/core';
-import { getDb } from '@vip/core/db';
-import { invites, replies, jobs, contacts } from '@vip/core/schema';
+import type { Job } from '@event-drafter/core';
+import { getDb } from '@event-drafter/core/db';
+import { invites, replies, jobs, contacts } from '@event-drafter/core/schema';
 import { and, eq, gt, isNotNull, sql } from 'drizzle-orm';
 import { ensureWaLoggedIn, readChatInbound } from '../wa/driver.js';
 import { joinThreadText } from '../wa/reader.js';

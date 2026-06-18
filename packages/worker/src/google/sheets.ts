@@ -1,7 +1,7 @@
 import { google } from 'googleapis';
 import { authorizedClient } from './oauth.js';
 import { createHash } from 'node:crypto';
-import type { ContactsSheet } from '@vip/core/settings';
+import type { ContactsSheet } from '@event-drafter/core/settings';
 
 export interface SheetRow {
   first_name: string;
