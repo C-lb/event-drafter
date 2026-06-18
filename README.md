@@ -1,4 +1,4 @@
-# vip-event-drafter
+# event-drafter
 
 Local single-user tool to draft and track personalized WhatsApp invites for VIP contacts.
 
