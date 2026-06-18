@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { getDb } from '@vip/core/db';
 import { replies, invites, contacts, events, jobs } from '@vip/core/schema';
-import { eq, sql, and, inArray } from 'drizzle-orm';
+import { eq, sql, and, inArray, isNull } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
 export async function triggerReplyCheck(): Promise<void> {
@@ -105,6 +105,39 @@ export async function listAllReplies(opts: { includeResolved?: boolean } = {}) {
 
   const filtered = opts.includeResolved ? base : base.where(eq(replies.resolved, false));
   return filtered.orderBy(sql`${replies.detected_at} DESC`).limit(200).all();
+}
+
+export interface AwaitingInvite {
+  invite_id: number;
+  event_id: number;
+  event_name: string;
+  contact_name: string;
+  sent_at: Date | null;
+}
+
+/**
+ * VIPs who were sent an invite but haven't replied yet: invites in `sent`
+ * status with no row in `replies`. Independent of the resolved toggle (these
+ * have no reply to resolve). Ordered most-recently-invited first.
+ */
+export async function listAwaitingInvites(): Promise<AwaitingInvite[]> {
+  const db = getDb();
+  return db
+    .select({
+      invite_id: invites.id,
+      event_id: invites.event_id,
+      event_name: events.name,
+      contact_name: sql<string>`${contacts.first_name} || ' ' || COALESCE(${contacts.last_name}, '')`,
+      sent_at: invites.sent_at,
+    })
+    .from(invites)
+    .innerJoin(contacts, eq(invites.contact_id, contacts.id))
+    .innerJoin(events, eq(invites.event_id, events.id))
+    .leftJoin(replies, eq(replies.invite_id, invites.id))
+    .where(and(eq(invites.status, 'sent'), isNull(replies.id)))
+    .orderBy(sql`${invites.sent_at} DESC`)
+    .limit(300)
+    .all();
 }
 
 const resolveSchema = z.object({
