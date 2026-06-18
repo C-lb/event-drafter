@@ -8,13 +8,21 @@ interface StepStatus {
 }
 
 export async function SetupBanner() {
-  const steps: StepStatus[] = [
-    { label: 'LLM Provider', done: getSetting('llm_ready') === true, href: '/setup/llm' },
-    { label: 'Google Account', done: getSetting('google_tokens') !== null, href: '/setup/google' },
-    { label: 'Contacts Sheet', done: getSetting('contacts_sheet') !== null, href: '/setup/sheet' },
-    { label: 'Import Contacts', done: getSetting('setup_completed') === true, href: '/setup/import' },
-    { label: 'WhatsApp Web', done: getSetting('wa_ready') === true, href: '/setup/wa' },
-  ];
+  let steps: StepStatus[];
+  try {
+    steps = [
+      { label: 'LLM Provider', done: getSetting('llm_ready') === true, href: '/setup/llm' },
+      { label: 'Google Account', done: getSetting('google_tokens') !== null, href: '/setup/google' },
+      { label: 'Contacts Sheet', done: getSetting('contacts_sheet') !== null, href: '/setup/sheet' },
+      { label: 'Import Contacts', done: getSetting('setup_completed') === true, href: '/setup/import' },
+      { label: 'WhatsApp Web', done: getSetting('wa_ready') === true, href: '/setup/wa' },
+    ];
+  } catch {
+    // The root layout renders this banner, so it also runs during the static
+    // prerender of /_not-found at `next build` time — when no migrated DB
+    // exists. Don't crash the build over it; at runtime the DB is always there.
+    return null;
+  }
 
   const missing = steps.filter((s) => !s.done);
   if (missing.length === 0) return null;
