@@ -183,6 +183,50 @@ describe('classifyRow', () => {
     );
     expect(r.isInbound).toBe(true);
   });
+
+  // ===== Current WA build (verified live 2026-06-17): WA dropped the
+  // `true_`/`false_` data-id wrapper and the `.message-in/.message-out`
+  // classes. Our own messages now render with author = the operator's WA
+  // profile name (e.g. "caleb"), NOT "You" — so the only durable outbound
+  // signal is the message-id prefix: WhatsApp stamps `3EB0…` on every message
+  // the local client sends; received messages carry other prefixes (`3A…`).
+  it('own message: author is operator name, message-id 3EB0 → outbound', () => {
+    // This is the reported bug: previously fell through to default-inbound,
+    // so the worker drafted a reply to the operator's own text.
+    const r = classifyRow(
+      raw({ meta: '[9:33 pm, 17/06/2026] caleb: ', dataIdRaw: '3EB0003BEA82D4BA4C14AD' }),
+      'Ian',
+      '+6583217860',
+    );
+    expect(r.isInbound).toBe(false);
+  });
+
+  it('contact message: message-id 3AF1, author matches contact → inbound', () => {
+    const r = classifyRow(
+      raw({ meta: '[9:47 pm, 17/06/2026] ian 🌮: ', dataIdRaw: '3AF1C74333CE58276286' }),
+      'Ian',
+      '+6583217860',
+    );
+    expect(r.isInbound).toBe(true);
+  });
+
+  it('own message with 3EB0 id wins even when author coincidentally matches contact', () => {
+    const r = classifyRow(
+      raw({ meta: '[9:33 pm, 17/06/2026] Ada: ', dataIdRaw: '3EB0FF11' }),
+      contactName,
+      phoneE164,
+    );
+    expect(r.isInbound).toBe(false);
+  });
+
+  it('non-3EB0 message id does not force outbound (inbound default preserved)', () => {
+    const r = classifyRow(
+      raw({ meta: '[14:14, 10/06/2026] Some Stranger: ', dataIdRaw: '3A5599AABB' }),
+      contactName,
+      phoneE164,
+    );
+    expect(r.isInbound).toBe(true);
+  });
 });
 
 describe('joinThreadText', () => {

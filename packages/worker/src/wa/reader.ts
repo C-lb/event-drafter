@@ -42,17 +42,25 @@ function phoneTail(phoneE164: string | undefined): string {
  * Decides whether a raw row is inbound or outbound.
  *
  * Direction signal priority (highest confidence first):
- *  1. `data-id` prefix — `true_*` (sent by us) / `false_*` (received). This
- *     is part of WhatsApp's message-id storage model and is the most stable
- *     signal across UI/locale drifts.
- *  2. Author tail equals "You" or "From you" appears in meta — outbound.
- *  3. Author tail matches the contact's display name (word-bounded, case
+ *  1. `data-id` wrapper prefix — `true_*` (sent by us) / `false_*` (received).
+ *     This was WhatsApp's message-id storage model pre-2026-06. WA dropped it
+ *     mid-2026 (the `data-id` is now a bare message id), but it's kept first:
+ *     cheap, definitive when present, and forward-safe if WA reverts.
+ *  2. Message-id prefix `3EB0` — WhatsApp stamps this on every message the
+ *     local client SENDS; received messages carry server ids with other
+ *     prefixes (e.g. `3A…`). Verified live 2026-06-17. This is the durable
+ *     OUTBOUND signal on current builds, where the `true_/false_` wrapper and
+ *     the `.message-out` class are both gone and our own messages render with
+ *     author = the operator's profile name (not "You"). Only `3EB0` proves
+ *     outbound; its absence is NOT proof of inbound, so we fall through.
+ *  3. Author tail equals "You" or "From you" appears in meta — outbound.
+ *  4. Author tail matches the contact's display name (word-bounded, case
  *     insensitive) — inbound. Handles saved contacts.
- *  4. Author tail's digits end with the last 7 of the contact's phone —
+ *  5. Author tail's digits end with the last 7 of the contact's phone —
  *     inbound. Handles UNSAVED contacts where WA shows the phone in place of
  *     a name (the bug this addresses).
- *  5. CSS class `.message-out` — outbound (legacy, drifts).
- *  6. Ambiguous → INBOUND by default. The walk-back stops on the first
+ *  6. CSS class `.message-out` — outbound (legacy, drifts).
+ *  7. Ambiguous → INBOUND by default. The walk-back stops on the first
  *     outbound row, so misclassifying a noise row as inbound at worst adds
  *     junk that the per-invite date filter in check-replies drops, whereas
  *     misclassifying as outbound silently buries the rest of the thread.
@@ -65,6 +73,11 @@ export function classifyRow(
   const id = raw.dataIdRaw;
   if (id.startsWith('false_') || id.includes('_false_')) return { isInbound: true };
   if (id.startsWith('true_') || id.includes('_true_')) return { isInbound: false };
+
+  // `3EB0` = locally-generated outgoing message id. Present on our own
+  // messages, never on received ones. The single durable outbound signal on
+  // post-2026-06 WA builds.
+  if (/(^|_)3eb0/i.test(id)) return { isInbound: false };
 
   const authorMatch = raw.meta.match(/^\[[^\]]+\]\s+([^:]+):/);
   const author = authorMatch?.[1]?.trim() ?? '';
