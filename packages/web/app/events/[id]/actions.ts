@@ -456,6 +456,7 @@ export async function regenerateResponse(input: unknown): Promise<{ ok: true } |
         classification: null,
         classification_confidence: null,
         classification_summary: null,
+        classification_source: 'llm',
         response_draft: null,
         response_status: 'pending',
       })

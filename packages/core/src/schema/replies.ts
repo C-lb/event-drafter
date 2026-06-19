@@ -1,6 +1,6 @@
 import { sqliteTable, integer, text, real, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import type { ReplyClassification, ResponseStatus } from '../types.js';
+import type { ReplyClassification, ResponseStatus, ClassificationSource } from '../types.js';
 import { invites } from './invites.js';
 
 export const replies = sqliteTable(
@@ -19,6 +19,10 @@ export const replies = sqliteTable(
     classification: text('classification').$type<ReplyClassification>(),
     classification_confidence: real('classification_confidence'),
     classification_summary: text('classification_summary'),
+    classification_source: text('classification_source')
+      .$type<ClassificationSource>()
+      .notNull()
+      .default('llm'),
     response_draft: text('response_draft'),
     response_approved_at: integer('response_approved_at', { mode: 'timestamp_ms' }),
     response_prefilled_at: integer('response_prefilled_at', { mode: 'timestamp_ms' }),

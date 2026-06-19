@@ -10,7 +10,14 @@ import {
   editResponse,
   regenerateResponse,
 } from '../events/[id]/actions';
-import { setReplyResolved } from './actions';
+import { setReplyResolved, setReplyClassification } from './actions';
+
+const CLASSIFY_OPTIONS = [
+  { value: 'yes', label: 'Yes', cls: 'bg-green-600 text-white border-green-700' },
+  { value: 'no', label: 'No', cls: 'bg-red-600 text-white border-red-700' },
+  { value: 'maybe', label: 'Maybe', cls: 'bg-amber-500 text-white border-amber-600' },
+  { value: 'unclear', label: 'Unclear', cls: 'bg-neutral-500 text-white border-neutral-600' },
+] as const;
 
 function ago(ts: Date | number | null | undefined): string {
   if (!ts) return '—';
@@ -40,6 +47,7 @@ export interface ReplyRow {
   classification: string | null;
   confidence: number | null;
   summary: string | null;
+  classification_source: string | null;
   reply_text: string;
   response_draft: string | null;
   response_status: string | null;
@@ -55,6 +63,7 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
   const router = useRouter();
   const [isPending, start] = useTransition();
   const [edit, setEdit] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const editValue = edit ?? r.response_draft ?? '';
   const dirty = (r.response_draft ?? '') !== editValue;
@@ -98,10 +107,16 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
         >
           <span className="text-base leading-none">{cv.glyph}</span>
           <span className="mt-0.5 leading-none tracking-wide">{cv.label}</span>
-          {r.confidence !== null && r.confidence !== undefined && (
-            <span className="mt-0.5 text-[10px] font-normal opacity-90">
-              {Math.round(r.confidence * 100)}%
+          {r.classification_source === 'manual' ? (
+            <span className="mt-0.5 text-[10px] font-normal opacity-90" title="Classification set by operator">
+              ✎ manual
             </span>
+          ) : (
+            r.confidence !== null && r.confidence !== undefined && (
+              <span className="mt-0.5 text-[10px] font-normal opacity-90">
+                {Math.round(r.confidence * 100)}%
+              </span>
+            )
           )}
         </div>
 
@@ -117,28 +132,64 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
             <span className={`rounded px-2 py-0.5 text-xs ${stateCls}`}>{stateLabel}</span>
           </div>
           {r.summary && <p className="text-xs italic text-neutral-600">{r.summary}</p>}
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-neutral-500" suppressHydrationWarning>
             {r.detected_at ? new Date(r.detected_at as unknown as Date).toLocaleString() : ''}
             {r.resolved && r.resolved_at ? ` · resolved ${ago(r.resolved_at as unknown as Date)}` : ''}
           </p>
         </div>
 
-        <button
-          onClick={() =>
-            start(async () => {
-              await setReplyResolved({ reply_id: r.reply_id, resolved: !r.resolved });
-              refresh();
-            })
-          }
-          disabled={isPending}
-          className={`flex-none rounded border px-2 py-1 text-xs ${
-            r.resolved
-              ? 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'
-              : 'border-green-300 bg-green-50 text-green-800 hover:bg-green-100'
-          }`}
-        >
-          {r.resolved ? 'Reopen' : 'Mark resolved'}
-        </button>
+        <div className="flex w-28 flex-none flex-col gap-1">
+          <button
+            onClick={() =>
+              start(async () => {
+                await setReplyResolved({ reply_id: r.reply_id, resolved: !r.resolved });
+                refresh();
+              })
+            }
+            disabled={isPending}
+            className={`rounded border px-2 py-1 text-xs ${
+              r.resolved
+                ? 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'
+                : 'border-neutral-300 bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+            }`}
+          >
+            {r.resolved ? 'Reopen' : 'Mark resolved'}
+          </button>
+
+          <button
+            onClick={() => setPickerOpen((o) => !o)}
+            disabled={isPending}
+            className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
+            title="Override the classification regardless of the LLM's read"
+          >
+            Mark it as {pickerOpen ? '▴' : '▾'}
+          </button>
+
+          {pickerOpen && (
+            <div className="grid grid-cols-2 gap-1">
+              {CLASSIFY_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  disabled={isPending}
+                  onClick={() =>
+                    start(async () => {
+                      await setReplyClassification({ reply_id: r.reply_id, classification: opt.value });
+                      setPickerOpen(false);
+                      refresh();
+                    })
+                  }
+                  className={`rounded border px-1.5 py-1 text-xs font-semibold disabled:opacity-50 ${opt.cls} ${
+                    r.classification === opt.value
+                      ? 'ring-2 ring-neutral-400 ring-offset-1'
+                      : 'opacity-90 hover:opacity-100'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="rounded bg-neutral-50 p-2 text-sm">

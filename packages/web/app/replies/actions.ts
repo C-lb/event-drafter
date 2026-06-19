@@ -88,6 +88,7 @@ export async function listAllReplies(opts: { includeResolved?: boolean } = {}) {
       classification: replies.classification,
       confidence: replies.classification_confidence,
       summary: replies.classification_summary,
+      classification_source: replies.classification_source,
       reply_text: replies.wa_message_text,
       response_draft: replies.response_draft,
       response_status: replies.response_status,
@@ -154,6 +155,69 @@ export async function setReplyResolved(input: unknown): Promise<{ ok: true } | {
     .set({ resolved, resolved_at: resolved ? new Date() : null })
     .where(eq(replies.id, reply_id))
     .run();
+  revalidatePath('/replies');
+  return { ok: true };
+}
+
+const classificationSchema = z.object({
+  reply_id: z.number().int().positive(),
+  classification: z.enum(['yes', 'no', 'maybe', 'unclear']),
+});
+
+/**
+ * Operator override of a reply's classification. Forces the chosen value
+ * regardless of how the LLM read the message:
+ *  - confidence is pinned to 100% (it's a human decision, not a guess);
+ *  - classification_source is flipped to 'manual' so the override is a
+ *    first-class, queryable distinction (not inferred from the summary text);
+ *  - the invite's rsvp is re-synced, so the event RSVP tallies reflect it; and
+ *  - unless the response has already been approved/prefilled/sent, a fresh
+ *    `redraft_reply` job is enqueued to rewrite the draft to match the new
+ *    judgement. The draft is cleared meanwhile so the card visibly empties
+ *    until the worker repopulates it.
+ */
+export async function setReplyClassification(
+  input: unknown,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const parsed = classificationSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'invalid input' };
+  const { reply_id, classification } = parsed.data;
+
+  const db = getDb();
+  const reply = db.select().from(replies).where(eq(replies.id, reply_id)).get();
+  if (!reply) return { ok: false, error: 'reply not found' };
+
+  // A reply that's already approved/prefilled/sent has a committed message we
+  // must not silently overwrite — reclassify it, but leave the draft alone.
+  const locked =
+    reply.response_status === 'approved' ||
+    reply.response_status === 'prefilled' ||
+    reply.response_status === 'sent';
+
+  db.transaction((tx) => {
+    tx.update(replies)
+      .set({
+        classification,
+        classification_confidence: 1,
+        classification_source: 'manual',
+        classification_summary: `Manually set to ${classification.toUpperCase()} by operator`,
+        ...(locked ? {} : { response_draft: null, response_status: 'pending' }),
+      })
+      .where(eq(replies.id, reply_id))
+      .run();
+
+    // Keep the event's RSVP tally in step with the override (mirrors
+    // classify_reply): 'unclear' maps to 'none', everything else 1:1.
+    tx.update(invites)
+      .set({ rsvp: classification === 'unclear' ? 'none' : classification })
+      .where(eq(invites.id, reply.invite_id))
+      .run();
+
+    if (!locked) {
+      tx.insert(jobs).values({ kind: 'redraft_reply', payload: { reply_id }, status: 'queued' }).run();
+    }
+  });
+
   revalidatePath('/replies');
   return { ok: true };
 }

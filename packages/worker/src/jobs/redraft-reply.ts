@@ -4,20 +4,29 @@ import { contacts, events, invites, replies } from '@event-drafter/core/schema';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { complete } from '../llm/client.js';
-import { buildClassifyAndDraftPrompt, parseClassifyAndDraft } from '../llm/prompts.js';
+import { buildRedraftForClassificationPrompt, parseRedraft } from '../llm/prompts.js';
 import { getSetting } from '@event-drafter/core/settings';
 import { logger } from '../logger.js';
 
-const payloadSchema = z.object({ reply_id: z.number(), operator_first_name: z.string().optional() });
+const payloadSchema = z.object({ reply_id: z.number() });
 
 const DEFAULT_STYLE_GUIDE = 'Brief and warm. 1-3 sentences. No emoji.';
 
-export async function classifyReplyHandler(job: Job): Promise<void> {
-  const { reply_id, operator_first_name } = payloadSchema.parse(job.payload);
+/**
+ * Redraft a reply's response after the operator manually overrode its
+ * classification. Unlike classify_reply, this NEVER re-classifies — it honours
+ * the classification already on the row (which the operator just set) and only
+ * rewrites response_draft to match that judgement. The operator's
+ * classification, confidence (pinned to 1), summary, and 'manual' source are
+ * left intact.
+ */
+export async function redraftReplyHandler(job: Job): Promise<void> {
+  const { reply_id } = payloadSchema.parse(job.payload);
 
   const db = getDb();
   const reply = db.select().from(replies).where(eq(replies.id, reply_id)).get();
   if (!reply) throw new Error(`reply ${reply_id} not found`);
+  if (!reply.classification) throw new Error(`reply ${reply_id} has no classification to draft for`);
 
   const invite = db.select().from(invites).where(eq(invites.id, reply.invite_id)).get();
   if (!invite) throw new Error(`invite ${reply.invite_id} not found`);
@@ -30,40 +39,28 @@ export async function classifyReplyHandler(job: Job): Promise<void> {
 
   const style_guide = getSetting('style_guide') ?? DEFAULT_STYLE_GUIDE;
 
-  const prompt = buildClassifyAndDraftPrompt({
+  const prompt = buildRedraftForClassificationPrompt({
     event,
     contact,
     original_invite_text: invite.draft_text ?? '(original invite text not stored)',
     reply_text: reply.wa_message_text,
+    classification: reply.classification,
     style_guide,
-    operator_first_name,
   });
 
-  const result = await complete(prompt, 500, { json: true });
-  logger.info('classify_reply: model output', {
+  const result = await complete(prompt, 500, { json: false });
+  logger.info('redraft_reply: model output', {
     reply_id,
+    classification: reply.classification,
     in: result.input_tokens,
     out: result.output_tokens,
     cache_read: result.cache_read_input_tokens,
   });
 
-  const parsed = parseClassifyAndDraft(result.text);
+  const response_draft = parseRedraft(result.text);
 
-  db.transaction((tx) => {
-    tx.update(replies)
-      .set({
-        classification: parsed.classification,
-        classification_confidence: parsed.confidence,
-        classification_summary: parsed.summary,
-        classification_source: 'llm',
-        response_draft: parsed.response_draft,
-        response_status: 'drafted',
-      })
-      .where(eq(replies.id, reply_id))
-      .run();
-    tx.update(invites)
-      .set({ rsvp: parsed.classification === 'unclear' ? 'none' : parsed.classification })
-      .where(eq(invites.id, reply.invite_id))
-      .run();
-  });
+  db.update(replies)
+    .set({ response_draft, response_status: 'drafted' })
+    .where(eq(replies.id, reply_id))
+    .run();
 }

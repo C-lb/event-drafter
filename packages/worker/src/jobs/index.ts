@@ -6,6 +6,7 @@ import { draftInviteHandler } from './draft-invite.js';
 import { sendMessageHandler } from './send-message.js';
 import { checkRepliesHandler } from './check-replies.js';
 import { classifyReplyHandler } from './classify-reply.js';
+import { redraftReplyHandler } from './redraft-reply.js';
 import { sendResponseHandler } from './send-response.js';
 import { generateFollowUpsHandler } from './generate-follow-ups.js';
 import { sendFollowUpHandler } from './send-follow-up.js';
@@ -21,6 +22,7 @@ export const handlers: Record<JobKind, JobHandler> = {
   check_replies: checkRepliesHandler,
   classify_reply: classifyReplyHandler,
   draft_response: classifyReplyHandler,
+  redraft_reply: redraftReplyHandler,
   send_response: sendResponseHandler,
   generate_follow_ups: generateFollowUpsHandler,
   generate_follow_up: generateFollowUpsHandler,

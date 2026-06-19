@@ -242,6 +242,84 @@ export function parseClassifyAndDraft(raw: string): ClassifyAndDraftOutput {
   };
 }
 
+// ===== Redraft for an operator-forced classification =====
+
+export interface RedraftForClassificationInput {
+  event: Pick<Event, 'name' | 'event_date' | 'venue'>;
+  contact: Pick<Contact, 'first_name' | 'last_name' | 'remarks'>;
+  original_invite_text: string;
+  reply_text: string;
+  /** The classification the operator forced — the draft must honour this. */
+  classification: 'yes' | 'no' | 'maybe' | 'unclear';
+  style_guide: string;
+}
+
+const CLASSIFICATION_INTENT: Record<RedraftForClassificationInput['classification'], string> = {
+  yes: 'The operator has decided this contact IS attending. Draft a warm reply that treats them as coming, thanks them, and says we look forward to seeing them. Do not ask whether they can make it.',
+  no: 'The operator has decided this contact is NOT attending. Draft a gracious reply that accepts the decline with no guilt-tripping, says they will be missed, and leaves the door open for a future event.',
+  maybe: 'The operator has decided this contact is a MAYBE. Draft a no-pressure reply that acknowledges they are still deciding, offers to hold a spot or answer any questions, and makes it easy to confirm later.',
+  unclear: 'The operator has marked this reply UNCLEAR. Draft a friendly reply that gently asks them to confirm whether they can make it, without assuming a yes or a no.',
+};
+
+const REDRAFT_RULES = `You are drafting the operator's WhatsApp reply to a contact who responded to an event invitation. The operator has already JUDGED how to treat this contact (see the decision below); your job is only to write a reply that matches that decision, even if the contact's own words were ambiguous.
+
+Hard rules:
+- Output ONLY the message body. No JSON, no quotes, no Markdown, no "Here is the message".
+- 1-3 sentences.
+- Honour the operator's decision exactly. Do not hedge against it or re-litigate what the contact "really" meant.
+- Do not promise specific times or logistics unless the contact explicitly asked.
+- Do NOT append the operator's name, role, "Regards,", or any closing block. The original invite in this WhatsApp thread already carried the sign-off, so this reads as a continuation, not a new formal letter.
+
+${HUMAN_VOICE_RULES}`;
+
+export function buildRedraftForClassificationPrompt(input: RedraftForClassificationInput): PromptBlock {
+  const eventDateStr = new Date(input.event.event_date).toLocaleDateString('en-SG', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  });
+
+  const systemHeader = `# Style guide
+
+${input.style_guide}
+
+# Reply drafting rules
+
+${REDRAFT_RULES}
+
+# Event context
+
+Event: ${input.event.name}
+When: ${eventDateStr}
+Venue: ${input.event.venue ?? '(not specified)'}`;
+
+  const fullName = `${input.contact.first_name}${input.contact.last_name ? ' ' + input.contact.last_name : ''}`;
+  const userMessage = `# Contact
+Name: ${fullName} (preferred: ${input.contact.first_name})
+Remarks: ${input.contact.remarks ?? '(none)'}
+
+# Original invitation we sent
+${input.original_invite_text}
+
+# Their reply
+${input.reply_text}
+
+# Operator's decision: ${input.classification.toUpperCase()}
+${CLASSIFICATION_INTENT[input.classification]}
+
+Draft the reply body now.`;
+
+  return {
+    system: [{ type: 'text', text: systemHeader, cache_control: { type: 'ephemeral' } }],
+    user: userMessage,
+  };
+}
+
+export function parseRedraft(raw: string): string {
+  const stripped = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/```$/, '').trim();
+  const draft = sanitizeDraft(stripped);
+  if (!draft) throw new Error('redraft: empty response_draft');
+  return draft;
+}
+
 // ===== Follow-up (Plan 6) =====
 
 export interface FollowUpInput {
