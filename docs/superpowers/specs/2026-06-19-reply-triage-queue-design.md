@@ -54,7 +54,7 @@ tx:
 
 The actual WhatsApp send is the `send_response` worker job, picked up ~1s later
 — **not** the server action itself. Therefore a true "undo" needs no recall: we
-simply **defer the `approveResponse` call** by 5s on the client. If the operator
+simply **defer the `approveResponse` call** by 3s on the client. If the operator
 undoes within the window, the action is never called and nothing is ever
 enqueued. This is why the feature needs zero server changes.
 
@@ -95,11 +95,11 @@ draft is normal), with the sole exception of `Esc` (blurs the field). Exposes
 `{ highlightedId, advance() }`. `advance()` moves the highlight to the next card
 not already in a terminal state — **pure function, unit-tested**.
 
-### 3. `useDeferredSend({ onSend, delayMs: 5000 })`
+### 3. `useDeferredSend({ onSend, delayMs: 3000 })`
 The Gmail-undo state machine:
 
 ```
-idle --send()--> sending(timer) --(5s elapses)--> sent
+idle --send()--> sending(timer) --(3s elapses)--> sent
                       |                              |
                    undo()                         onSend() throws
                       v                              v
@@ -126,7 +126,7 @@ Consumes both hooks. Two render modes:
   - sent: `✓ sent to {name}`
   - skipped: `↷ skipped`
   - resolved: `✓ resolved`
-  Undo (only present during the 5s window) re-expands the card.
+  Undo (only present during the 3s window) re-expands the card.
 
 `Enter` maps to the status-aware primary action:
 - normal card → deferred `Approve & send`
@@ -145,10 +145,10 @@ Enter
  → ReplyCard.useDeferredSend.send()
     → collapse to "✓ sending… undo"
     → busy := true   (AutoRefresh pauses)
-    → start 5s timer
+    → start 3s timer
  → useQueueNavigation.advance()  (highlight jumps to next card)
  ... operator may hit undo here → timer cleared, card re-expands, busy recomputed
- → 5s elapses
+ → 3s elapses
     → approveResponse({ reply_id })   (enqueues send_response job)
     → collapse to "✓ sent"
     → busy recomputed; if no other engagement, AutoRefresh resumes ~1s later
@@ -162,7 +162,7 @@ If the deferred `approveResponse` (or `skipResponse`/`setReplyResolved`/
 - shows an inline red `Send failed — retry` with a retry button,
 - stays in the queue; the highlight does not strand on a vanished card.
 
-Because the action is deferred 5s, a failure surfaces ~5s after `Enter`, while
+Because the action is deferred 3s, a failure surfaces ~3s after `Enter`, while
 the operator may already be on a later card — the re-expanded error card is
 their signal to come back.
 
@@ -172,7 +172,7 @@ their signal to come back.
   `useDeferredSend` reducer with fake timers (undo cancels, fires after timeout,
   onSend-throws → error). These two hold the only real logic.
 - **Manual:** Playwright MCP pass on the dev server — `j`/`k` highlight moves,
-  `Enter` collapses + advances, `undo` within 5s prevents the send (assert no
+  `Enter` collapses + advances, `undo` within 3s prevents the send (assert no
   `send_response` job row appears), `e`/`Esc` focus round-trip, typing in the
   textarea does not trigger nav keys.
 - Presentational changes (hierarchy, collapsed row) verified visually.
