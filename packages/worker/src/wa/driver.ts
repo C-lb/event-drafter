@@ -180,7 +180,11 @@ export async function prefillDraft(phoneE164: string, text: string): Promise<voi
   throw new WaSelectorMismatch('input box did not receive prefilled text');
 }
 
-import { openChatAndReadInbound as _read, type ReadOpts } from './reader.js';
+import {
+  openChatAndReadInbound as _read,
+  scrapeOutboundReactions as _readReactions,
+  type ReadOpts,
+} from './reader.js';
 
 export async function readChatInbound(
   phoneE164: string,
@@ -189,6 +193,16 @@ export async function readChatInbound(
 ) {
   const { page } = await ensureContext();
   return _read(page, phoneE164, contactDisplayName, opts);
+}
+
+/**
+ * Reads reactions on the CURRENTLY-OPEN chat. Intended to be called right after
+ * `readChatInbound(phone, ...)` for the same contact — that call leaves the page
+ * on the contact's chat, so this scrapes it without an extra navigation.
+ */
+export async function readChatReactions(): Promise<string[]> {
+  const { page } = await ensureContext();
+  return _readReactions(page);
 }
 
 /**

@@ -282,3 +282,29 @@ const THREAD_JOINER = '\n— next message —\n';
 export function joinThreadText(messages: { text: string }[]): string {
   return messages.map((m) => m.text.trim()).filter(Boolean).join(THREAD_JOINER);
 }
+
+/**
+ * Scrapes the CURRENTLY-OPEN chat for reactions the recipient added to our
+ * outbound messages. WA (2026-06 build) renders each as a button with
+ * aria-label "reaction <emoji>. View reactions" inside the outbound row
+ * (a div[role="row"] containing a [data-icon="tail-out"]). Returns the raw
+ * aria-labels in DOM order (oldest → newest) for chooseReactionRsvp to
+ * interpret. Best-effort: returns [] on any scrape error.
+ */
+export async function scrapeOutboundReactions(page: Page): Promise<string[]> {
+  return page
+    .evaluate(() => {
+      const labels: string[] = [];
+      const rows = Array.from(document.querySelectorAll('div[role="row"]'));
+      for (const row of rows) {
+        if (!row.querySelector('[data-icon="tail-out"]')) continue; // outbound only
+        const badges = Array.from(row.querySelectorAll('[aria-label^="reaction "]'));
+        for (const b of badges) {
+          const l = (b.getAttribute('aria-label') || '').trim();
+          if (l) labels.push(l);
+        }
+      }
+      return labels;
+    })
+    .catch(() => []);
+}
