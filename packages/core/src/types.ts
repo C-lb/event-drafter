@@ -37,7 +37,7 @@ export type ReplyClassification = (typeof REPLY_CLASSIFICATIONS)[number];
 // Who decided a reply's classification: the LLM, or the operator overriding it
 // by hand from the /replies feed. A manual override pins confidence to 1 and
 // triggers a fresh draft keyed off the chosen judgement.
-export const CLASSIFICATION_SOURCES = ['llm', 'manual'] as const;
+export const CLASSIFICATION_SOURCES = ['llm', 'manual', 'reaction'] as const;
 export type ClassificationSource = (typeof CLASSIFICATION_SOURCES)[number];
 
 export const EVENT_STATUSES = ['draft', 'drafting', 'sending', 'closed'] as const;
