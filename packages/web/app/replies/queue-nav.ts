@@ -17,7 +17,7 @@ export function stepHighlight(
   if (orderedIds.length === 0) return null;
   const start = current === null ? (dir === 1 ? -1 : orderedIds.length) : orderedIds.indexOf(current);
   for (let i = start + dir; i >= 0 && i < orderedIds.length; i += dir) {
-    if (!isTerminal(orderedIds[i])) return orderedIds[i];
+    if (!isTerminal(orderedIds[i]!)) return orderedIds[i]!;
   }
   return current;
 }
@@ -31,10 +31,10 @@ export function advanceHighlight(
 ): number | null {
   const start = current === null ? -1 : orderedIds.indexOf(current);
   for (let i = start + 1; i < orderedIds.length; i++) {
-    if (!isTerminal(orderedIds[i])) return orderedIds[i];
+    if (!isTerminal(orderedIds[i]!)) return orderedIds[i]!;
   }
   for (let i = start - 1; i >= 0; i--) {
-    if (!isTerminal(orderedIds[i])) return orderedIds[i];
+    if (!isTerminal(orderedIds[i]!)) return orderedIds[i]!;
   }
   return null;
 }
