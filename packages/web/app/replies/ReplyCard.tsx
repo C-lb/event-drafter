@@ -193,6 +193,10 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
             <span className="mt-0.5 text-[10px] font-normal opacity-90" title="Classification set by operator">
               ✎ manual
             </span>
+          ) : r.classification_source === 'reaction' ? (
+            <span className="mt-0.5 text-[10px] font-normal opacity-90" title="Set from a WhatsApp reaction">
+              ⚡ reaction
+            </span>
           ) : (
             r.confidence !== null && r.confidence !== undefined && (
               <span className="mt-0.5 text-[10px] font-normal opacity-90">
