@@ -24,6 +24,7 @@ export function createDeferredSend(opts: {
 }): DeferredSend {
   let state: SendState = { phase: 'idle' };
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let disposed = false;
 
   const set = (s: SendState) => {
     state = s;
@@ -35,15 +36,19 @@ export function createDeferredSend(opts: {
       return state;
     },
     send() {
-      if (state.phase !== 'idle') return;
+      if (disposed || state.phase !== 'idle') return;
       set({ phase: 'sending' });
       timer = setTimeout(async () => {
         timer = null;
         try {
           await opts.onSend();
-          set({ phase: 'sent' });
+          if (!disposed) {
+            set({ phase: 'sent' });
+          }
         } catch (e) {
-          set({ phase: 'error', message: e instanceof Error ? e.message : 'send failed' });
+          if (!disposed) {
+            set({ phase: 'error', message: e instanceof Error ? e.message : 'send failed' });
+          }
         }
       }, opts.delayMs);
     },
@@ -56,6 +61,7 @@ export function createDeferredSend(opts: {
       set({ phase: 'idle' });
     },
     dispose() {
+      disposed = true;
       if (timer) {
         clearTimeout(timer);
         timer = null;

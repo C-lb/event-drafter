@@ -52,4 +52,17 @@ describe('createDeferredSend', () => {
     d.send();
     expect(d.state.phase).toBe('sending');
   });
+
+  it('does not transition after dispose() while onSend is pending', async () => {
+    const seen: SendState[] = [];
+    let resolveSend: () => void = () => {};
+    const onSend = vi.fn(() => new Promise<void>((res) => { resolveSend = res; }));
+    const d = createDeferredSend({ onSend, delayMs: 3000, onChange: (s) => seen.push(s) });
+    d.send();
+    await vi.advanceTimersByTimeAsync(3000);
+    d.dispose();
+    resolveSend();
+    await Promise.resolve();
+    expect(seen.map((s) => s.phase)).toEqual(['sending']);
+  });
 });
