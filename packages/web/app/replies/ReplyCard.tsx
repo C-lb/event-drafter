@@ -216,7 +216,14 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
 
         <div className="flex w-28 flex-none flex-col gap-1">
           <button
-            onClick={() => doCollapse('resolved', () => setReplyResolved({ reply_id: r.reply_id, resolved: !r.resolved }))}
+            onClick={() =>
+              r.resolved
+                ? start(async () => {
+                    await setReplyResolved({ reply_id: r.reply_id, resolved: false });
+                    refresh();
+                  })
+                : doCollapse('resolved', () => setReplyResolved({ reply_id: r.reply_id, resolved: true }))
+            }
             disabled={isPending}
             className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
           >
