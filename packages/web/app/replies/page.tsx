@@ -7,7 +7,8 @@ import {
   triggerReplyCheck,
   resolvedReplyCount,
 } from './actions';
-import { ReplyCard, type ReplyRow } from './ReplyCard';
+import { type ReplyRow } from './ReplyCard';
+import { RepliesQueue } from './RepliesQueue';
 import { AutoRefresh } from '../components/AutoRefresh';
 
 export const dynamic = 'force-dynamic';
@@ -89,7 +90,6 @@ export default async function AllRepliesPage({ searchParams }: PageProps) {
 
   return (
     <section className="max-w-7xl space-y-3">
-      <AutoRefresh active={inFlight} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-3xl font-semibold tracking-tight">
           {includeResolved ? 'All replies (incl. resolved)' : 'All replies'}
@@ -134,7 +134,9 @@ export default async function AllRepliesPage({ searchParams }: PageProps) {
       )}
 
       {filter === 'awaiting' ? (
-        awaiting.length === 0 ? (
+        <>
+        <AutoRefresh active={inFlight} />
+        {awaiting.length === 0 ? (
           <p className="rounded border border-dashed border-neutral-300 bg-neutral-50 p-4 text-sm text-neutral-600">
             Everyone who was sent an invite has replied.
           </p>
@@ -161,7 +163,8 @@ export default async function AllRepliesPage({ searchParams }: PageProps) {
               </li>
             ))}
           </ul>
-        )
+        )}
+        </>
       ) : visibleReplies.length === 0 ? (
         <p className="rounded border border-dashed border-neutral-300 bg-neutral-50 p-4 text-sm text-neutral-600">
           {filter === 'all'
@@ -171,11 +174,7 @@ export default async function AllRepliesPage({ searchParams }: PageProps) {
             : `No ${FILTER_LABEL[filter].toLowerCase()} replies in this view.`}
         </p>
       ) : (
-        <ul className="space-y-2">
-          {visibleReplies.map((r) => (
-            <ReplyCard key={r.reply_id} r={r as ReplyRow} />
-          ))}
-        </ul>
+        <RepliesQueue replies={visibleReplies as ReplyRow[]} active={inFlight} />
       )}
     </section>
   );
