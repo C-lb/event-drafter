@@ -3,7 +3,7 @@
  * When WA changes its markup (it does, multiple times per year),
  * update only this file. Names are stable; implementations are not.
  *
- * Last verified against WA Web build: 2026-06-10
+ * Last verified against WA Web build: 2026-06-20
  */
 
 export const SEL = {
@@ -16,8 +16,11 @@ export const SEL = {
   // Compose-area send button. WA Web renders it as the airplane icon on the
   // right of the input box. Matches both the aria-label and the data-icon.
   sendButton: 'footer button[aria-label="Send" i], footer span[data-icon="send"]',
-  // Pending-clock icon WA shows on an outbound bubble until the server acks
-  // the message (it then flips to msg-check / msg-dblcheck).
+  // DEPRECATED (pre-2026-06 WA build): the pending-clock icon. WA's 2026-06
+  // refresh removed msg-time/msg-check/msg-dblcheck and moved delivery state to
+  // an aria-label ("Pending"/"Sent"/"Delivered"/"Read") on the bubble's status
+  // node, read in driver.observeSendState via statusTextIsPending. Kept only as
+  // a fallback for older WA builds.
   pendingClock: 'span[data-icon="msg-time"]',
 
   // ===== Reply scraping (added in Plan 5) =====
@@ -28,11 +31,14 @@ export const SEL = {
   inboundBubble: 'div.message-in, [data-pre-plain-text]:not([data-pre-plain-text*="From you"])',
   // Outbound detection — WA periodically renames the css class. Try several
   // signals and union the matches:
-  //  1. Legacy `.message-out` class on the bubble.
-  //  2. data-id attribute on the bubble whose value indicates "from me"
-  //     (the format used since ~2022 is `true_<chat>_<msg>` for outbound).
-  //  3. New obfuscated classes that still co-occur with the outbound tail.
+  //  1. 2026-06 refresh: the message row contains the outbound tail icon
+  //     `data-icon="tail-out"` (inbound rows carry `tail-in`). This is the only
+  //     signal that survives the refresh — verified live 2026-06-20.
+  //  2. Legacy `.message-out` class on the bubble (pre-refresh builds).
+  //  3. data-id attribute whose value indicates "from me" (`true_<chat>_<msg>`).
+  //  4. `data-pre-plain-text` containing "From you".
   outboundBubble: [
+    'div[role="row"]:has([data-icon="tail-out"])',
     'div.message-out',
     'div[class*="message-out"]',
     'div[data-id^="true_"]',

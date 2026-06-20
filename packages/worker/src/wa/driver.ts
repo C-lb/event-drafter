@@ -9,7 +9,12 @@ import {
   WaSelectorMismatch,
   WaSendNotConfirmed,
 } from './session.js';
-import { evaluateSendState, type SendObservation, type SendState } from './send-verify.js';
+import {
+  evaluateSendState,
+  statusTextIsPending,
+  type SendObservation,
+  type SendState,
+} from './send-verify.js';
 import { logger } from '../logger.js';
 
 // Stable absolute path so the web (Next.js) and worker (tsx) processes share
@@ -248,10 +253,27 @@ async function observeSendState(page: Page): Promise<SendObservation> {
     (await page.locator(SEL.messageInputBox).first().innerText().catch(() => '')) || '';
   const lastBubble = page.locator(SEL.outboundBubble).last();
   const lastOutboundText = await lastBubble.innerText().catch(() => null);
-  const lastOutboundPending =
-    lastOutboundText === null
-      ? false
-      : (await lastBubble.locator(SEL.pendingClock).count().catch(() => 0)) > 0;
+  let lastOutboundPending = false;
+  if (lastOutboundText !== null) {
+    // WA 2026-06: delivery state is an aria-label ("Pending"/"Sent"/"Delivered"/
+    // "Read", often space-padded e.g. " Delivered ") on a status node inside the
+    // bubble. Collect the bubble's aria-labels and pick the status one. If none
+    // is present (older WA build), fall back to the legacy pending clock.
+    const statusLabel = await lastBubble
+      .evaluate((el) => {
+        const labels = Array.from(el.querySelectorAll('[aria-label]')).map(
+          (n) => (n.getAttribute('aria-label') || '').trim(),
+        );
+        return labels.find((l) => /^(pending|sending|sent|delivered|read)$/i.test(l)) ?? null;
+      })
+      .catch(() => null);
+    if (statusLabel !== null) {
+      lastOutboundPending = statusTextIsPending(statusLabel);
+    } else {
+      lastOutboundPending =
+        (await lastBubble.locator(SEL.pendingClock).count().catch(() => 0)) > 0;
+    }
+  }
   return { composeText, lastOutboundText, lastOutboundPending };
 }
 

@@ -32,6 +32,21 @@ function containsDraft(haystack: string, draft: string): boolean {
   return needle.length > 0 && haystack.replace(/\s+/g, '').includes(needle);
 }
 
+/**
+ * WhatsApp Web's 2026-06 markup refresh dropped the old delivery-tick data-icons
+ * (`msg-time` / `msg-check` / `msg-dblcheck`) and now exposes the state as an
+ * aria-label on the outbound bubble's status node: "Pending", "Sent",
+ * "Delivered", "Read". A message is only still in flight while that label reads
+ * pending/sending. Anything else — including a missing or unreadable label — is
+ * treated as NOT pending, so a rendered outbound bubble carrying our text is
+ * never left stuck reporting `pending` forever (the failure that left genuinely
+ * sent messages logged as unsent).
+ */
+export function statusTextIsPending(label: string | null | undefined): boolean {
+  if (!label) return false;
+  return /\b(pending|sending)\b/i.test(label);
+}
+
 export function evaluateSendState(obs: SendObservation, draft: string): SendState {
   if (containsDraft(obs.composeText, draft)) return 'not-sent';
   if (obs.lastOutboundText !== null && containsDraft(obs.lastOutboundText, draft)) {

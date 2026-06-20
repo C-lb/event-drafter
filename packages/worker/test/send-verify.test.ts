@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { evaluateSendState, type SendObservation } from '../src/wa/send-verify.js';
+import {
+  evaluateSendState,
+  statusTextIsPending,
+  type SendObservation,
+} from '../src/wa/send-verify.js';
 
 const DRAFT = 'Hi David, you are warmly invited to our private tasting on 20 June.';
 
@@ -56,5 +60,27 @@ describe('evaluateSendState', () => {
 
   it('handles drafts shorter than the prefix window', () => {
     expect(evaluateSendState(obs({ lastOutboundText: 'ok' }), 'ok')).toBe('confirmed');
+  });
+});
+
+describe('statusTextIsPending', () => {
+  it('treats the WA "Pending" status label as in-flight', () => {
+    expect(statusTextIsPending('Pending')).toBe(true);
+  });
+
+  it('treats "Sending" as in-flight', () => {
+    expect(statusTextIsPending(' Sending ')).toBe(true);
+  });
+
+  it('treats Sent / Delivered / Read as no longer pending', () => {
+    expect(statusTextIsPending('Sent')).toBe(false);
+    expect(statusTextIsPending('Delivered')).toBe(false);
+    expect(statusTextIsPending('Read')).toBe(false);
+  });
+
+  it('treats a missing/unreadable status as not pending (so a rendered outbound bubble is not stuck forever)', () => {
+    expect(statusTextIsPending(null)).toBe(false);
+    expect(statusTextIsPending('')).toBe(false);
+    expect(statusTextIsPending(undefined)).toBe(false);
   });
 });
