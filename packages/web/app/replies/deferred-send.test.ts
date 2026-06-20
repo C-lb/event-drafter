@@ -53,6 +53,21 @@ describe('createDeferredSend', () => {
     expect(d.state.phase).toBe('sending');
   });
 
+  it('allows send() to retry after error', async () => {
+    const onSend = vi.fn()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce(undefined);
+    const d = createDeferredSend({ onSend, delayMs: 3000, onChange: () => {} });
+    d.send();
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(d.state.phase).toBe('error');
+    d.send(); // retry from error
+    expect(d.state.phase).toBe('sending');
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(onSend).toHaveBeenCalledTimes(2);
+    expect(d.state.phase).toBe('sent');
+  });
+
   it('does not transition after dispose() while onSend is pending', async () => {
     const seen: SendState[] = [];
     let resolveSend: () => void = () => {};

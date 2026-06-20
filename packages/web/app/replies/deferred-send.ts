@@ -36,7 +36,8 @@ export function createDeferredSend(opts: {
       return state;
     },
     send() {
-      if (disposed || state.phase !== 'idle') return;
+      if (disposed) return;
+      if (state.phase !== 'idle' && state.phase !== 'error') return;
       set({ phase: 'sending' });
       timer = setTimeout(async () => {
         timer = null;

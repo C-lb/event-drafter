@@ -79,6 +79,9 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
   const canApprove = !!editValue.trim() && status !== 'approved' && status !== 'sent';
 
   const send = useDeferredSend(async () => {
+    if (dirty) {
+      await editResponse({ reply_id: r.reply_id, response_draft: editValue });
+    }
     await approveResponse({ reply_id: r.reply_id });
     queue.removePending(r.reply_id);
     refresh();

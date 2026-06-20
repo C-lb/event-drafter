@@ -19,6 +19,11 @@ export function useDeferredSend(onSend: () => Promise<void>, delayMs = 3000) {
     });
   }
 
+  // Tradeoff: if the card unmounts during the 3 s undo window (e.g. a hot
+  // reload or an unlikely router reconciliation that destroys the node), dispose
+  // fires here and clears the pending timer — the send is dropped silently.
+  // This is acceptable: the queue suppresses refresh while busy, and
+  // router.refresh() reconciles by key without unmounting live cards.
   useEffect(() => () => ctrl.current?.dispose(), []);
 
   return {
