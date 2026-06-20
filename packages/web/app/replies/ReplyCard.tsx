@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -11,6 +11,8 @@ import {
   regenerateResponse,
 } from '../events/[id]/actions';
 import { setReplyResolved, setReplyClassification } from './actions';
+import { useQueue } from './QueueProvider';
+import { useDeferredSend } from './useDeferredSend';
 
 const CLASSIFY_OPTIONS = [
   { value: 'yes', label: 'Yes', cls: 'bg-green-600 text-white border-green-700' },
@@ -61,15 +63,97 @@ export interface ReplyRow {
 
 export function ReplyCard({ r }: { r: ReplyRow }) {
   const router = useRouter();
+  const queue = useQueue();
   const [isPending, start] = useTransition();
   const [edit, setEdit] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState<null | 'skipped' | 'resolved' | 'sentManual'>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const editValue = edit ?? r.response_draft ?? '';
   const dirty = (r.response_draft ?? '') !== editValue;
   const cv = classificationVisual(r.classification);
   const status = r.response_status ?? 'pending';
+  const refresh = () => router.refresh();
 
+  const canApprove = !!editValue.trim() && status !== 'approved' && status !== 'sent';
+
+  const send = useDeferredSend(async () => {
+    await approveResponse({ reply_id: r.reply_id });
+    queue.removePending(r.reply_id);
+    refresh();
+  });
+
+  // A card is terminal once it has collapsed or a send is in flight/done.
+  const terminal =
+    collapsed !== null || send.state.phase === 'sending' || send.state.phase === 'sent';
+
+  // Auto-advance after an action lives in QueueProvider's Enter handler, which
+  // reads each card's isTerminal(); the card itself does not push the highlight.
+
+  const approveAndSend = () => {
+    queue.addPending(r.reply_id);
+    send.send();
+  };
+
+  const undoSend = () => {
+    send.undo();
+    queue.removePending(r.reply_id);
+  };
+
+  const doCollapse = (kind: 'skipped' | 'resolved' | 'sentManual', action: () => Promise<unknown>) => {
+    start(async () => {
+      await action();
+      setCollapsed(kind);
+      refresh();
+    });
+  };
+
+  // Register keyboard handlers with the queue.
+  useEffect(() => {
+    const primary = () => {
+      if (status === 'prefilled') {
+        doCollapse('sentManual', () => markResponseSent({ reply_id: r.reply_id }));
+      } else if (canApprove) {
+        approveAndSend();
+      }
+    };
+    const focusEditor = () => textareaRef.current?.focus();
+    const isTerminal = () => terminal;
+    return queue.registerCard(r.reply_id, { primary, focusEditor, isTerminal });
+    // re-register when the inputs to these closures change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [r.reply_id, status, canApprove, terminal]);
+
+  const highlighted = queue.highlightedId === r.reply_id;
+
+  // ---- Collapsed render ----
+  if (terminal) {
+    let label: string;
+    if (send.state.phase === 'sending') label = `✓ sending to ${r.contact_name}…`;
+    else if (send.state.phase === 'sent') label = `✓ sent to ${r.contact_name}`;
+    else if (collapsed === 'skipped') label = '↷ skipped';
+    else if (collapsed === 'resolved') label = '✓ resolved';
+    else label = `✓ sent to ${r.contact_name}`;
+
+    return (
+      <li className="flex items-center justify-between rounded border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-600">
+        <span>{label}</span>
+        {send.state.phase === 'sending' && (
+          <button
+            onClick={undoSend}
+            className="rounded border border-neutral-300 bg-white px-2 py-0.5 text-xs font-medium text-blue-700 hover:bg-neutral-50"
+          >
+            undo
+          </button>
+        )}
+      </li>
+    );
+  }
+
+  // ---- Expanded render ----
+  let stateLabel: string;
+  let stateCls: string;
   const hadPriorResponse = !!r.response_sent_at;
   const inboundAfterReply =
     hadPriorResponse &&
@@ -77,9 +161,6 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
     r.response_sent_at &&
     new Date(r.wa_sent_at as unknown as Date).getTime() >
       new Date(r.response_sent_at as unknown as Date).getTime();
-
-  let stateLabel: string;
-  let stateCls: string;
   if (r.resolved) {
     stateLabel = 'resolved'; stateCls = 'bg-neutral-200 text-neutral-600';
   } else if (status === 'pending' && hadPriorResponse && !inboundAfterReply) {
@@ -92,13 +173,11 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
     stateLabel = status; stateCls = 'bg-neutral-100 text-neutral-600';
   }
 
-  const refresh = () => router.refresh();
-
   return (
     <li
-      className={`rounded border bg-white p-3 text-sm ${
-        r.resolved ? 'border-neutral-200 opacity-70' : 'border-neutral-200'
-      } space-y-2`}
+      className={`rounded border bg-white p-3 text-sm space-y-2 ${
+        highlighted ? 'border-blue-400 ring-2 ring-blue-200' : 'border-neutral-200'
+      } ${r.resolved ? 'opacity-70' : ''}`}
     >
       <div className="flex items-start gap-3">
         <div
@@ -123,10 +202,7 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
         <div className="flex-1 space-y-1">
           <div className="flex flex-wrap items-baseline gap-2">
             <strong>{r.contact_name}</strong>
-            <Link
-              href={`/events/${r.event_id}/replies`}
-              className="text-xs text-blue-700 underline"
-            >
+            <Link href={`/events/${r.event_id}/replies`} className="text-xs text-blue-700 underline">
               {r.event_name}
             </Link>
             <span className={`rounded px-2 py-0.5 text-xs ${stateCls}`}>{stateLabel}</span>
@@ -140,18 +216,9 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
 
         <div className="flex w-28 flex-none flex-col gap-1">
           <button
-            onClick={() =>
-              start(async () => {
-                await setReplyResolved({ reply_id: r.reply_id, resolved: !r.resolved });
-                refresh();
-              })
-            }
+            onClick={() => doCollapse('resolved', () => setReplyResolved({ reply_id: r.reply_id, resolved: !r.resolved }))}
             disabled={isPending}
-            className={`rounded border px-2 py-1 text-xs ${
-              r.resolved
-                ? 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'
-                : 'border-neutral-300 bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-            }`}
+            className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
           >
             {r.resolved ? 'Reopen' : 'Mark resolved'}
           </button>
@@ -179,9 +246,7 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
                     })
                   }
                   className={`rounded border px-1.5 py-1 text-xs font-semibold disabled:opacity-50 ${opt.cls} ${
-                    r.classification === opt.value
-                      ? 'ring-2 ring-neutral-400 ring-offset-1'
-                      : 'opacity-90 hover:opacity-100'
+                    r.classification === opt.value ? 'ring-2 ring-neutral-400 ring-offset-1' : 'opacity-90 hover:opacity-100'
                   }`}
                 >
                   {opt.label}
@@ -198,21 +263,28 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
       </div>
 
       <textarea
+        ref={textareaRef}
         className="h-20 w-full rounded border border-neutral-300 p-2 text-sm"
         value={editValue}
         onChange={(e) => setEdit(e.target.value)}
         placeholder="(no draft yet)"
       />
 
-      <div className="flex flex-wrap gap-2 text-xs">
+      {send.state.phase === 'error' && (
+        <p className="rounded bg-red-50 px-2 py-1 text-xs text-red-700">
+          Send failed: {send.state.message}. Try Approve &amp; send again.
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2 text-xs">
         {status === 'prefilled' ? (
           <>
             <span className="rounded bg-yellow-100 px-2 py-1 text-yellow-800">
               ✋ Pre-filled in WA — click send there, then:
             </span>
             <button
-              onClick={() => start(async () => { await markResponseSent({ reply_id: r.reply_id }); refresh(); })}
-              className="rounded bg-green-700 px-2 py-1 text-white"
+              onClick={() => doCollapse('sentManual', () => markResponseSent({ reply_id: r.reply_id }))}
+              className="rounded bg-green-700 px-3 py-1.5 font-medium text-white"
             >
               Mark sent
             </button>
@@ -220,47 +292,30 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
         ) : (
           <>
             <button
+              disabled={isPending || !canApprove}
+              onClick={approveAndSend}
+              className="rounded bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:opacity-50"
+            >
+              ✓ Approve &amp; send
+            </button>
+            <button
               disabled={!dirty || isPending || status === 'sent'}
-              onClick={() =>
-                start(async () => {
-                  await editResponse({ reply_id: r.reply_id, response_draft: editValue });
-                  setEdit(null);
-                  refresh();
-                })
-              }
-              className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
+              onClick={() => start(async () => { await editResponse({ reply_id: r.reply_id, response_draft: editValue }); setEdit(null); refresh(); })}
+              className="rounded border border-neutral-300 px-2 py-1 text-neutral-600 disabled:opacity-50"
             >
               Save edits
             </button>
             <button
-              disabled={isPending || !editValue.trim() || status === 'approved' || status === 'sent'}
-              onClick={() => start(async () => { await approveResponse({ reply_id: r.reply_id }); refresh(); })}
-              className="rounded bg-green-600 px-2 py-1 text-white disabled:opacity-50"
-            >
-              Approve &amp; send
-            </button>
-            <button
               disabled={isPending || status === 'sent'}
-              onClick={() => start(async () => { await skipResponse({ reply_id: r.reply_id }); refresh(); })}
-              className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
+              onClick={() => doCollapse('skipped', () => skipResponse({ reply_id: r.reply_id }))}
+              className="rounded border border-neutral-300 px-2 py-1 text-neutral-600 disabled:opacity-50"
             >
               Skip
             </button>
             <button
-              disabled={
-                isPending ||
-                status === 'approved' ||
-                status === 'prefilled' ||
-                status === 'sent'
-              }
-              onClick={() =>
-                start(async () => {
-                  await regenerateResponse({ reply_id: r.reply_id });
-                  setEdit(null);
-                  refresh();
-                })
-              }
-              className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
+              disabled={isPending || status === 'approved' || status === 'prefilled' || status === 'sent'}
+              onClick={() => start(async () => { await regenerateResponse({ reply_id: r.reply_id }); setEdit(null); refresh(); })}
+              className="rounded border border-neutral-300 px-2 py-1 text-neutral-600 disabled:opacity-50"
               title="Re-run the LLM to draft a fresh response"
             >
               ↻ Regenerate
