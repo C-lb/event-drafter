@@ -26,7 +26,7 @@ export default function QueuePage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [edits, setEdits] = useState<Record<number, string>>({});
   const [isPending, start] = useTransition();
-  const [filter, setFilter] = useState<'all' | 'pending' | 'drafted' | 'approved' | 'prefilled' | 'sent' | 'skipped' | 'failed'>('all');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'drafted' | 'approved' | 'sending' | 'prefilled' | 'sent' | 'skipped' | 'failed'>('all');
 
   const [autoSend, setAutoSend] = useState<boolean | null>(null);
   const refresh = () => start(async () => {
@@ -122,7 +122,7 @@ export default function QueuePage() {
       </div>
 
       <div className="flex flex-wrap gap-2 text-xs">
-        {(['all', 'pending', 'drafted', 'approved', 'prefilled', 'sent', 'skipped', 'failed'] as const).map((s) => (
+        {(['all', 'pending', 'drafted', 'approved', 'sending', 'prefilled', 'sent', 'skipped', 'failed'] as const).map((s) => (
           <button
             key={s}
             onClick={() => setFilter(s)}
@@ -191,28 +191,28 @@ export default function QueuePage() {
                     ) : (
                       <>
                         <button
-                          disabled={!dirty || isPending || r.status === 'sent'}
+                          disabled={!dirty || isPending || r.status === 'sending' || r.status === 'sent'}
                           onClick={() => start(async () => { await editDraft({ invite_id: r.invite_id, draft_text: editValue }); refresh(); })}
                           className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
                         >
                           Save edits
                         </button>
                         <button
-                          disabled={isPending || r.status === 'approved' || r.status === 'sent'}
+                          disabled={isPending || r.status === 'approved' || r.status === 'sending' || r.status === 'sent'}
                           onClick={() => start(async () => { await approveDraft({ invite_id: r.invite_id }); refresh(); })}
                           className="rounded bg-green-600 px-2 py-1 text-white disabled:opacity-50"
                         >
                           Approve
                         </button>
                         <button
-                          disabled={isPending || r.status === 'sent'}
+                          disabled={isPending || r.status === 'sending' || r.status === 'sent'}
                           onClick={() => start(async () => { await skipDraft({ invite_id: r.invite_id }); refresh(); })}
                           className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
                         >
                           Skip
                         </button>
                         <button
-                          disabled={isPending || r.status === 'sent'}
+                          disabled={isPending || r.status === 'sending' || r.status === 'sent'}
                           onClick={() => start(async () => { await regenerateDraft({ invite_id: r.invite_id }); refresh(); })}
                           className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
                         >

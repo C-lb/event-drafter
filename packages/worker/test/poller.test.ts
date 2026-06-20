@@ -6,7 +6,7 @@ import { runMigrations } from '@event-drafter/core/migrate';
 import { closeDb, getDb } from '@event-drafter/core/db';
 import { jobs } from '@event-drafter/core/schema';
 import { eq } from 'drizzle-orm';
-import { tick } from '../src/poller.js';
+import { tick, tryClaimJob } from '../src/poller.js';
 import { handlers } from '../src/jobs/index.js';
 
 let tmp: string;
@@ -74,5 +74,38 @@ describe('tick()', () => {
 
     const after = db.select().from(jobs).where(eq(jobs.id, row.id)).get();
     expect(after?.status).toBe('succeeded');
+  });
+
+  it('does NOT auto-reset a stuck running send_message job (would risk double-send)', async () => {
+    const db = getDb();
+    const stale = new Date(Date.now() - 10 * 60 * 1000);
+    const row = db
+      .insert(jobs)
+      .values({ kind: 'send_message', payload: {}, status: 'running', started_at: stale })
+      .returning()
+      .get();
+
+    const spy = vi.fn().mockResolvedValue(undefined);
+    handlers.send_message = spy;
+    await tick();
+
+    const after = db.select().from(jobs).where(eq(jobs.id, row.id)).get();
+    expect(after?.status).toBe('running');
+    expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe('tryClaimJob() — atomic compare-and-swap claim', () => {
+  it('claims a queued job once; a second claim of the same job loses', () => {
+    const db = getDb();
+    const row = db.insert(jobs).values({ kind: 'send_message', payload: {} }).returning().get();
+
+    expect(tryClaimJob(row.id)).toBe(true);
+    expect(tryClaimJob(row.id)).toBe(false);
+
+    const after = db.select().from(jobs).where(eq(jobs.id, row.id)).get();
+    expect(after?.status).toBe('running');
+    // The losing claim must not bump attempts — only the winner ran it.
+    expect(after?.attempts).toBe(1);
   });
 });

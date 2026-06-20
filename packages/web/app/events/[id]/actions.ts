@@ -222,14 +222,27 @@ export async function approveDraft(input: unknown) {
   const { invite_id } = approveSchema.parse(input);
   const db = getDb();
   db.transaction((tx) => {
-    tx.update(invites)
+    // Only enqueue if we actually transition into 'approved'. Excluding the
+    // in-flight/done states makes this idempotent: a double-click, or a click
+    // on a row the worker is already sending ('sending'), is a no-op instead of
+    // a second send_message job. This is the UI-side half of the single-send
+    // guarantee — the worker's send-claim is the other half.
+    const res = tx
+      .update(invites)
       .set({ status: 'approved', approved_at: new Date() })
-      .where(eq(invites.id, invite_id))
+      .where(
+        and(
+          eq(invites.id, invite_id),
+          notInArray(invites.status, ['sending', 'approved', 'prefilled', 'sent']),
+        ),
+      )
       .run();
-    tx.insert(jobs).values({
-      kind: 'send_message',
-      payload: { invite_id },
-    }).run();
+    if (res.changes === 1) {
+      tx.insert(jobs).values({
+        kind: 'send_message',
+        payload: { invite_id },
+      }).run();
+    }
   });
 }
 

@@ -7,6 +7,7 @@ import { prefillDraft } from '../wa/driver.js';
 import { WaInvalidNumber, WaNotLoggedIn, WaSelectorMismatch } from '../wa/session.js';
 import { sendDelayMs, jitterMs } from '../rate-limit.js';
 import { JobDeferred } from '../errors.js';
+import { claimFollowUpForSend, releaseFollowUpClaim } from './send-claim.js';
 import { logger } from '../logger.js';
 
 const payloadSchema = z.object({ follow_up_id: z.number() });
@@ -29,9 +30,17 @@ export async function sendFollowUpHandler(job: Job): Promise<void> {
   const contact = db.select().from(contacts).where(eq(contacts.id, invite.contact_id)).get();
   if (!contact) throw new Error(`contact ${invite.contact_id} not found`);
 
+  // Single-send guarantee — atomic approved→sending claim before WhatsApp. See
+  // ./send-claim.ts.
+  if (!claimFollowUpForSend(follow_up_id)) {
+    logger.warn('send_follow_up: already claimed/sent — skip', { follow_up_id });
+    return;
+  }
+
   try {
     await prefillDraft(contact.phone_e164, fu.draft_text);
   } catch (err) {
+    releaseFollowUpClaim(follow_up_id);
     if (err instanceof WaNotLoggedIn) throw new JobDeferred(10 * 60 * 1000, 'WA not logged in');
     if (err instanceof WaSelectorMismatch) throw new JobDeferred(60 * 60 * 1000, err.message);
     if (err instanceof WaInvalidNumber) {

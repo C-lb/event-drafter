@@ -8,6 +8,7 @@ import { prefillDraft, clickSendInPrefilledChat } from '../wa/driver.js';
 import { WaInvalidNumber, WaNotLoggedIn, WaSelectorMismatch, WaSendNotConfirmed } from '../wa/session.js';
 import { sendDelayMs, jitterMs } from '../rate-limit.js';
 import { JobDeferred } from '../errors.js';
+import { claimInviteForSend, releaseInviteClaim } from './send-claim.js';
 import { logger } from '../logger.js';
 
 const payloadSchema = z.object({ invite_id: z.number() });
@@ -32,9 +33,20 @@ export async function sendMessageHandler(job: Job): Promise<void> {
   const contact = db.select().from(contacts).where(eq(contacts.id, inv.contact_id)).get();
   if (!contact) throw new Error(`contact ${inv.contact_id} not found`);
 
+  // Single-send guarantee: atomically claim approved→sending BEFORE touching
+  // WhatsApp. Only the winner proceeds; a duplicate job or racing worker gets
+  // false here and stops. See ./send-claim.ts.
+  if (!claimInviteForSend(invite_id)) {
+    logger.warn('send_message: invite already claimed/sent — skipping', { invite_id });
+    return;
+  }
+
   try {
     await prefillDraft(contact.phone_e164, inv.draft_text);
   } catch (err) {
+    // Nothing was delivered (prefill only types into the box). Hand the claim
+    // back to 'approved' so a later attempt can re-send.
+    releaseInviteClaim(invite_id);
     if (err instanceof WaNotLoggedIn) {
       throw new JobDeferred(10 * 60 * 1000, 'WA not logged in — defer 10 min');
     }

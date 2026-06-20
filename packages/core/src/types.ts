@@ -17,10 +17,16 @@ export type JobKind = (typeof JOB_KINDS)[number];
 export const JOB_STATUSES = ['queued', 'running', 'succeeded', 'failed'] as const;
 export type JobStatus = (typeof JOB_STATUSES)[number];
 
+// 'sending' is the per-record send claim: a worker atomically moves an
+// approved row to 'sending' before it touches WhatsApp, and only the winner of
+// that transition delivers the message. This is the single-send guarantee — a
+// duplicate job or a racing second worker can never re-claim it. See the
+// worker's send-claim helpers.
 export const INVITE_STATUSES = [
   'pending',
   'drafted',
   'approved',
+  'sending',
   'prefilled',
   'sent',
   'skipped',
@@ -47,6 +53,7 @@ export const FOLLOW_UP_STATUSES = [
   'pending',
   'drafted',
   'approved',
+  'sending',
   'prefilled',
   'sent',
   'skipped',
@@ -58,6 +65,7 @@ export const RESPONSE_STATUSES = [
   'pending',
   'drafted',
   'approved',
+  'sending',
   'prefilled',
   'sent',
   'skipped',
