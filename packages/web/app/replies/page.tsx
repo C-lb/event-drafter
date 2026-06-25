@@ -82,33 +82,26 @@ export default async function AllRepliesPage({ searchParams }: PageProps) {
   };
 
   const chipCls = (f: Filter) =>
-    `rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+    `rounded-full px-3 py-1 text-xs font-medium transition ${
       filter === f
-        ? 'bg-blue-600 text-white'
-        : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'
+        ? 'bg-ink text-white shadow-raise'
+        : 'bg-line text-ink-2 hover:bg-line-strong hover:text-ink'
     }`;
 
   return (
-    <section className="max-w-7xl space-y-3">
+    <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-3xl font-semibold tracking-tight">
+        <h2 className="text-2xl font-semibold tracking-tight">
           {includeResolved ? 'All replies (incl. resolved)' : 'All replies'}
         </h2>
         <div className="flex items-center gap-2">
           {resolvedCount > 0 && (
-            <Link
-              href={buildHref(filter, !includeResolved)}
-              className="rounded border border-neutral-300 bg-white px-3 py-1.5 text-xs text-neutral-700 hover:bg-neutral-50"
-            >
+            <Link href={buildHref(filter, !includeResolved)} className="btn btn-sm">
               {includeResolved ? `Hide resolved (${resolvedCount})` : `Show resolved (${resolvedCount})`}
             </Link>
           )}
           <form action={triggerReplyCheck}>
-            <button
-              type="submit"
-              disabled={inFlight}
-              className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-            >
+            <button type="submit" disabled={inFlight} className="btn-primary btn-sm">
               {inFlight ? 'Checking…' : 'Check now'}
             </button>
           </form>
@@ -124,49 +117,47 @@ export default async function AllRepliesPage({ searchParams }: PageProps) {
       </div>
 
       {last ? (
-        <p className="text-xs text-neutral-600">
-          Last check: <strong>{last.status}</strong> · started {ago(last.created_at)}
+        <p className="text-xs text-ink-3">
+          Last check: <strong className="text-ink-2">{last.status}</strong> · started {ago(last.created_at)}
           {last.finished_at ? ` · finished ${ago(last.finished_at)}` : ''}
           {last.last_error ? ` · error: ${last.last_error.slice(0, 120)}` : ''}
         </p>
       ) : (
-        <p className="text-xs text-neutral-600">No checks have run yet.</p>
+        <p className="text-xs text-ink-3">No checks have run yet.</p>
       )}
 
       {filter === 'awaiting' ? (
         <>
         <AutoRefresh active={inFlight} />
         {awaiting.length === 0 ? (
-          <p className="rounded border border-dashed border-neutral-300 bg-neutral-50 p-4 text-sm text-neutral-600">
+          <p className="card-quiet p-5 text-sm text-ink-2">
             Everyone who was sent an invite has replied.
           </p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {awaiting.map((a) => (
               <li
                 key={a.invite_id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded border border-neutral-200 bg-white p-3 text-sm"
+                className="card flex flex-wrap items-center justify-between gap-2 p-4 text-sm"
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-md border border-neutral-300 bg-neutral-100 px-2 py-1 text-xs font-semibold tracking-wide text-neutral-500">
-                    — NO REPLY
-                  </span>
+                  <span className="badge badge-neutral">No reply yet</span>
                   <strong>{a.contact_name}</strong>
                   <Link
                     href={`/events/${a.event_id}/replies`}
-                    className="text-xs text-blue-700 underline"
+                    className="text-xs font-medium text-accent hover:text-accent-hover"
                   >
                     {a.event_name}
                   </Link>
                 </div>
-                <span className="text-xs text-neutral-500">invited {ago(a.sent_at)}</span>
+                <span className="text-xs text-ink-3">invited {ago(a.sent_at)}</span>
               </li>
             ))}
           </ul>
         )}
         </>
       ) : visibleReplies.length === 0 ? (
-        <p className="rounded border border-dashed border-neutral-300 bg-neutral-50 p-4 text-sm text-neutral-600">
+        <p className="card-quiet p-5 text-sm text-ink-2">
           {filter === 'all'
             ? includeResolved
               ? 'No replies yet.'

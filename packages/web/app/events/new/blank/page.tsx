@@ -52,27 +52,29 @@ export default function BlankEventPage() {
   };
 
   return (
-    <section className="max-w-2xl space-y-4">
+    <section className="mx-auto max-w-2xl space-y-6">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-3xl font-semibold tracking-tight">New event from scratch</h2>
-        <Link href="/events/new" className="text-xs text-blue-700 underline">
+        <h2 className="text-2xl font-semibold tracking-tight">New event from scratch</h2>
+        <Link href="/events/new" className="text-xs font-medium text-accent hover:text-accent-hover">
           Use Gmail instead →
         </Link>
       </div>
 
-      <p className="text-sm text-neutral-600">
+      <p className="text-sm text-ink-2">
         For events where there's no email to pull from. Fill in the event facts; optionally
         paste the EDM body and we'll extract the structured summary used by the LLM and the
         starter-draft cards.
       </p>
 
-      {error && <p className="rounded bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {error && (
+        <p className="rounded-card bg-red-50 p-4 text-sm text-red-700 ring-1 ring-inset ring-red-600/20">{error}</p>
+      )}
 
-      <div className="space-y-3 rounded border border-neutral-200 bg-white p-4">
+      <div className="card space-y-5 p-5">
         <label className="block text-xs">
           <span className="font-medium">Event title</span>
           <input
-            className="mt-0.5 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+            className="field mt-1.5 w-full"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. SPARK Founders Lunch"
@@ -84,7 +86,7 @@ export default function BlankEventPage() {
           <span className="font-medium">Date &amp; time</span>
           <input
             type="datetime-local"
-            className="mt-0.5 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+            className="field mt-1.5 w-full"
             value={dateLocal}
             onChange={(e) => setDateLocal(e.target.value)}
           />
@@ -93,7 +95,7 @@ export default function BlankEventPage() {
         <label className="block text-xs">
           <span className="font-medium">Venue (optional)</span>
           <input
-            className="mt-0.5 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+            className="field mt-1.5 w-full"
             value={venue}
             onChange={(e) => setVenue(e.target.value)}
             placeholder="e.g. Garibaldi Italian Restaurant & Bar"
@@ -103,17 +105,17 @@ export default function BlankEventPage() {
         <label className="block text-xs">
           <span className="font-medium">EDM subject (optional)</span>
           <input
-            className="mt-0.5 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+            className="field mt-1.5 w-full"
             value={edmSubject}
             onChange={(e) => setEdmSubject(e.target.value)}
-            placeholder="e.g. SPARK Founders Lunch — Wednesday 3 July 2026"
+            placeholder="e.g. SPARK Founders Lunch, Wednesday 3 July 2026"
           />
         </label>
 
         <label className="block text-xs">
           <span className="font-medium">EDM body (optional)</span>
           <textarea
-            className="mt-0.5 h-48 w-full rounded border border-neutral-300 px-3 py-2 text-sm font-mono"
+            className="field mt-1.5 h-48 w-full font-mono"
             value={edmBody}
             onChange={(e) => setEdmBody(e.target.value)}
             placeholder={'Date: ...\nTime: ...\nVenue: ...\nDress code: ...\nKey Program Highlights:\n• ...'}
@@ -121,9 +123,9 @@ export default function BlankEventPage() {
         </label>
 
         {previewSummary && (
-          <div className="rounded border border-blue-200 bg-blue-50 p-3 text-xs">
-            <p className="mb-1 font-medium text-blue-900">Extracted summary (preview)</p>
-            <pre className="whitespace-pre-wrap break-words font-mono text-blue-900">{previewSummary}</pre>
+          <div className="rounded-card bg-accent-soft p-4 text-xs text-accent ring-1 ring-inset ring-accent-line">
+            <p className="mb-1 font-medium">Extracted summary (preview)</p>
+            <pre className="whitespace-pre-wrap break-words font-mono">{previewSummary}</pre>
           </div>
         )}
 
@@ -132,14 +134,11 @@ export default function BlankEventPage() {
             type="button"
             onClick={submit}
             disabled={isPending || !name.trim() || !dateLocal}
-            className="rounded bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-primary"
           >
             {isPending ? 'Creating…' : 'Create event'}
           </button>
-          <Link
-            href="/events"
-            className="rounded border border-neutral-300 px-4 py-2 text-sm hover:bg-neutral-50"
-          >
+          <Link href="/events" className="btn">
             Cancel
           </Link>
         </div>

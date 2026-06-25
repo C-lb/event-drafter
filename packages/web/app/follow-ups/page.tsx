@@ -24,12 +24,12 @@ export default function FollowUpsPage() {
   const visible = rows.filter((r) => filter === 'all' || r.status === filter);
 
   return (
-    <section className="max-w-7xl space-y-6">
+    <section className="space-y-6">
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-3xl font-semibold tracking-tight">Follow-ups</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">Follow-ups</h2>
         <button
           onClick={() => start(async () => { await triggerFollowUpGeneration(); refresh(); })}
-          className="rounded border border-neutral-300 px-4 py-2 text-sm"
+          className="btn btn-sm"
         >
           Generate now
         </button>
@@ -37,14 +37,14 @@ export default function FollowUpsPage() {
 
       <div className="flex flex-wrap gap-3 text-sm">
         {(['all', 'drafted', 'approved', 'prefilled', 'sent', 'skipped', 'failed'] as const).map((s) => (
-          <button key={s} onClick={() => setFilter(s)} className={`rounded px-3 py-1.5 capitalize tracking-wide ${filter === s ? 'bg-blue-600 text-white' : 'bg-neutral-200'}`}>
+          <button key={s} onClick={() => setFilter(s)} className={`badge ${filter === s ? 'badge-blue' : 'badge-neutral'} capitalize`}>
             {s} ({rows.filter((r) => s === 'all' || r.status === s).length})
           </button>
         ))}
       </div>
 
       {visible.length === 0 && (
-        <p className="rounded border border-dashed border-neutral-300 bg-neutral-50 p-6 text-center text-sm text-neutral-600">
+        <p className="card-quiet p-6 text-center text-sm text-ink-2">
           No follow-ups for now.
         </p>
       )}
@@ -54,24 +54,24 @@ export default function FollowUpsPage() {
           const editValue = edits[r.follow_up_id] ?? r.draft_text ?? '';
           const dirty = (r.draft_text ?? '') !== editValue;
           return (
-            <li key={r.follow_up_id} className="rounded border border-neutral-200 bg-white p-3 space-y-2">
+            <li key={r.follow_up_id} className="card p-4 space-y-2">
               <div className="flex items-baseline justify-between">
-                <p className="font-medium">{r.contact_name} <span className="text-xs text-neutral-500">→ {r.event_name}</span></p>
-                <span className="rounded bg-neutral-100 px-2 py-0.5 text-xs">{r.status}</span>
+                <p className="font-medium text-ink">{r.contact_name} <span className="text-xs text-ink-3">→ {r.event_name}</span></p>
+                <span className="badge badge-neutral">{r.status}</span>
               </div>
               <textarea
-                className="h-20 w-full rounded border border-neutral-300 p-2 text-sm"
+                className="field h-20 w-full"
                 value={editValue}
                 onChange={(e) => setEdits({ ...edits, [r.follow_up_id]: e.target.value })}
               />
-              <div className="flex flex-wrap gap-2 text-xs">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
                 {r.status === 'prefilled' ? (
                   <>
-                    <span className="rounded bg-yellow-100 px-2 py-1 text-yellow-800">✋ Pre-filled — send in WA, then:</span>
+                    <span className="badge badge-amber">Pre-filled. Send in WhatsApp, then:</span>
                     <button
                       disabled={isPending}
                       onClick={() => start(async () => { await markFollowUpSent({ follow_up_id: r.follow_up_id }); refresh(); })}
-                      className="rounded bg-green-700 px-2 py-1 text-white"
+                      className="btn-primary btn-sm bg-emerald-600 hover:bg-emerald-700"
                     >Mark sent</button>
                   </>
                 ) : (
@@ -79,17 +79,17 @@ export default function FollowUpsPage() {
                     <button
                       disabled={!dirty || isPending}
                       onClick={() => start(async () => { await editFollowUp({ follow_up_id: r.follow_up_id, draft_text: editValue }); refresh(); })}
-                      className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
+                      className="btn btn-sm"
                     >Save edits</button>
                     <button
                       disabled={isPending || r.status === 'approved' || r.status === 'sent'}
                       onClick={() => start(async () => { await approveFollowUp({ follow_up_id: r.follow_up_id }); refresh(); })}
-                      className="rounded bg-green-600 px-2 py-1 text-white disabled:opacity-50"
+                      className="btn-primary btn-sm bg-emerald-600 hover:bg-emerald-700"
                     >Approve &amp; send</button>
                     <button
                       disabled={isPending || r.status === 'sent'}
                       onClick={() => start(async () => { await skipFollowUp({ follow_up_id: r.follow_up_id }); refresh(); })}
-                      className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
+                      className="btn btn-sm"
                     >Skip</button>
                   </>
                 )}

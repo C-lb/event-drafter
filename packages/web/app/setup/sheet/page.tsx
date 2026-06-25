@@ -35,7 +35,7 @@ const FIELDS = [
 type Field = (typeof FIELDS)[number];
 const REQUIRED: Field[] = ['first_name', 'phone_e164'];
 
-// Synonym table — ordered by preference (earlier = stronger match). Each entry is
+// Synonym table, ordered by preference (earlier = stronger match). Each entry is
 // a list of substrings that, if present (case-insensitive) in a sheet header,
 // indicate that column maps to the field. The matcher walks the priority list
 // and picks the first header that matches.
@@ -155,20 +155,20 @@ export default function SheetPickerPage() {
   };
 
   return (
-    <section className="max-w-3xl space-y-4">
-      <h2 className="text-3xl font-semibold tracking-tight">Pick Contacts Sheet</h2>
+    <section className="mx-auto max-w-2xl space-y-7">
+      <h2 className="text-2xl font-semibold tracking-tight">Pick contacts sheet</h2>
 
-      <div className="space-y-2">
-        <label className="block text-sm font-medium">Sheet URL or ID</label>
+      <div className="card space-y-3 p-5">
+        <label className="block text-sm font-medium text-ink">Sheet URL or ID</label>
         <input
-          className="w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+          className="field w-full"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://docs.google.com/spreadsheets/d/..."
         />
-        <label className="block text-sm font-medium">Range</label>
+        <label className="block text-sm font-medium text-ink">Range</label>
         <input
-          className="w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+          className="field w-full"
           value={range}
           onChange={(e) => setRange(e.target.value)}
           placeholder="A1:Z (or SheetName!A1:Z)"
@@ -176,34 +176,34 @@ export default function SheetPickerPage() {
         <button
           onClick={() => doPreview()}
           disabled={isPending || !url}
-          className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-primary"
         >
           {isPending ? 'Loading…' : 'Preview'}
         </button>
       </div>
 
       {history.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold">Recent sheets</h3>
-          <ul className="space-y-1">
+        <div className="space-y-3">
+          <h3 className="eyebrow">Recent sheets</h3>
+          <ul className="space-y-2">
             {history.map((h) => (
               <li
                 key={h.spreadsheet_id}
-                className="flex items-center justify-between gap-2 rounded border border-neutral-200 bg-white px-2 py-1 text-sm"
+                className="card flex items-center justify-between gap-2 p-4 text-sm"
               >
                 <button
                   onClick={() => doPreview(h.sheet_url, h.range)}
-                  className="flex-1 text-left hover:underline"
+                  className="flex-1 text-left"
                   type="button"
                 >
-                  <span className="font-medium">{h.title}</span>
-                  <span className="ml-2 text-xs text-neutral-500">
+                  <span className="font-medium text-ink">{h.title}</span>
+                  <span className="ml-2 text-xs text-ink-3">
                     {h.range} · {timeAgo(h.last_used)}
                   </span>
                 </button>
                 <button
                   onClick={() => removeFromHistory(h.spreadsheet_id)}
-                  className="rounded border border-neutral-300 px-2 py-0.5 text-xs text-neutral-600 hover:bg-neutral-50"
+                  className="btn btn-sm"
                   type="button"
                   aria-label={`Remove ${h.title} from history`}
                   title="Remove from history"
@@ -216,34 +216,38 @@ export default function SheetPickerPage() {
         </div>
       )}
 
-      {err && <p className="rounded bg-red-50 p-3 text-sm text-red-700">{err}</p>}
+      {err && (
+        <p className="rounded-card bg-red-50 p-4 text-sm text-red-700 ring-1 ring-inset ring-red-600/20">
+          {err}
+        </p>
+      )}
 
       {preview && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold">
-            {preview.title} — preview ({preview.preview.rows.length} row{preview.preview.rows.length === 1 ? '' : 's'})
+          <h3 className="text-base font-semibold">
+            {preview.title}, preview ({preview.preview.rows.length} row{preview.preview.rows.length === 1 ? '' : 's'})
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-xs">
-              <thead className="bg-neutral-100">
-                <tr>{preview.preview.headers.map((h) => <th key={h} className="border px-2 py-1 text-left">{h}</th>)}</tr>
+              <thead className="bg-surface-2 text-ink-2">
+                <tr>{preview.preview.headers.map((h) => <th key={h} className="border-b border-line px-2 py-1 text-left">{h}</th>)}</tr>
               </thead>
               <tbody>
                 {preview.preview.rows.map((r, i) => (
-                  <tr key={i}>{r.map((c, j) => <td key={j} className="border px-2 py-1">{c}</td>)}</tr>
+                  <tr key={i}>{r.map((c, j) => <td key={j} className="border-b border-line px-2 py-1">{c}</td>)}</tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          <h3 className="text-sm font-semibold">Column mapping</h3>
-          <p className="text-xs text-neutral-600">For each app field, pick the matching Sheet column. * = required.</p>
+          <h3 className="text-base font-semibold">Column mapping</h3>
+          <p className="text-xs text-ink-2">For each app field, pick the matching Sheet column. * = required.</p>
           <div className="grid grid-cols-2 gap-2 text-sm">
             {FIELDS.map((f) => (
               <label key={f} className="flex items-center gap-2">
-                <span className="w-44">{f}{REQUIRED.includes(f) && '*'}</span>
+                <span className="w-44 text-ink">{f}{REQUIRED.includes(f) && '*'}</span>
                 <select
-                  className="flex-1 rounded border border-neutral-300 px-2 py-1"
+                  className="field flex-1"
                   value={mapping[f] ?? ''}
                   onChange={(e) => setMapping({ ...mapping, [f]: e.target.value })}
                 >
@@ -256,7 +260,7 @@ export default function SheetPickerPage() {
           <button
             onClick={doSave}
             disabled={isPending || !mapping.first_name || !mapping.phone_e164}
-            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-primary"
           >
             Save binding
           </button>
@@ -264,8 +268,8 @@ export default function SheetPickerPage() {
       )}
 
       {saved && (
-        <p className="rounded bg-green-50 p-3 text-sm text-green-700">
-          Saved. <Link href="/setup/import" className="underline">Continue to import →</Link>
+        <p className="rounded-card bg-emerald-50 p-4 text-sm text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+          Saved. <Link href="/setup/import" className="font-medium text-accent hover:text-accent-hover">Continue to import →</Link>
         </p>
       )}
     </section>

@@ -72,54 +72,54 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   });
 
   return (
-    <section className="max-w-7xl space-y-4">
+    <section className="space-y-6">
       <AutoRefresh active={checkInFlight} />
       <div className="space-y-1">
-        <Link href="/events" className="text-xs text-neutral-500 hover:underline">← Events</Link>
-        <h2 className="text-3xl font-semibold tracking-tight">{event.name}</h2>
-        <p className="text-xs text-neutral-600">
+        <Link href="/events" className="text-xs font-medium text-accent hover:text-accent-hover">← Events</Link>
+        <h2 className="text-2xl font-semibold tracking-tight">{event.name}</h2>
+        <p className="text-xs text-ink-2">
           {new Date(event.event_date).toLocaleString()} · {event.venue ?? '—'} · {event.status}
         </p>
       </div>
 
-      <div className="grid grid-cols-6 gap-2 text-center text-xs">
+      <div className="grid grid-cols-6 gap-3 text-center text-xs">
         {(['total', 'drafted', 'approved', 'sent', 'skipped', 'failed'] as const).map((k) => (
-          <div key={k} className="rounded border border-neutral-200 bg-white p-2">
-            <p className="text-neutral-500">{k}</p>
-            <p className="text-lg font-semibold">{counts[k]}</p>
+          <div key={k} className="card p-4">
+            <p className="text-ink-3">{k}</p>
+            <p className="text-lg font-semibold text-ink">{counts[k]}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-4 gap-2 text-center text-xs">
-        <div className="rounded border border-green-200 bg-green-50 p-2"><p>Yes</p><p className="text-lg font-semibold">{replyCounts.yes}</p></div>
-        <div className="rounded border border-red-200 bg-red-50 p-2"><p>No</p><p className="text-lg font-semibold">{replyCounts.no}</p></div>
-        <div className="rounded border border-yellow-200 bg-yellow-50 p-2"><p>Maybe</p><p className="text-lg font-semibold">{replyCounts.maybe}</p></div>
-        <div className="rounded border border-neutral-200 bg-neutral-50 p-2"><p>Unclear</p><p className="text-lg font-semibold">{replyCounts.unclear}</p></div>
+      <div className="grid grid-cols-4 gap-3 text-center text-xs">
+        <div className="card p-4"><p className="text-ink-2">Yes</p><p className="text-lg font-semibold text-emerald-700">{replyCounts.yes}</p></div>
+        <div className="card p-4"><p className="text-ink-2">No</p><p className="text-lg font-semibold text-red-700">{replyCounts.no}</p></div>
+        <div className="card p-4"><p className="text-ink-2">Maybe</p><p className="text-lg font-semibold text-amber-700">{replyCounts.maybe}</p></div>
+        <div className="card p-4"><p className="text-ink-2">Unclear</p><p className="text-lg font-semibold text-ink">{replyCounts.unclear}</p></div>
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Link href={`/events/${eventId}/pick-contacts`} className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white">
+        <Link href={`/events/${eventId}/pick-contacts`} className="btn-primary">
           Add contacts &amp; generate drafts
         </Link>
-        <Link href={`/events/${eventId}/queue`} className="rounded border border-neutral-300 px-4 py-2 text-sm">
+        <Link href={`/events/${eventId}/queue`} className="btn">
           Review queue ({counts.drafted + counts.approved})
         </Link>
-        <Link href={`/events/${eventId}/replies`} className="rounded border border-neutral-300 px-4 py-2 text-sm">
+        <Link href={`/events/${eventId}/replies`} className="btn">
           Replies ({allReplies.length})
         </Link>
         <form action={check}>
           <button
             type="submit"
             disabled={checkInFlight}
-            className="rounded border border-neutral-300 px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn disabled:cursor-not-allowed disabled:opacity-60"
           >
             {checkInFlight ? 'Checking…' : 'Check replies now'}
           </button>
         </form>
         {checkInFlight && (
-          <span className="self-center text-xs text-neutral-600">
-            worker running — page will refresh automatically
+          <span className="self-center text-xs text-ink-2">
+            Worker running, page will refresh automatically.
           </span>
         )}
       </div>
@@ -127,11 +127,11 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       {/* Two-column split on wide monitors: RSVP roster on the left, EDM
           context + starter drafts stacked on the right. Stacks vertically
           below the `lg` breakpoint (1024px viewport). */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="space-y-4">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
           <RsvpSummarySection data={rsvpSummary} />
         </div>
-        <div className="space-y-4">
+        <div className="space-y-6">
           <SummaryPanel
             event={{
               id: event.id,

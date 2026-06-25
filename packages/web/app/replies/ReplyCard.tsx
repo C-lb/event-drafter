@@ -140,14 +140,11 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
     else label = `✓ sent to ${r.contact_name}`;
 
     return (
-      <li className="flex items-center justify-between rounded border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-600">
+      <li className="card-quiet flex items-center justify-between px-4 py-3 text-sm text-ink-2">
         <span>{label}</span>
         {send.state.phase === 'sending' && (
-          <button
-            onClick={undoSend}
-            className="rounded border border-neutral-300 bg-white px-2 py-0.5 text-xs font-medium text-blue-700 hover:bg-neutral-50"
-          >
-            undo
+          <button onClick={undoSend} className="btn btn-sm">
+            Undo
           </button>
         )}
       </li>
@@ -165,21 +162,21 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
     new Date(r.wa_sent_at as unknown as Date).getTime() >
       new Date(r.response_sent_at as unknown as Date).getTime();
   if (r.resolved) {
-    stateLabel = 'resolved'; stateCls = 'bg-neutral-200 text-neutral-600';
+    stateLabel = 'resolved'; stateCls = 'badge-neutral';
   } else if (status === 'pending' && hadPriorResponse && !inboundAfterReply) {
-    stateLabel = 'awaiting their reply'; stateCls = 'bg-neutral-100 text-neutral-600';
+    stateLabel = 'awaiting their reply'; stateCls = 'badge-neutral';
   } else if (status === 'pending' && inboundAfterReply) {
-    stateLabel = 'they replied again'; stateCls = 'bg-amber-100 text-amber-800';
+    stateLabel = 'they replied again'; stateCls = 'badge-amber';
   } else if (status === 'pending') {
-    stateLabel = 'needs review'; stateCls = 'bg-blue-100 text-blue-800';
+    stateLabel = 'needs review'; stateCls = 'badge-blue';
   } else {
-    stateLabel = status; stateCls = 'bg-neutral-100 text-neutral-600';
+    stateLabel = status; stateCls = 'badge-neutral';
   }
 
   return (
     <li
-      className={`rounded border bg-white p-3 text-sm space-y-2 ${
-        highlighted ? 'border-blue-400 ring-2 ring-blue-200' : 'border-neutral-200'
+      className={`card p-4 text-sm space-y-3 ${
+        highlighted ? 'ring-2 ring-accent/40' : ''
       } ${r.resolved ? 'opacity-70' : ''}`}
     >
       <div className="flex items-start gap-3">
@@ -209,13 +206,13 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
         <div className="flex-1 space-y-1">
           <div className="flex flex-wrap items-baseline gap-2">
             <strong>{r.contact_name}</strong>
-            <Link href={`/events/${r.event_id}/replies`} className="text-xs text-blue-700 underline">
+            <Link href={`/events/${r.event_id}/replies`} className="text-xs font-medium text-accent hover:text-accent-hover">
               {r.event_name}
             </Link>
-            <span className={`rounded px-2 py-0.5 text-xs ${stateCls}`}>{stateLabel}</span>
+            <span className={`badge ${stateCls}`}>{stateLabel}</span>
           </div>
-          {r.summary && <p className="text-xs italic text-neutral-600">{r.summary}</p>}
-          <p className="text-xs text-neutral-500" suppressHydrationWarning>
+          {r.summary && <p className="text-xs italic text-ink-2">{r.summary}</p>}
+          <p className="text-xs text-ink-3" suppressHydrationWarning>
             {r.detected_at ? new Date(r.detected_at as unknown as Date).toLocaleString() : ''}
             {r.resolved && r.resolved_at ? ` · resolved ${ago(r.resolved_at as unknown as Date)}` : ''}
           </p>
@@ -232,7 +229,7 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
                 : doCollapse('resolved', () => setReplyResolved({ reply_id: r.reply_id, resolved: true }))
             }
             disabled={isPending}
-            className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
+            className="btn btn-sm w-full"
           >
             {r.resolved ? 'Reopen' : 'Mark resolved'}
           </button>
@@ -240,7 +237,7 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
           <button
             onClick={() => setPickerOpen((o) => !o)}
             disabled={isPending}
-            className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
+            className="btn btn-sm w-full"
             title="Override the classification regardless of the LLM's read"
           >
             Mark it as {pickerOpen ? '▴' : '▾'}
@@ -271,34 +268,35 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
         </div>
       </div>
 
-      <div className="rounded bg-neutral-50 p-2 text-sm">
-        <p className="text-xs text-neutral-500">Their reply:</p>
+      <div className="rounded-sm bg-surface-2 p-3 text-sm">
+        <p className="eyebrow mb-1">Their reply</p>
         <p className="whitespace-pre-wrap">{r.reply_text}</p>
       </div>
 
       <textarea
         ref={textareaRef}
-        className="h-20 w-full rounded border border-neutral-300 p-2 text-sm"
+        className="field h-20 resize-y"
         value={editValue}
         onChange={(e) => setEdit(e.target.value)}
         placeholder="(no draft yet)"
       />
 
       {send.state.phase === 'error' && (
-        <p className="rounded bg-red-50 px-2 py-1 text-xs text-red-700">
-          Send failed: {send.state.message}. Try Approve &amp; send again.
+        <p className="rounded-sm bg-red-50 px-3 py-2 text-xs text-red-700 ring-1 ring-inset ring-red-600/20">
+          Send failed: {send.state.message}. Try Approve and send again.
         </p>
       )}
 
       <div className="flex flex-wrap items-center gap-2 text-xs">
         {status === 'prefilled' ? (
           <>
-            <span className="rounded bg-yellow-100 px-2 py-1 text-yellow-800">
-              ✋ Pre-filled in WA — click send there, then:
+            <span className="badge badge-amber">
+              Pre-filled in WhatsApp. Click send there, then:
             </span>
             <button
               onClick={() => doCollapse('sentManual', () => markResponseSent({ reply_id: r.reply_id }))}
-              className="rounded bg-green-700 px-3 py-1.5 font-medium text-white"
+              className="btn-primary btn-sm bg-emerald-600 hover:bg-emerald-700"
+              style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18), 0 12px 26px -16px rgba(5,150,105,0.6)' }}
             >
               Mark sent
             </button>
@@ -308,31 +306,32 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
             <button
               disabled={isPending || !canApprove}
               onClick={approveAndSend}
-              className="rounded bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:opacity-50"
+              className="btn-primary bg-emerald-600 hover:bg-emerald-700"
+              style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18), 0 12px 26px -16px rgba(5,150,105,0.6)' }}
             >
-              ✓ Approve &amp; send
+              Approve and send
             </button>
             <button
               disabled={!dirty || isPending || status === 'sent'}
               onClick={() => start(async () => { await editResponse({ reply_id: r.reply_id, response_draft: editValue }); setEdit(null); refresh(); })}
-              className="rounded border border-neutral-300 px-2 py-1 text-neutral-600 disabled:opacity-50"
+              className="btn btn-sm"
             >
               Save edits
             </button>
             <button
               disabled={isPending || status === 'sent'}
               onClick={() => doCollapse('skipped', () => skipResponse({ reply_id: r.reply_id }))}
-              className="rounded border border-neutral-300 px-2 py-1 text-neutral-600 disabled:opacity-50"
+              className="btn btn-sm"
             >
               Skip
             </button>
             <button
               disabled={isPending || status === 'approved' || status === 'prefilled' || status === 'sent'}
               onClick={() => start(async () => { await regenerateResponse({ reply_id: r.reply_id }); setEdit(null); refresh(); })}
-              className="rounded border border-neutral-300 px-2 py-1 text-neutral-600 disabled:opacity-50"
+              className="btn btn-sm"
               title="Re-run the LLM to draft a fresh response"
             >
-              ↻ Regenerate
+              Regenerate
             </button>
           </>
         )}

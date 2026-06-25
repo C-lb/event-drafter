@@ -30,15 +30,15 @@ interface ClassificationVisual { label: string; glyph: string; cls: string }
 function classificationVisual(c: string | null | undefined): ClassificationVisual {
   switch (c) {
     case 'yes':
-      return { label: 'YES', glyph: '✓', cls: 'bg-green-600 text-white border-green-700 ring-2 ring-green-200' };
+      return { label: 'Yes', glyph: '✓', cls: 'bg-emerald-600 text-white border-emerald-700 ring-2 ring-emerald-200' };
     case 'no':
-      return { label: 'NO', glyph: '✕', cls: 'bg-red-600 text-white border-red-700 ring-2 ring-red-200' };
+      return { label: 'No', glyph: '✕', cls: 'bg-red-600 text-white border-red-700 ring-2 ring-red-200' };
     case 'maybe':
-      return { label: 'MAYBE', glyph: '?', cls: 'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-200' };
+      return { label: 'Maybe', glyph: '?', cls: 'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-200' };
     case 'unclear':
-      return { label: 'UNCLEAR', glyph: '…', cls: 'bg-neutral-500 text-white border-neutral-600 ring-2 ring-neutral-200' };
+      return { label: 'Unclear', glyph: '…', cls: 'bg-ink-3 text-white border-ink-2 ring-2 ring-line-strong' };
     default:
-      return { label: 'UNCLASSIFIED', glyph: '·', cls: 'bg-neutral-200 text-neutral-700 border-neutral-300' };
+      return { label: 'Unclassified', glyph: '·', cls: 'bg-line text-ink-2 border-line-strong' };
   }
 }
 
@@ -75,11 +75,11 @@ export default function EventRepliesPage() {
   const visible = rows.filter((r) => filter === 'all' || r.classification === filter);
 
   return (
-    <section className="max-w-7xl space-y-4">
+    <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-3xl font-semibold tracking-tight">Replies</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">Replies</h2>
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-1 text-xs">
+          <label className="flex items-center gap-1 text-xs text-ink-2">
             <input
               type="checkbox"
               checked={showResolved}
@@ -90,7 +90,7 @@ export default function EventRepliesPage() {
           <button
             onClick={checkNow}
             disabled={checkInFlight}
-            className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-primary"
           >
             {checkInFlight ? 'Checking…' : 'Check now'}
           </button>
@@ -98,13 +98,13 @@ export default function EventRepliesPage() {
       </div>
 
       {lastCheck ? (
-        <p className="text-xs text-neutral-600">
+        <p className="text-xs text-ink-2">
           Last check: <strong>{lastCheck.status}</strong> · started {ago(lastCheck.created_at)}
           {lastCheck.finished_at ? ` · finished ${ago(lastCheck.finished_at)}` : ''}
           {lastCheck.last_error ? ` · error: ${lastCheck.last_error.slice(0, 120)}` : ''}
         </p>
       ) : (
-        <p className="text-xs text-neutral-600">No checks have run yet.</p>
+        <p className="text-xs text-ink-2">No checks have run yet.</p>
       )}
 
       <div className="flex gap-2 text-xs">
@@ -112,7 +112,7 @@ export default function EventRepliesPage() {
           <button
             key={s}
             onClick={() => setFilter(s)}
-            className={`rounded px-2 py-1 ${filter === s ? 'bg-blue-600 text-white' : 'bg-neutral-200'}`}
+            className={`rounded-full px-3 py-1 ${filter === s ? 'bg-ink text-white shadow-raise' : 'bg-line text-ink-2 hover:bg-line-strong'}`}
           >
             {s} ({rows.filter((r) => s === 'all' || r.classification === s).length})
           </button>
@@ -127,13 +127,11 @@ export default function EventRepliesPage() {
           return (
             <li
               key={r.reply_id}
-              className={`rounded border bg-white p-3 space-y-2 ${
-                r.resolved ? 'border-neutral-200 opacity-70' : 'border-neutral-200'
-              }`}
+              className={`card p-4 space-y-2 ${r.resolved ? 'opacity-70' : ''}`}
             >
               <div className="flex items-start gap-3">
                 <div
-                  className={`flex flex-none flex-col items-center justify-center rounded-md border px-2 py-1 text-xs font-semibold ${cv.cls}`}
+                  className={`flex flex-none flex-col items-center justify-center rounded-sm border px-2 py-1 text-xs font-semibold ${cv.cls}`}
                   title={`Classification: ${cv.label}`}
                 >
                   <span className="text-base leading-none">{cv.glyph}</span>
@@ -147,31 +145,27 @@ export default function EventRepliesPage() {
                 <div className="flex-1">
                   <p className="font-medium">{r.contact_name}</p>
                   <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs">
-                    <span className="rounded bg-neutral-100 px-2 py-0.5">{r.response_status ?? 'pending'}</span>
-                    {r.resolved && <span className="rounded bg-neutral-200 px-2 py-0.5 text-neutral-600">resolved</span>}
+                    <span className="badge badge-neutral">{r.response_status ?? 'pending'}</span>
+                    {r.resolved && <span className="badge badge-neutral">resolved</span>}
                   </div>
                 </div>
                 <button
                   onClick={() => start(async () => { await setEventReplyResolved({ reply_id: r.reply_id, resolved: !r.resolved }); refresh(); })}
                   disabled={isPending}
-                  className={`flex-none rounded border px-2 py-1 text-xs ${
-                    r.resolved
-                      ? 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'
-                      : 'border-green-300 bg-green-50 text-green-800 hover:bg-green-100'
-                  }`}
+                  className="btn btn-sm flex-none"
                 >
                   {r.resolved ? 'Reopen' : 'Mark resolved'}
                 </button>
               </div>
-              {r.summary && <p className="text-xs italic text-neutral-600">{r.summary}</p>}
+              {r.summary && <p className="text-xs italic text-ink-2">{r.summary}</p>}
 
-              <div className="rounded bg-neutral-50 p-2 text-sm">
-                <p className="text-xs text-neutral-500">Their reply:</p>
+              <div className="card-quiet p-4 text-sm">
+                <p className="text-xs text-ink-3">Their reply:</p>
                 <p className="whitespace-pre-wrap">{r.reply_text}</p>
               </div>
 
               <textarea
-                className="h-20 w-full rounded border border-neutral-300 p-2 text-sm"
+                className="field h-20 w-full"
                 value={editValue}
                 onChange={(e) => setEdits({ ...edits, [r.reply_id]: e.target.value })}
                 placeholder="(no draft yet)"
@@ -180,12 +174,12 @@ export default function EventRepliesPage() {
               <div className="flex flex-wrap gap-2 text-xs">
                 {r.response_status === 'prefilled' ? (
                   <>
-                    <span className="rounded bg-yellow-100 px-2 py-1 text-yellow-800">
-                      ✋ Pre-filled in WA — click send there, then:
+                    <span className="badge badge-amber">
+                      ✋ Pre-filled in WhatsApp. Click send there, then:
                     </span>
                     <button
                       onClick={() => start(async () => { await markResponseSent({ reply_id: r.reply_id }); refresh(); })}
-                      className="rounded bg-green-700 px-2 py-1 text-white"
+                      className="btn-primary btn-sm bg-emerald-600 hover:bg-emerald-700"
                     >
                       Mark sent
                     </button>
@@ -195,21 +189,21 @@ export default function EventRepliesPage() {
                     <button
                       disabled={!dirty || isPending || r.response_status === 'sent'}
                       onClick={() => start(async () => { await editResponse({ reply_id: r.reply_id, response_draft: editValue }); refresh(); })}
-                      className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
+                      className="btn btn-sm"
                     >
                       Save edits
                     </button>
                     <button
                       disabled={isPending || !r.response_draft || r.response_status === 'approved' || r.response_status === 'sent'}
                       onClick={() => start(async () => { await approveResponse({ reply_id: r.reply_id }); refresh(); })}
-                      className="rounded bg-green-600 px-2 py-1 text-white disabled:opacity-50"
+                      className="btn-primary btn-sm bg-emerald-600 hover:bg-emerald-700"
                     >
                       Approve &amp; send
                     </button>
                     <button
                       disabled={isPending || r.response_status === 'sent'}
                       onClick={() => start(async () => { await skipResponse({ reply_id: r.reply_id }); refresh(); })}
-                      className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
+                      className="btn btn-sm"
                     >
                       Skip
                     </button>
@@ -223,7 +217,7 @@ export default function EventRepliesPage() {
                         r.response_status === 'sent'
                       }
                       onClick={() => start(async () => { await regenerateResponse({ reply_id: r.reply_id }); refresh(); })}
-                      className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
+                      className="btn btn-sm"
                       title="Re-run the LLM to draft a fresh response"
                     >
                       ↻ Regenerate

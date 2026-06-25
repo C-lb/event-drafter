@@ -39,31 +39,34 @@ export default async function LLMSetupPage() {
   }
 
   return (
-    <section className="max-w-xl space-y-4">
-      <h2 className="text-3xl font-semibold tracking-tight">Step 1 — LLM provider</h2>
-      <p className="text-sm text-neutral-700">
+    <section className="mx-auto max-w-2xl space-y-6">
+      <div className="space-y-1">
+        <p className="eyebrow">Step 1</p>
+        <h2 className="text-2xl font-semibold tracking-tight">LLM provider</h2>
+      </div>
+      <p className="text-sm text-ink-2">
         Active provider: <strong>{PROVIDER}</strong>
         {' · '}
-        <span className="text-neutral-500">
+        <span className="text-ink-3">
           Switch by setting <code>LLM_PROVIDER</code> in <code>.env</code> to <code>ollama</code> or <code>anthropic</code>.
         </span>
       </p>
 
       {PROVIDER === 'ollama' && (
         <div className="space-y-3">
-          <p className="text-sm">Drafts, classification, and follow-ups run on a local Ollama model. Nothing leaves your machine.</p>
-          <ol className="list-decimal space-y-1 pl-5 text-sm">
-            <li>Install: <code className="rounded bg-neutral-100 px-1">brew install --cask ollama-app</code></li>
-            <li>Start: <code className="rounded bg-neutral-100 px-1">open -a Ollama</code></li>
-            <li>Pull model: <code className="rounded bg-neutral-100 px-1">ollama pull {OLLAMA_MODEL}</code></li>
+          <p className="text-sm text-ink-2">Drafts, classification, and follow-ups run on a local Ollama model. Nothing leaves your machine.</p>
+          <ol className="list-decimal space-y-1 pl-5 text-sm text-ink-2">
+            <li>Install: <code className="rounded-sm bg-surface-2 px-1">brew install --cask ollama-app</code></li>
+            <li>Start: <code className="rounded-sm bg-surface-2 px-1">open -a Ollama</code></li>
+            <li>Pull model: <code className="rounded-sm bg-surface-2 px-1">ollama pull {OLLAMA_MODEL}</code></li>
           </ol>
-          <div className="rounded border border-neutral-200 bg-white p-3 text-xs">
+          <div className="card p-5 text-xs text-ink-2">
             <p>Base URL: <code>{OLLAMA_BASE_URL}</code></p>
             <p>Model: <code>{OLLAMA_MODEL}</code></p>
             <p className="mt-2">
               {ollamaProbe?.ok ? (
                 (ollamaProbe as { hasModel: boolean }).hasModel ? (
-                  <span className="text-green-700">✓ Ollama reachable and model is pulled.</span>
+                  <span className="text-emerald-700">✓ Ollama reachable and model is pulled.</span>
                 ) : (
                   <span className="text-amber-700">! Reachable but model not pulled. Run <code>ollama pull {OLLAMA_MODEL}</code>.</span>
                 )
@@ -72,7 +75,7 @@ export default async function LLMSetupPage() {
               )}
             </p>
             {ollamaProbe?.ok && (ollamaProbe as { models: string[] }).models.length > 0 && (
-              <p className="mt-1 text-neutral-600">Installed: {(ollamaProbe as { models: string[] }).models.join(', ')}</p>
+              <p className="mt-1 text-ink-3">Installed: {(ollamaProbe as { models: string[] }).models.join(', ')}</p>
             )}
           </div>
         </div>
@@ -80,21 +83,21 @@ export default async function LLMSetupPage() {
 
       {PROVIDER === 'anthropic' && (
         <div className="space-y-3">
-          <p className="text-sm">
+          <p className="text-sm text-ink-2">
             Drafts, classification, and follow-ups call the Anthropic API. Lower latency and higher quality than local models, but contact data is sent to Claude.
           </p>
-          <ol className="list-decimal space-y-1 pl-5 text-sm">
-            <li>Get a key at <a className="underline" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">console.anthropic.com</a>.</li>
+          <ol className="list-decimal space-y-1 pl-5 text-sm text-ink-2">
+            <li>Get a key at <a className="font-medium text-accent hover:text-accent-hover" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">console.anthropic.com</a>.</li>
             <li>Add <code>ANTHROPIC_API_KEY=sk-ant-…</code> to your <code>.env</code>.</li>
             <li>Restart <code>npm run dev</code>.</li>
           </ol>
-          <div className="rounded border border-neutral-200 bg-white p-3 text-xs">
+          <div className="card p-5 text-xs text-ink-2">
             <p>Model: <code>{ANTHROPIC_MODEL}</code></p>
             <p className="mt-2">
               {hasAnthropicKey ? (
-                <span className="text-green-700">✓ API key detected.</span>
+                <span className="text-emerald-700">✓ API key detected.</span>
               ) : (
-                <span className="text-red-700">✗ <code>ANTHROPIC_API_KEY</code> missing — add it to <code>.env</code> and restart.</span>
+                <span className="text-red-700">✗ <code>ANTHROPIC_API_KEY</code> missing. Add it to <code>.env</code> and restart.</span>
               )}
             </p>
           </div>
@@ -105,7 +108,7 @@ export default async function LLMSetupPage() {
         <button
           type="submit"
           disabled={!ready}
-          className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-primary disabled:opacity-50"
         >
           Confirm
         </button>

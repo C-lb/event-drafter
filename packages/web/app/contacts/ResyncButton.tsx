@@ -41,7 +41,7 @@ function SubmitButton({ syncing }: { syncing: boolean }) {
       type="submit"
       disabled={busy}
       aria-busy={busy}
-      className="inline-flex items-center gap-2 rounded border border-neutral-300 px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+      className="btn btn-sm inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
     >
       {busy && <Spinner />}
       <span>{label}</span>
@@ -63,16 +63,16 @@ export function ResyncButton({ action, job }: Props) {
     <form action={action} className="flex items-center gap-2">
       <SubmitButton syncing={active} />
       {job?.status === 'running' && (
-        <span className="inline-flex items-center gap-1 text-xs text-neutral-600">
+        <span className="inline-flex items-center gap-1 text-xs text-ink-2">
           <Spinner />
           syncing rows…
         </span>
       )}
       {job?.status === 'queued' && (
-        <span className="text-xs text-neutral-500">queued for worker…</span>
+        <span className="text-xs text-ink-3">queued for worker…</span>
       )}
       {job?.status === 'failed' && (
-        <span className="text-xs text-red-700">last sync failed — try again</span>
+        <span className="text-xs text-red-700">last sync failed, try again</span>
       )}
     </form>
   );

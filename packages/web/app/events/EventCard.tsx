@@ -33,11 +33,9 @@ export function EventCard({ ev, expired, dateLabel }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const wrapperCls = expired
-    ? 'rounded border border-neutral-200 bg-neutral-50 p-3 opacity-70 hover:opacity-100 transition-opacity'
-    : 'rounded border border-neutral-200 bg-white p-3';
-  const dateBadgeCls = expired
-    ? 'rounded bg-neutral-200 px-2 py-0.5 text-xs text-neutral-600'
-    : 'rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800';
+    ? 'card p-5 opacity-70 hover:opacity-100 transition-opacity'
+    : 'card p-5';
+  const dateBadgeCls = expired ? 'badge badge-neutral' : 'badge badge-blue';
 
   const doDelete = () => {
     setError(null);
@@ -51,107 +49,77 @@ export function EventCard({ ev, expired, dateLabel }: Props) {
   return (
     <li className={wrapperCls}>
       <div className="flex items-baseline justify-between gap-2">
-        <p className="font-medium">
-          <Link href={`/events/${ev.id}`} className="hover:underline">{ev.name}</Link>
+        <p className="font-semibold">
+          <Link href={`/events/${ev.id}`} className="hover:text-accent">{ev.name}</Link>
         </p>
         <span className={dateBadgeCls}>{dateLabel}</span>
       </div>
-      <p className="mt-0.5 text-xs text-neutral-600">
-        {new Date(ev.event_date).toLocaleString()} · {ev.venue ?? '—'} · {ev.status}
+      <p className="mt-1 text-sm text-ink-2">
+        {new Date(ev.event_date).toLocaleString()} · {ev.venue ?? 'No venue set'} · {ev.status}
       </p>
 
-      <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
-        <span className="rounded bg-neutral-100 px-2 py-0.5">{ev.total_invites} invited</span>
-        <span
-          className={`rounded px-2 py-0.5 ${
-            ev.replied > 0 ? 'bg-blue-100 text-blue-800' : 'bg-neutral-100 text-neutral-600'
-          }`}
-        >
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        <span className="badge badge-neutral">{ev.total_invites} invited</span>
+        <span className={`badge ${ev.replied > 0 ? 'badge-blue' : 'badge-neutral'}`}>
           {ev.replied} replied
         </span>
-        <span
-          className={`rounded px-2 py-0.5 ${
-            ev.yes > 0 ? 'bg-green-100 text-green-800' : 'bg-neutral-100 text-neutral-600'
-          }`}
-          title="Replies classified yes"
-        >
-          ✓ {ev.yes} yes
+        <span className={`badge ${ev.yes > 0 ? 'badge-green' : 'badge-neutral'}`} title="Replies classified yes">
+          {ev.yes} yes
         </span>
-        <span
-          className={`rounded px-2 py-0.5 ${
-            ev.no > 0 ? 'bg-red-100 text-red-800' : 'bg-neutral-100 text-neutral-600'
-          }`}
-          title="Replies classified no"
-        >
-          ✕ {ev.no} no
+        <span className={`badge ${ev.no > 0 ? 'badge-red' : 'badge-neutral'}`} title="Replies classified no">
+          {ev.no} no
         </span>
-        <span
-          className={`rounded px-2 py-0.5 ${
-            ev.maybe > 0 ? 'bg-amber-100 text-amber-800' : 'bg-neutral-100 text-neutral-600'
-          }`}
-          title="Replies classified maybe"
-        >
-          ? {ev.maybe} maybe
+        <span className={`badge ${ev.maybe > 0 ? 'badge-amber' : 'badge-neutral'}`} title="Replies classified maybe">
+          {ev.maybe} maybe
         </span>
-        <span
-          className={`rounded px-2 py-0.5 ${
-            ev.unclear > 0 ? 'bg-neutral-200 text-neutral-700' : 'bg-neutral-100 text-neutral-600'
-          }`}
-          title="Replies classified unclear"
-        >
-          … {ev.unclear} unclear
+        <span className="badge badge-neutral" title="Replies classified unclear">
+          {ev.unclear} unclear
         </span>
       </div>
 
-      <div className="mt-2 flex flex-wrap gap-2 text-xs">
-        <Link
-          href={`/events/${ev.id}`}
-          className="rounded border border-neutral-300 px-2 py-1 hover:bg-neutral-100"
-        >
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Link href={`/events/${ev.id}`} className="btn btn-sm">
           Open
         </Link>
-        <Link
-          href={`/events/${ev.id}#edit`}
-          className="rounded border border-neutral-300 px-2 py-1 hover:bg-neutral-100"
-        >
+        <Link href={`/events/${ev.id}#edit`} className="btn btn-sm">
           Edit
         </Link>
         <button
           onClick={() => { setConfirmOpen((v) => !v); setError(null); }}
-          className="rounded border border-red-300 px-2 py-1 text-red-700 hover:bg-red-50"
+          className="btn-ghost btn-sm text-red-600 hover:bg-red-50"
           type="button"
         >
-          Delete…
+          Delete
         </button>
       </div>
 
       {confirmOpen && (
-        <div className="mt-2 rounded border border-red-300 bg-red-50 p-3 text-xs">
+        <div className="mt-3 rounded-card border border-red-200 bg-red-50 p-4 text-sm">
           <p className="font-medium text-red-900">
-            Delete this event and cascade-delete all of its invites, replies, and follow-ups.
+            Delete this event and all of its invites, replies, and follow-ups.
           </p>
           <p className="mt-1 text-red-800">
-            Type the event name exactly to confirm: <code className="rounded bg-white px-1 font-mono">{ev.name}</code>
+            Type the event name exactly to confirm: <code className="rounded bg-white px-1.5 py-0.5 font-mono text-xs">{ev.name}</code>
           </p>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap gap-2">
             <input
               type="text"
               value={confirmPhrase}
               onChange={(e) => setConfirmPhrase(e.target.value)}
               placeholder={ev.name}
-              className="flex-1 min-w-[180px] rounded border border-red-400 px-2 py-1 font-mono"
+              className="field min-w-[180px] flex-1 font-mono"
             />
             <button
               onClick={doDelete}
               disabled={isPending || confirmPhrase !== ev.name}
-              className="rounded bg-red-700 px-3 py-1 font-medium text-white disabled:opacity-50"
+              className="btn-danger btn-sm"
               type="button"
             >
               {isPending ? 'Deleting…' : 'Delete event'}
             </button>
             <button
               onClick={() => { setConfirmOpen(false); setConfirmPhrase(''); setError(null); }}
-              className="rounded border border-neutral-300 px-3 py-1"
+              className="btn btn-sm"
               type="button"
             >
               Cancel

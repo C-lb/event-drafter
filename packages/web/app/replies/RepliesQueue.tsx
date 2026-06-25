@@ -7,7 +7,7 @@ export function RepliesQueue({ replies, active }: { replies: ReplyRow[]; active:
   const orderedIds = replies.map((r) => r.reply_id);
   return (
     <QueueProvider orderedIds={orderedIds} active={active}>
-      <ul className="space-y-2">
+      <ul className="space-y-3">
         {replies.map((r) => (
           <ReplyCard key={r.reply_id} r={r} />
         ))}

@@ -22,37 +22,31 @@ export default async function EventsPage() {
   const past = all.filter((e) => daysUntil(e.event_date).expired);
 
   return (
-    <section className="max-w-7xl space-y-6">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-3xl font-semibold tracking-tight">Events</h2>
+    <section className="space-y-7">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-2xl font-semibold tracking-tight">Events</h2>
         <div className="flex flex-wrap gap-2">
-          <Link
-            href="/events/new"
-            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
+          <Link href="/events/new" className="btn-primary">
             Create from Gmail
           </Link>
-          <Link
-            href="/events/new/blank"
-            className="rounded border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
-          >
+          <Link href="/events/new/blank" className="btn">
             Create blank
           </Link>
         </div>
       </div>
 
       {all.length === 0 ? (
-        <p className="text-sm text-neutral-600">No events yet.</p>
+        <p className="card p-6 text-sm text-ink-2">No events yet. Create one to get started.</p>
       ) : (
         <>
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-neutral-700">
+          <div className="space-y-3">
+            <h3 className="eyebrow">
               Upcoming ({upcoming.length})
             </h3>
             {upcoming.length === 0 ? (
-              <p className="text-xs text-neutral-500">No upcoming events.</p>
+              <p className="text-sm text-ink-3">No upcoming events.</p>
             ) : (
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 {upcoming.map((e) => (
                   <EventCard
                     key={e.id}
@@ -78,11 +72,11 @@ export default async function EventsPage() {
           </div>
 
           {past.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-neutral-500">
+            <div className="space-y-3">
+              <h3 className="eyebrow text-ink-3">
                 Past ({past.length})
               </h3>
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 {past.map((e) => (
                   <EventCard
                     key={e.id}

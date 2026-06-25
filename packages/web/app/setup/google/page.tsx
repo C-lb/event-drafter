@@ -13,26 +13,38 @@ export default function GoogleSetupPage({
   const params = use(searchParams);
 
   return (
-    <section className="max-w-xl space-y-4">
-      <h2 className="text-3xl font-semibold tracking-tight">Step 2 — Connect Google</h2>
-      <p className="text-sm text-neutral-700">
+    <section className="mx-auto max-w-2xl space-y-6">
+      <div className="space-y-1">
+        <p className="eyebrow">Step 2</p>
+        <h2 className="text-2xl font-semibold tracking-tight">Connect Google</h2>
+      </div>
+      <p className="text-sm text-ink-2">
         See <code>docs/setup/google-oauth.md</code> for the one-time GCP setup.
         After that, click below to authorize this app.
       </p>
       {params?.error && (
-        <p className="rounded bg-red-50 p-3 text-sm text-red-700">Error: {params.error}</p>
+        <p className="rounded-card bg-red-50 p-4 text-sm text-red-700 ring-1 ring-inset ring-red-600/20">Error: {params.error}</p>
       )}
       {tokens ? (
-        <div className="space-y-2">
-          <p className="rounded bg-green-50 p-3 text-sm text-green-700">
+        <div className="space-y-3">
+          <p className="rounded-card bg-emerald-50 p-4 text-sm text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
             ✓ Authorized. Scopes: {tokens.scope}
           </p>
-          <Link href="/setup/sheet" className="inline-block rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white">
-            Continue
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/setup/sheet" className="btn-primary inline-flex">
+              Continue
+            </Link>
+            <a href="/api/auth/google/start" className="btn inline-flex">
+              Re-authorize
+            </a>
+          </div>
+          <p className="text-sm text-ink-3">
+            If replies or contact sync stopped working, the saved login has expired.
+            Re-authorize to get a fresh one.
+          </p>
         </div>
       ) : (
-        <a href="/api/auth/google/start" className="inline-block rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white">
+        <a href="/api/auth/google/start" className="btn-primary inline-flex">
           Authorize Google
         </a>
       )}

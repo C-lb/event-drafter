@@ -12,7 +12,7 @@ export const revalidate = 0;
 
 function HealthTag({ ok, label }: { ok: boolean; label: string }) {
   return (
-    <span className={`rounded px-2 py-0.5 text-xs ${ok ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+    <span className={`badge ${ok ? 'badge-green' : 'badge-red'}`}>
       {ok ? '✓' : '✗'} {label}
     </span>
   );
@@ -84,17 +84,17 @@ export default async function StatusPage() {
     .get();
 
   return (
-    <section className="max-w-7xl space-y-6">
+    <section className="space-y-6">
       {/* Keep the page live whenever ANY job is queued or running, so progress
           text (jobs.progress) and counters update without a manual reload. */}
       <AutoRefresh active={inFlight.length > 0} />
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-3xl font-semibold tracking-tight">Status</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">Status</h2>
         <form action={triggerCleanup}>
           <button
             type="submit"
             disabled={cleanupInFlight}
-            className="rounded bg-neutral-700 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+            className="btn btn-sm"
             title={lastCleanup ? `Last cleanup: ${lastCleanup.status} ${ago(((lastCleanup.finished_at ?? lastCleanup.created_at) as Date | null)?.getTime() ?? null)}` : 'No prior cleanup'}
           >
             {cleanupInFlight ? 'Cleaning up…' : 'Run cleanup now'}
@@ -109,46 +109,49 @@ export default async function StatusPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="rounded border border-neutral-200 bg-white p-3">
-          <h3 className="text-sm font-semibold">Worker heartbeat</h3>
-          <p className="text-xs text-neutral-700">Last beat: {ago(heartbeat?.ts ?? null)}</p>
-          <p className="text-xs text-neutral-700">Node: {heartbeat?.node ?? '—'}</p>
+        <div className="card p-5">
+          <h3 className="text-base font-semibold">Worker heartbeat</h3>
+          <p className="text-xs text-ink-2">Last beat: {ago(heartbeat?.ts ?? null)}</p>
+          <p className="text-xs text-ink-2">Node: {heartbeat?.node ?? '—'}</p>
         </div>
-        <div className="rounded border border-neutral-200 bg-white p-3">
-          <h3 className="text-sm font-semibold">Google tokens</h3>
-          <p className="text-xs text-neutral-700">
+        <div className="card flex flex-col p-5">
+          <h3 className="text-base font-semibold">Google tokens</h3>
+          <p className="text-xs text-ink-2">
             Expires:{' '}
             {tokens
               ? `${new Date(tokens.expiry_date).toLocaleString()} (${tokenExpMs && tokenExpMs > 0 ? Math.round(tokenExpMs / 60_000) + ' min' : 'expired'})`
               : 'no tokens'}
           </p>
-          <p className="text-xs text-neutral-700">Scopes: {tokens?.scope ?? '—'}</p>
+          <p className="text-xs text-ink-2">Scopes: {tokens?.scope ?? '—'}</p>
+          <a href="/api/auth/google/start" className={`btn-sm mt-3 self-start ${googleOk ? 'btn' : 'btn-primary'}`}>
+            {googleOk ? 'Re-authorize' : 'Re-authorize Google'}
+          </a>
         </div>
-        <div className="rounded border border-neutral-200 bg-white p-3">
-          <h3 className="text-sm font-semibold">LLM (Ollama)</h3>
-          <p className="text-xs text-neutral-700">Last OK: {ago(lastOk?.ts ?? null)}</p>
-          <p className="text-xs text-neutral-700">Last error: {lastErr ? `${ago(lastErr.ts)} — ${lastErr.message}` : 'none'}</p>
+        <div className="card p-5">
+          <h3 className="text-base font-semibold">LLM (Ollama)</h3>
+          <p className="text-xs text-ink-2">Last OK: {ago(lastOk?.ts ?? null)}</p>
+          <p className="text-xs text-ink-2">Last error: {lastErr ? `${ago(lastErr.ts)}. ${lastErr.message}` : 'none'}</p>
         </div>
-        <div className="rounded border border-neutral-200 bg-white p-3">
-          <h3 className="text-sm font-semibold">Job queue totals</h3>
-          <ul className="text-xs">
+        <div className="card p-5">
+          <h3 className="text-base font-semibold">Job queue totals</h3>
+          <ul className="text-xs text-ink-2">
             {Object.entries(queue).map(([k, v]) => (
-              <li key={k}>{k}: <strong>{v}</strong></li>
+              <li key={k}>{k}: <strong className="text-ink">{v}</strong></li>
             ))}
           </ul>
         </div>
       </div>
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold">Jobs by kind</h3>
+        <h3 className="eyebrow mb-2">Jobs by kind</h3>
         <table className="w-full text-xs">
-          <thead className="bg-neutral-100">
+          <thead className="bg-surface-2 text-ink-2">
             <tr>
-              <th className="border px-2 py-1 text-left">Kind</th>
+              <th className="px-2 py-1 text-left font-medium">Kind</th>
               {STATUSES.map((s) => (
-                <th key={s} className="border px-2 py-1 text-right">{s}</th>
+                <th key={s} className="px-2 py-1 text-right font-medium">{s}</th>
               ))}
-              <th className="border px-2 py-1 text-right">total</th>
+              <th className="px-2 py-1 text-right font-medium">total</th>
             </tr>
           </thead>
           <tbody>
@@ -156,19 +159,19 @@ export default async function StatusPage() {
               const row = breakdown.get(k)!;
               const total = STATUSES.reduce((acc, s) => acc + (row[s] ?? 0), 0);
               return (
-                <tr key={k}>
-                  <td className="border px-2 py-1 font-mono">{k}</td>
+                <tr key={k} className="border-b border-line">
+                  <td className="px-2 py-1 font-mono">{k}</td>
                   {STATUSES.map((s) => (
-                    <td key={s} className={`border px-2 py-1 text-right ${(row[s] ?? 0) > 0 && s === 'failed' ? 'bg-red-50 text-red-800' : (row[s] ?? 0) > 0 && (s === 'queued' || s === 'running') ? 'bg-amber-50' : ''}`}>
+                    <td key={s} className={`px-2 py-1 text-right ${(row[s] ?? 0) > 0 && s === 'failed' ? 'bg-red-50 text-red-700' : (row[s] ?? 0) > 0 && (s === 'queued' || s === 'running') ? 'bg-amber-50 text-amber-900' : ''}`}>
                       {row[s] ? row[s] : ''}
                     </td>
                   ))}
-                  <td className="border px-2 py-1 text-right font-semibold">{total}</td>
+                  <td className="px-2 py-1 text-right font-semibold">{total}</td>
                 </tr>
               );
             })}
             {sortedKinds.length === 0 && (
-              <tr><td colSpan={STATUSES.length + 2} className="border px-2 py-1 text-neutral-500">No jobs yet.</td></tr>
+              <tr><td colSpan={STATUSES.length + 2} className="px-2 py-1 text-ink-3">No jobs yet.</td></tr>
             )}
           </tbody>
         </table>
@@ -176,27 +179,27 @@ export default async function StatusPage() {
 
       {inFlight.length > 0 && (
         <div>
-          <h3 className="mb-2 text-sm font-semibold">In flight (queued + running)</h3>
+          <h3 className="eyebrow mb-2">In flight (queued and running)</h3>
           <table className="w-full text-xs">
-            <thead className="bg-neutral-100">
+            <thead className="bg-surface-2 text-ink-2">
               <tr>
-                <th className="border px-2 py-1 text-left">ID</th>
-                <th className="border px-2 py-1 text-left">Kind</th>
-                <th className="border px-2 py-1 text-left">Status</th>
-                <th className="border px-2 py-1 text-left">Progress</th>
-                <th className="border px-2 py-1 text-left">Created</th>
-                <th className="border px-2 py-1 text-right">Attempts</th>
+                <th className="px-2 py-1 text-left font-medium">ID</th>
+                <th className="px-2 py-1 text-left font-medium">Kind</th>
+                <th className="px-2 py-1 text-left font-medium">Status</th>
+                <th className="px-2 py-1 text-left font-medium">Progress</th>
+                <th className="px-2 py-1 text-left font-medium">Created</th>
+                <th className="px-2 py-1 text-right font-medium">Attempts</th>
               </tr>
             </thead>
             <tbody>
               {inFlight.map((j) => (
-                <tr key={j.id}>
-                  <td className="border px-2 py-1">{j.id}</td>
-                  <td className="border px-2 py-1 font-mono">{j.kind}</td>
-                  <td className="border px-2 py-1">{j.status}</td>
-                  <td className="border px-2 py-1">{j.progress ?? <span className="text-neutral-400">—</span>}</td>
-                  <td className="border px-2 py-1">{ago(j.created_at instanceof Date ? j.created_at.getTime() : Number(j.created_at))}</td>
-                  <td className="border px-2 py-1 text-right">{j.attempts}</td>
+                <tr key={j.id} className="border-b border-line">
+                  <td className="px-2 py-1">{j.id}</td>
+                  <td className="px-2 py-1 font-mono">{j.kind}</td>
+                  <td className="px-2 py-1"><span className={`badge ${j.status === 'running' ? 'badge-blue' : 'badge-neutral'}`}>{j.status}</span></td>
+                  <td className="px-2 py-1">{j.progress ?? <span className="text-ink-3">—</span>}</td>
+                  <td className="px-2 py-1">{ago(j.created_at instanceof Date ? j.created_at.getTime() : Number(j.created_at))}</td>
+                  <td className="px-2 py-1 text-right">{j.attempts}</td>
                 </tr>
               ))}
             </tbody>
@@ -206,10 +209,10 @@ export default async function StatusPage() {
 
       {recentFailed.length > 0 && (
         <div>
-          <h3 className="mb-2 text-sm font-semibold">Recent failures</h3>
+          <h3 className="eyebrow mb-2">Recent failures</h3>
           <ul className="space-y-1 text-xs">
             {recentFailed.map((j) => (
-              <li key={j.id} className="rounded bg-red-50 p-2 text-red-900">
+              <li key={j.id} className="rounded-card bg-red-50 p-4 text-red-700 ring-1 ring-inset ring-red-600/20">
                 <p><strong>#{j.id}</strong> <span className="font-mono">{j.kind}</span> · {ago(j.created_at instanceof Date ? j.created_at.getTime() : Number(j.created_at))}</p>
                 <p className="line-clamp-2">{j.last_error?.slice(0, 200) ?? ''}</p>
               </li>
@@ -219,25 +222,25 @@ export default async function StatusPage() {
       )}
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold">Cron schedule</h3>
+        <h3 className="eyebrow mb-2">Cron schedule</h3>
         <table className="w-full text-xs">
-          <thead className="bg-neutral-100">
+          <thead className="bg-surface-2 text-ink-2">
             <tr>
-              <th className="border px-2 py-1 text-left">Label</th>
-              <th className="border px-2 py-1 text-left">Cron (UTC)</th>
-              <th className="border px-2 py-1 text-left">Kind</th>
-              <th className="border px-2 py-1 text-left">Next run</th>
+              <th className="px-2 py-1 text-left font-medium">Label</th>
+              <th className="px-2 py-1 text-left font-medium">Cron (UTC)</th>
+              <th className="px-2 py-1 text-left font-medium">Kind</th>
+              <th className="px-2 py-1 text-left font-medium">Next run</th>
             </tr>
           </thead>
           <tbody>
             {Object.entries(SCHEDULES).map(([name, s]) => {
               const next = nextRunFor(s.cron);
               return (
-                <tr key={name}>
-                  <td className="border px-2 py-1">{s.label}</td>
-                  <td className="border px-2 py-1 font-mono">{s.cron}</td>
-                  <td className="border px-2 py-1">{s.kind}</td>
-                  <td className="border px-2 py-1">{next ? next.toLocaleString() : '—'}</td>
+                <tr key={name} className="border-b border-line">
+                  <td className="px-2 py-1">{s.label}</td>
+                  <td className="px-2 py-1 font-mono">{s.cron}</td>
+                  <td className="px-2 py-1">{s.kind}</td>
+                  <td className="px-2 py-1">{next ? next.toLocaleString() : '—'}</td>
                 </tr>
               );
             })}

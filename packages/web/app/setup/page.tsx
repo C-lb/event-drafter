@@ -49,45 +49,45 @@ export default async function SetupHome() {
   const allDone = completedCount === steps.length;
 
   return (
-    <section className="max-w-2xl space-y-4">
+    <section className="mx-auto max-w-2xl space-y-7">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-3xl font-semibold tracking-tight">Setup Wizard</h2>
-        <span className="text-xs text-neutral-600">
+        <h2 className="text-2xl font-semibold tracking-tight">Setup wizard</h2>
+        <span className="text-xs text-ink-3">
           {completedCount} of {steps.length} complete
         </span>
       </div>
 
-      <p className="text-sm text-neutral-700">
-        Walk through these steps once. Setup state is stored locally — you only repeat a step when
+      <p className="text-sm text-ink-2">
+        Walk through these steps once. Setup state is stored locally, so you only repeat a step when
         something material changes (new API key, new Sheet, WhatsApp logged out, etc.).
       </p>
 
-      <ol className="space-y-2">
+      <ol className="space-y-3">
         {steps.map((step, i) => (
           <li
             key={step.href}
-            className={`flex items-start gap-3 rounded border p-3 transition-colors ${
-              step.done ? 'border-green-200 bg-green-50' : 'border-neutral-200 bg-white hover:bg-neutral-50'
+            className={`flex items-start gap-3 p-4 transition-colors ${
+              step.done ? 'rounded-card bg-emerald-50 ring-1 ring-inset ring-emerald-600/20' : 'card hover:bg-surface-2'
             }`}
           >
             <span
               className={`mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded-full text-xs ${
-                step.done ? 'bg-green-600 text-white' : 'bg-neutral-200 text-neutral-700'
+                step.done ? 'bg-emerald-600 text-white' : 'bg-surface-2 text-ink-2'
               }`}
             >
               {step.done ? '✓' : i + 1}
             </span>
             <Link href={step.href} className="flex-1">
-              <p className="text-sm font-medium hover:underline">{step.label}</p>
-              <p className="text-xs text-neutral-600">{step.description}</p>
+              <p className="text-sm font-medium hover:text-accent">{step.label}</p>
+              <p className="text-xs text-ink-2">{step.description}</p>
             </Link>
           </li>
         ))}
       </ol>
 
       {allDone && (
-        <p className="rounded bg-green-50 p-3 text-sm text-green-800">
-          Setup is complete. <Link href="/" className="underline">Back to dashboard</Link>.
+        <p className="rounded-card bg-emerald-50 p-4 text-sm text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+          Setup is complete. <Link href="/" className="font-medium text-accent hover:text-accent-hover">Back to dashboard</Link>.
         </p>
       )}
     </section>

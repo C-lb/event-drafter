@@ -85,10 +85,10 @@ export function StarterDrafts({ eventId, drafts, overrides }: Props) {
   if (drafts.length === 0) return null;
 
   return (
-    <section className="space-y-2">
+    <section className="space-y-3">
       <div className="flex items-baseline justify-between">
-        <h3 className="text-sm font-semibold">Starter drafts</h3>
-        <p className="text-xs text-neutral-500">
+        <h3 className="text-base font-semibold text-ink">Starter drafts</h3>
+        <p className="text-xs text-ink-3">
           Pre-rendered from the EDM summary. Replace <code>[name]</code> at send time. Click{' '}
           <em>Edit</em> on any card to tweak the wording for this event.
         </p>
@@ -107,33 +107,33 @@ export function StarterDrafts({ eventId, drafts, overrides }: Props) {
           return (
             <article
               key={d.kind}
-              className="flex flex-col gap-2 rounded border border-neutral-200 bg-white p-3"
+              className="card flex flex-col gap-3 p-5"
             >
               <header className="space-y-0.5">
                 <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-semibold">{d.title}</h4>
+                  <h4 className="text-sm font-semibold text-ink">{d.title}</h4>
                   {hasOverride && !s.editing && (
-                    <span className="rounded bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-800">
-                      edited
+                    <span className="badge badge-blue">
+                      Edited
                     </span>
                   )}
                   {s.editing && (
-                    <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">
-                      editing
+                    <span className="badge badge-amber">
+                      Editing
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-neutral-500">{d.description}</p>
+                <p className="text-xs text-ink-3">{d.description}</p>
               </header>
 
               {missing > 0 && !hasOverride && (
-                <p className="rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-800">
+                <p className="rounded-card bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-inset ring-amber-600/25">
                   Missing from summary: {d.missing_facts.join(', ')}. Left as placeholders.
                 </p>
               )}
 
               {s.error && (
-                <p className="rounded bg-red-50 px-2 py-1 text-[11px] text-red-700">{s.error}</p>
+                <p className="rounded-card bg-red-50 p-4 text-sm text-red-700 ring-1 ring-inset ring-red-600/20">{s.error}</p>
               )}
 
               <textarea
@@ -141,10 +141,8 @@ export function StarterDrafts({ eventId, drafts, overrides }: Props) {
                 value={visible}
                 onChange={(e) => patch(d.kind, { draft: e.target.value })}
                 rows={Math.min(20, visible.split('\n').length + 1)}
-                className={`flex-1 rounded border p-2 font-mono text-xs leading-relaxed ${
-                  s.editing
-                    ? 'border-amber-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-200'
-                    : 'border-neutral-200 bg-neutral-50'
+                className={`field flex-1 font-mono leading-relaxed ${
+                  s.editing ? 'bg-accent-soft' : 'bg-surface-2'
                 }`}
                 onFocus={(e) => { if (!s.editing) e.currentTarget.select(); }}
               />
@@ -155,14 +153,14 @@ export function StarterDrafts({ eventId, drafts, overrides }: Props) {
                     <button
                       type="button"
                       onClick={() => copy(d)}
-                      className="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
+                      className="btn-primary btn-sm"
                     >
                       {s.copied ? 'Copied ✓' : 'Copy to clipboard'}
                     </button>
                     <button
                       type="button"
                       onClick={() => startEdit(d)}
-                      className="rounded border border-neutral-300 px-3 py-1 text-xs hover:bg-neutral-50"
+                      className="btn btn-sm"
                     >
                       Edit
                     </button>
@@ -171,7 +169,7 @@ export function StarterDrafts({ eventId, drafts, overrides }: Props) {
                         type="button"
                         onClick={() => reset(d)}
                         disabled={s.saving}
-                        className="rounded border border-red-200 px-3 py-1 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50"
+                        className="btn-ghost btn-sm text-red-700 disabled:opacity-50"
                       >
                         Reset to template
                       </button>
@@ -183,7 +181,7 @@ export function StarterDrafts({ eventId, drafts, overrides }: Props) {
                       type="button"
                       onClick={() => save(d)}
                       disabled={s.saving}
-                      className="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                      className="btn-primary btn-sm disabled:opacity-50"
                     >
                       {s.saving ? 'Saving…' : 'Save'}
                     </button>
@@ -191,13 +189,13 @@ export function StarterDrafts({ eventId, drafts, overrides }: Props) {
                       type="button"
                       onClick={() => cancelEdit(d)}
                       disabled={s.saving}
-                      className="rounded border border-neutral-300 px-3 py-1 text-xs hover:bg-neutral-50 disabled:opacity-50"
+                      className="btn btn-sm disabled:opacity-50"
                     >
                       Cancel
                     </button>
                   </>
                 )}
-                <span className="ml-auto text-xs text-neutral-400">{visible.length} chars</span>
+                <span className="ml-auto text-xs text-ink-3">{visible.length} chars</span>
               </div>
             </article>
           );

@@ -22,12 +22,12 @@ export default async function ContactsPage() {
     : null;
 
   return (
-    <section className="max-w-6xl space-y-4">
+    <section className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-semibold tracking-tight">Contacts ({all.length})</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">Contacts ({all.length})</h2>
         <ResyncButton action={resync} job={jobView} />
       </div>
-      <p className="text-xs text-neutral-600">
+      <p className="text-sm text-ink-2">
         Hand-edits override the Sheet locally. A re-sync will pull fresh values for any row whose Sheet content has changed since.
       </p>
       <ContactsTable rows={all.map((c) => ({

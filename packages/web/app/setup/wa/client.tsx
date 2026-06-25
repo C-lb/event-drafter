@@ -53,18 +53,21 @@ export function WaSetupClient({ initialReady }: Props) {
   const isLoggedIn = display === 'logged-in';
 
   return (
-    <section className="max-w-xl space-y-4">
-      <h2 className="text-3xl font-semibold tracking-tight">WhatsApp Web</h2>
-      <p className="text-sm text-neutral-700">
+    <section className="mx-auto max-w-2xl space-y-6">
+      <div className="space-y-1">
+        <p className="eyebrow">Step 5</p>
+        <h2 className="text-2xl font-semibold tracking-tight">Connect WhatsApp Web</h2>
+      </div>
+      <p className="text-sm text-ink-2">
         Scan the QR once. The login persists in the local profile directory. See{' '}
         <code>docs/setup/whatsapp.md</code> for the full walkthrough.
       </p>
 
       <div
-        className={`rounded border p-3 text-sm ${
+        className={`rounded-card p-4 text-sm ring-1 ring-inset ${
           isLoggedIn
-            ? 'border-green-200 bg-green-50 text-green-800'
-            : 'border-amber-200 bg-amber-50 text-amber-800'
+            ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
+            : 'bg-amber-50 text-amber-900 ring-amber-600/25'
         }`}
       >
         Status: <strong>{display}</strong>
@@ -76,7 +79,7 @@ export function WaSetupClient({ initialReady }: Props) {
           </p>
         )}
         {liveError && (
-          <pre className="mt-2 overflow-auto rounded bg-red-50 p-2 text-xs text-red-700">{liveError}</pre>
+          <pre className="mt-2 overflow-auto rounded-card bg-red-50 p-4 text-xs text-red-700 ring-1 ring-inset ring-red-600/20">{liveError}</pre>
         )}
       </div>
 
@@ -84,24 +87,24 @@ export function WaSetupClient({ initialReady }: Props) {
         <button
           onClick={recheckLive}
           disabled={isPending || scanning}
-          className="rounded border border-neutral-300 px-3 py-1 text-sm hover:bg-neutral-100 disabled:opacity-50"
+          className="btn disabled:opacity-50"
         >
           {isPending ? 'Probing…' : 'Re-check live'}
         </button>
         <button
           onClick={scan}
           disabled={isPending || scanning}
-          className="rounded bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          className="btn-primary disabled:opacity-50"
         >
           {scanning ? 'Waiting for QR…' : isLoggedIn ? 'Re-scan QR' : 'Open & scan'}
         </button>
       </div>
 
-      {msg && <p className="rounded bg-neutral-100 p-3 text-sm">{msg}</p>}
+      {msg && <p className="rounded-card bg-accent-soft p-4 text-sm text-accent ring-1 ring-inset ring-accent-line">{msg}</p>}
 
-      <p className="text-xs text-neutral-500">
+      <p className="text-xs text-ink-3">
         Note: a Chromium window will open briefly during probes and scans, then close. That is
-        expected — closing the window releases the profile lock so the worker can use it for sends.
+        expected. Closing the window releases the profile lock so the worker can use it for sends.
       </p>
     </section>
   );

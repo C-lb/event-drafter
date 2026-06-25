@@ -59,61 +59,61 @@ export default function PickContactsPage() {
   });
 
   return (
-    <section className="max-w-7xl space-y-4">
-      <h2 className="text-3xl font-semibold tracking-tight">Pick contacts to invite</h2>
+    <section className="space-y-6">
+      <h2 className="text-2xl font-semibold tracking-tight">Pick contacts to invite</h2>
 
       <div className="flex gap-2">
         <input
-          className="flex-1 rounded border border-neutral-300 px-3 py-2 text-sm"
+          className="field flex-1"
           placeholder="search name or remarks…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') load(); }}
         />
-        <button onClick={load} className="rounded border border-neutral-300 px-3 py-1 text-sm">Search</button>
+        <button onClick={load} className="btn">Search</button>
       </div>
 
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-neutral-600">
+        <p className="text-xs text-ink-2">
           {picked.size} selected · {candidates.length} candidates (excluding already-invited)
         </p>
         <div className="flex gap-2 text-xs">
           <button
             onClick={selectAll}
             disabled={candidates.length === 0 || picked.size === candidates.length}
-            className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
+            className="btn btn-sm"
           >
             Select all ({candidates.length})
           </button>
           <button
             onClick={clearAll}
             disabled={picked.size === 0}
-            className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
+            className="btn btn-sm"
           >
             Clear
           </button>
         </div>
       </div>
-      <p className="text-[11px] text-neutral-500">Tip: shift-click to select a range.</p>
+      <p className="text-[11px] text-ink-3">Tip: shift-click to select a range.</p>
 
       <ul className="space-y-1">
         {candidates.map((c, i) => (
           <li
             key={c.id}
             onClick={(e) => toggle(c.id, i, e.shiftKey)}
-            className={`cursor-pointer select-none rounded border p-2 text-sm ${picked.has(c.id) ? 'border-blue-500 bg-blue-50' : 'border-neutral-200 bg-white'}`}
+            className={`cursor-pointer select-none rounded-sm p-3 text-sm ${picked.has(c.id) ? 'bg-accent-soft ring-1 ring-inset ring-accent-line' : 'card'}`}
           >
-            <p className="font-medium">{c.first_name}{c.last_name ? ' ' + c.last_name : ''} <span className="text-xs text-neutral-500">{c.phone_e164}</span></p>
-            {c.remarks && <p className="text-xs text-neutral-600">{c.remarks}</p>}
+            <p className="font-medium">{c.first_name}{c.last_name ? ' ' + c.last_name : ''} <span className="text-xs text-ink-3">{c.phone_e164}</span></p>
+            {c.remarks && <p className="text-xs text-ink-2">{c.remarks}</p>}
           </li>
         ))}
       </ul>
 
-      <div className="sticky bottom-0 bg-white p-3 border-t">
+      <div className="sticky bottom-0 bg-canvas p-3 border-t border-line">
         <button
           onClick={generate}
           disabled={isPending || picked.size === 0}
-          className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-primary"
         >
           Generate {picked.size} draft{picked.size === 1 ? '' : 's'}
         </button>

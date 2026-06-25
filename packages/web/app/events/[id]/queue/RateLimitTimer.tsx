@@ -55,7 +55,7 @@ export function RateLimitTimer() {
 
   if (!snap) {
     return (
-      <div className="rounded border border-neutral-200 bg-neutral-50 p-2 text-xs text-neutral-500">
+      <div className="card-quiet p-4 text-xs text-ink-3">
         Rate-limit state loading…
       </div>
     );
@@ -73,10 +73,10 @@ export function RateLimitTimer() {
 
   return (
     <div
-      className={`rounded border p-2 text-xs ${
+      className={`rounded-card p-4 text-xs ring-1 ring-inset ${
         blocked
-          ? 'border-amber-300 bg-amber-50 text-amber-900'
-          : 'border-green-200 bg-green-50 text-green-900'
+          ? 'bg-amber-50 text-amber-900 ring-amber-600/25'
+          : 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
       }`}
     >
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
@@ -88,7 +88,7 @@ export function RateLimitTimer() {
               <span className="opacity-70">({reasonLabel(snap.reason)})</span>
             </>
           ) : (
-            <>ready — next send allowed now</>
+            <>ready. Next send allowed now</>
           )}
         </span>
         <span className="opacity-70">

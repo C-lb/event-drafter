@@ -86,7 +86,7 @@ export function ContactsTable({ rows: initial }: Props) {
   return (
     <div className="space-y-3">
       {banner && (
-        <div className={`rounded p-2 text-sm ${banner.kind === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+        <div className={`rounded-card p-4 text-sm ring-1 ring-inset ${banner.kind === 'ok' ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : 'bg-red-50 text-red-700 ring-red-600/20'}`}>
           {banner.text}
         </div>
       )}
@@ -94,34 +94,34 @@ export function ContactsTable({ rows: initial }: Props) {
       <div className="flex items-center justify-end gap-2">
         <button
           onClick={() => setClearOpen((v) => !v)}
-          className="rounded border border-red-300 px-3 py-1 text-sm text-red-700 hover:bg-red-50"
+          className="btn btn-sm"
         >
           Clear all contacts…
         </button>
       </div>
 
       {clearOpen && (
-        <div className="rounded border border-red-300 bg-red-50 p-3 text-sm">
+        <div className="rounded-card bg-red-50 p-4 text-sm text-red-700 ring-1 ring-inset ring-red-600/20">
           <p className="font-medium text-red-900">This deletes every contact and cascades to all of their invites, replies, and follow-ups across every event.</p>
-          <p className="mt-1 text-red-800">Type <code className="rounded bg-white px-1 font-mono">{CLEAR_PHRASE}</code> below to confirm.</p>
-          <div className="mt-2 flex gap-2">
+          <p className="mt-1 text-red-700">Type <code className="rounded-sm bg-surface px-1 font-mono">{CLEAR_PHRASE}</code> below to confirm.</p>
+          <div className="mt-3 flex gap-2">
             <input
               type="text"
               value={clearPhrase}
               onChange={(e) => setClearPhrase(e.target.value)}
               placeholder={CLEAR_PHRASE}
-              className="flex-1 rounded border border-red-400 px-2 py-1 font-mono text-sm"
+              className="field flex-1 font-mono"
             />
             <button
               onClick={doClearAll}
               disabled={isPending || clearPhrase !== CLEAR_PHRASE}
-              className="rounded bg-red-700 px-3 py-1 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-danger btn-sm disabled:opacity-50"
             >
               {isPending ? 'Deleting…' : 'Delete everything'}
             </button>
             <button
               onClick={() => { setClearOpen(false); setClearPhrase(''); }}
-              className="rounded border border-neutral-300 px-3 py-1 text-sm"
+              className="btn btn-sm"
             >
               Cancel
             </button>
@@ -130,63 +130,63 @@ export function ContactsTable({ rows: initial }: Props) {
       )}
 
       <table className="w-full text-sm">
-        <thead className="bg-neutral-100">
+        <thead className="bg-surface-2 text-ink-2">
           <tr>
-            <th className="border px-2 py-1 text-left">First name</th>
-            <th className="border px-2 py-1 text-left">Last name</th>
-            <th className="border px-2 py-1 text-left">Phone</th>
-            <th className="border px-2 py-1 text-left">Secondary phone</th>
-            <th className="border px-2 py-1 text-left">Email</th>
-            <th className="border px-2 py-1 text-left">Remarks</th>
-            <th className="border px-2 py-1 text-left w-32">Actions</th>
+            <th className="border-b border-line px-3 py-2 text-left font-medium">First name</th>
+            <th className="border-b border-line px-3 py-2 text-left font-medium">Last name</th>
+            <th className="border-b border-line px-3 py-2 text-left font-medium">Phone</th>
+            <th className="border-b border-line px-3 py-2 text-left font-medium">Secondary phone</th>
+            <th className="border-b border-line px-3 py-2 text-left font-medium">Email</th>
+            <th className="border-b border-line px-3 py-2 text-left font-medium">Remarks</th>
+            <th className="border-b border-line px-3 py-2 text-left font-medium w-32">Actions</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => {
             const isEditing = editingId === r.id && draft !== null;
-            const inputCls = 'w-full rounded border border-neutral-300 px-1 py-0.5 text-sm';
+            const inputCls = 'field w-full';
             return (
-              <tr key={r.id} className={isEditing ? 'bg-blue-50' : ''}>
+              <tr key={r.id} className={isEditing ? 'bg-accent-soft' : ''}>
                 {isEditing ? (
                   <>
-                    <td className="border px-1 py-1">
+                    <td className="border-b border-line px-2 py-1.5">
                       <input className={inputCls} value={draft.first_name} onChange={(e) => setDraft({ ...draft, first_name: e.target.value })} />
                     </td>
-                    <td className="border px-1 py-1">
+                    <td className="border-b border-line px-2 py-1.5">
                       <input className={inputCls} value={draft.last_name ?? ''} onChange={(e) => setDraft({ ...draft, last_name: e.target.value })} />
                     </td>
-                    <td className="border px-1 py-1">
+                    <td className="border-b border-line px-2 py-1.5">
                       <input className={inputCls} value={draft.phone_e164} onChange={(e) => setDraft({ ...draft, phone_e164: e.target.value })} />
                     </td>
-                    <td className="border px-1 py-1">
+                    <td className="border-b border-line px-2 py-1.5">
                       <input className={inputCls} value={draft.secondary_phone_e164 ?? ''} onChange={(e) => setDraft({ ...draft, secondary_phone_e164: e.target.value })} />
                     </td>
-                    <td className="border px-1 py-1">
+                    <td className="border-b border-line px-2 py-1.5">
                       <input className={inputCls} value={draft.email ?? ''} onChange={(e) => setDraft({ ...draft, email: e.target.value })} />
                     </td>
-                    <td className="border px-1 py-1">
+                    <td className="border-b border-line px-2 py-1.5">
                       <input className={inputCls} value={draft.remarks ?? ''} onChange={(e) => setDraft({ ...draft, remarks: e.target.value })} />
                     </td>
-                    <td className="border px-1 py-1 space-x-1">
-                      <button onClick={save} disabled={isPending} className="rounded bg-blue-600 px-2 py-0.5 text-xs text-white disabled:opacity-50">
+                    <td className="border-b border-line px-2 py-1.5 space-x-1">
+                      <button onClick={save} disabled={isPending} className="btn-primary btn-sm disabled:opacity-50">
                         {isPending ? '…' : 'Save'}
                       </button>
-                      <button onClick={cancelEdit} disabled={isPending} className="rounded border border-neutral-300 px-2 py-0.5 text-xs">
+                      <button onClick={cancelEdit} disabled={isPending} className="btn btn-sm">
                         Cancel
                       </button>
                     </td>
                   </>
                 ) : (
                   <>
-                    <td className="border px-2 py-1">{r.first_name}</td>
-                    <td className="border px-2 py-1">{r.last_name ?? ''}</td>
-                    <td className="border px-2 py-1">{r.phone_e164}</td>
-                    <td className="border px-2 py-1">{r.secondary_phone_e164 ?? ''}</td>
-                    <td className="border px-2 py-1">{r.email ?? ''}</td>
-                    <td className="border px-2 py-1">{r.remarks ?? ''}</td>
-                    <td className="border px-2 py-1 space-x-1">
-                      <button onClick={() => beginEdit(r)} className="rounded border border-neutral-300 px-2 py-0.5 text-xs hover:bg-neutral-100">Edit</button>
-                      <button onClick={() => remove(r)} disabled={isPending} className="rounded border border-red-300 px-2 py-0.5 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50">Delete</button>
+                    <td className="border-b border-line px-3 py-2">{r.first_name}</td>
+                    <td className="border-b border-line px-3 py-2">{r.last_name ?? ''}</td>
+                    <td className="border-b border-line px-3 py-2">{r.phone_e164}</td>
+                    <td className="border-b border-line px-3 py-2">{r.secondary_phone_e164 ?? ''}</td>
+                    <td className="border-b border-line px-3 py-2">{r.email ?? ''}</td>
+                    <td className="border-b border-line px-3 py-2">{r.remarks ?? ''}</td>
+                    <td className="border-b border-line px-3 py-2 space-x-1">
+                      <button onClick={() => beginEdit(r)} className="btn btn-sm">Edit</button>
+                      <button onClick={() => remove(r)} disabled={isPending} className="btn-ghost btn-sm text-red-700 disabled:opacity-50">Delete</button>
                     </td>
                   </>
                 )}
@@ -194,7 +194,7 @@ export function ContactsTable({ rows: initial }: Props) {
             );
           })}
           {rows.length === 0 && (
-            <tr><td colSpan={7} className="border px-2 py-3 text-center text-neutral-500">No contacts. Re-sync from your Sheet to repopulate.</td></tr>
+            <tr><td colSpan={7} className="border-b border-line px-3 py-4 text-center text-ink-3">No contacts. Re-sync from your Sheet to repopulate.</td></tr>
           )}
         </tbody>
       </table>

@@ -22,24 +22,27 @@ export default function ImportPage() {
   const finish = () => start(async () => { await completeSetup(); refresh(); });
 
   return (
-    <section className="max-w-xl space-y-4">
-      <h2 className="text-3xl font-semibold tracking-tight">Step 4 — Import contacts</h2>
-      <p className="text-sm text-neutral-700">
-        Clicking import enqueues a job for the worker. Pull happens in the background; this page polls for status.
+    <section className="mx-auto max-w-2xl space-y-6">
+      <div className="space-y-1">
+        <p className="eyebrow">Step 4</p>
+        <h2 className="text-2xl font-semibold tracking-tight">Import contacts</h2>
+      </div>
+      <p className="text-sm text-ink-2">
+        Clicking import enqueues a job for the worker. Pull happens in the background and this page polls for status.
       </p>
-      <div className="rounded border border-neutral-200 bg-white p-3 text-sm">
+      <div className="card p-5 text-sm text-ink-2">
         <p>Contacts in DB: <strong>{status?.contactCount ?? '…'}</strong></p>
         <p>Last import job: <strong>{status?.job?.status ?? 'none'}</strong></p>
         {status?.job?.last_error && (
-          <pre className="mt-2 overflow-auto rounded bg-red-50 p-2 text-xs text-red-700">{status.job.last_error}</pre>
+          <pre className="mt-2 overflow-auto rounded-card bg-red-50 p-4 text-xs text-red-700 ring-1 ring-inset ring-red-600/20">{status.job.last_error}</pre>
         )}
       </div>
-      <div className="flex gap-2">
-        <button onClick={run} disabled={isPending} className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">Run import</button>
-        <button onClick={finish} disabled={isPending || (status?.contactCount ?? 0) === 0} className="rounded bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+      <div className="flex flex-wrap gap-2">
+        <button onClick={run} disabled={isPending} className="btn-primary disabled:opacity-50">Run import</button>
+        <button onClick={finish} disabled={isPending || (status?.contactCount ?? 0) === 0} className="btn-primary bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50">
           Mark setup complete
         </button>
-        <Link href="/" className="rounded border border-neutral-300 px-4 py-2 text-sm">Back to dashboard</Link>
+        <Link href="/" className="btn">Back to dashboard</Link>
       </div>
     </section>
   );

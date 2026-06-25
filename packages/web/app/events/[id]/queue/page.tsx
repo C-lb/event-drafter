@@ -68,13 +68,13 @@ export default function QueuePage() {
   };
 
   return (
-    <section className="max-w-7xl space-y-4">
+    <section className="space-y-6">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-3xl font-semibold tracking-tight">Review queue</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">Review queue</h2>
         <button
           onClick={approveNext}
           disabled={isPending || batchSize === 0}
-          className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+          className="btn-primary bg-emerald-600 hover:bg-emerald-700"
           title={
             batchSize === 0
               ? 'No drafted invites to approve.'
@@ -86,7 +86,13 @@ export default function QueuePage() {
       </div>
 
       {batchBanner && (
-        <div className={`rounded p-2 text-xs ${batchBanner.kind === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+        <div
+          className={
+            batchBanner.kind === 'ok'
+              ? 'rounded-card bg-emerald-50 p-4 text-sm text-emerald-700 ring-1 ring-inset ring-emerald-600/20'
+              : 'rounded-card bg-red-50 p-4 text-sm text-red-700 ring-1 ring-inset ring-red-600/20'
+          }
+        >
           {batchBanner.text}
         </div>
       )}
@@ -94,8 +100,8 @@ export default function QueuePage() {
       <RateLimitTimer />
 
       <div
-        className={`flex items-center justify-between gap-3 rounded border p-2 text-xs ${
-          autoSend ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-neutral-200 bg-neutral-50 text-neutral-700'
+        className={`flex items-center justify-between gap-3 rounded-card p-4 text-sm ${
+          autoSend ? 'bg-amber-50 text-amber-900 ring-1 ring-inset ring-amber-600/25' : 'card-quiet text-ink-2'
         }`}
       >
         <div>
@@ -103,11 +109,11 @@ export default function QueuePage() {
           {autoSend === null
             ? '…'
             : autoSend
-            ? 'AUTO-SEND ON — worker clicks WA send button after pre-fill.'
-            : 'Manual — worker pre-fills only; you click send in WA.'}{' '}
+            ? 'Auto-send on. Worker clicks the WhatsApp send button after pre-fill.'
+            : 'Manual. Worker pre-fills only; you click send in WhatsApp.'}{' '}
           {autoSend && (
             <span className="opacity-80">
-              Rate limiter still paces sends (gap + batch cool-downs + hourly cap).
+              Rate limiter still paces sends (gap, batch cool-downs, and hourly cap).
             </span>
           )}
         </div>
@@ -115,7 +121,7 @@ export default function QueuePage() {
           type="button"
           onClick={toggleAutoSend}
           disabled={isPending || autoSend === null}
-          className="rounded border border-neutral-400 bg-white px-2 py-1 hover:bg-neutral-100 disabled:opacity-50"
+          className="btn btn-sm"
         >
           {autoSend ? 'Switch to manual' : 'Enable auto-send'}
         </button>
@@ -126,7 +132,7 @@ export default function QueuePage() {
           <button
             key={s}
             onClick={() => setFilter(s)}
-            className={`rounded px-2 py-1 ${filter === s ? 'bg-blue-600 text-white' : 'bg-neutral-200'}`}
+            className={`rounded-full px-3 py-1 ${filter === s ? 'bg-ink text-white shadow-raise' : 'bg-line text-ink-2 hover:bg-line-strong'}`}
           >
             {s} ({rows.filter((r) => s === 'all' || r.status === s).length})
           </button>
@@ -138,52 +144,52 @@ export default function QueuePage() {
           const editValue = edits[r.invite_id] ?? r.draft_text ?? '';
           const dirty = (r.draft_text ?? '') !== editValue;
           return (
-            <li key={r.invite_id} className="rounded border border-neutral-200 bg-white p-3 space-y-2">
+            <li key={r.invite_id} className="card p-4 space-y-2">
               <div className="flex items-baseline justify-between">
-                <p className="font-medium">{r.first_name}{r.last_name ? ' ' + r.last_name : ''} <span className="text-xs text-neutral-500">{r.phone_e164}</span></p>
+                <p className="font-medium">{r.first_name}{r.last_name ? ' ' + r.last_name : ''} <span className="text-xs text-ink-3">{r.phone_e164}</span></p>
                 <span className="flex items-center gap-1.5 text-xs">
                   {r.status === 'sent' && (
                     r.sent_confirmed_at ? (
-                      <span className="rounded bg-green-100 px-2 py-0.5 text-green-800" title={`Confirmed on WhatsApp at ${new Date(r.sent_confirmed_at).toLocaleString()}`}>
-                        ✓ confirmed on WA
+                      <span className="badge badge-green" title={`Confirmed on WhatsApp at ${new Date(r.sent_confirmed_at).toLocaleString()}`}>
+                        ✓ Confirmed on WhatsApp
                       </span>
                     ) : (
-                      <span className="rounded bg-amber-100 px-2 py-0.5 text-amber-800" title="Marked sent, but delivery was never verified against WhatsApp — check the chat or use Resend.">
-                        ⚠ not verified
+                      <span className="badge badge-amber" title="Marked sent, but delivery was never verified against WhatsApp. Check the chat or use Resend.">
+                        ⚠ Not verified
                       </span>
                     )
                   )}
-                  <span className="rounded bg-neutral-100 px-2 py-0.5">{r.status}</span>
+                  <span className="badge badge-neutral">{r.status}</span>
                 </span>
               </div>
-              {r.remarks && <p className="text-xs text-neutral-600 italic">remarks: {r.remarks}</p>}
+              {r.remarks && <p className="text-xs text-ink-2 italic">remarks: {r.remarks}</p>}
 
               {r.status === 'pending' ? (
-                <p className="text-xs text-neutral-500">Drafting… (refreshes every 2s)</p>
+                <p className="text-xs text-ink-3">Drafting… (refreshes every 2s)</p>
               ) : (
                 <>
                   <textarea
-                    className="h-24 w-full rounded border border-neutral-300 p-2 text-sm"
+                    className="field h-24 w-full"
                     value={editValue}
                     onChange={(e) => setEdits({ ...edits, [r.invite_id]: e.target.value })}
                   />
                   <div className="flex flex-wrap gap-2 text-xs">
                     {r.status === 'prefilled' ? (
                       <>
-                        <span className="rounded bg-yellow-100 px-2 py-1 text-yellow-800">
-                          ✋ Pre-filled in WA — click send there, then:
+                        <span className="badge badge-amber">
+                          ✋ Pre-filled in WhatsApp. Click send there, then:
                         </span>
                         <button
                           disabled={isPending}
                           onClick={() => start(async () => { await markSent({ invite_id: r.invite_id }); refresh(); })}
-                          className="rounded bg-green-700 px-2 py-1 text-white disabled:opacity-50"
+                          className="btn-primary btn-sm bg-emerald-600 hover:bg-emerald-700"
                         >
                           Mark sent
                         </button>
                         <button
                           disabled={isPending}
                           onClick={() => start(async () => { await reprefill({ invite_id: r.invite_id }); refresh(); })}
-                          className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
+                          className="btn btn-sm"
                         >
                           Re-prefill
                         </button>
@@ -193,28 +199,28 @@ export default function QueuePage() {
                         <button
                           disabled={!dirty || isPending || r.status === 'sending' || r.status === 'sent'}
                           onClick={() => start(async () => { await editDraft({ invite_id: r.invite_id, draft_text: editValue }); refresh(); })}
-                          className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
+                          className="btn btn-sm"
                         >
                           Save edits
                         </button>
                         <button
                           disabled={isPending || r.status === 'approved' || r.status === 'sending' || r.status === 'sent'}
                           onClick={() => start(async () => { await approveDraft({ invite_id: r.invite_id }); refresh(); })}
-                          className="rounded bg-green-600 px-2 py-1 text-white disabled:opacity-50"
+                          className="btn-primary btn-sm bg-emerald-600 hover:bg-emerald-700"
                         >
                           Approve
                         </button>
                         <button
                           disabled={isPending || r.status === 'sending' || r.status === 'sent'}
                           onClick={() => start(async () => { await skipDraft({ invite_id: r.invite_id }); refresh(); })}
-                          className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
+                          className="btn btn-sm"
                         >
                           Skip
                         </button>
                         <button
                           disabled={isPending || r.status === 'sending' || r.status === 'sent'}
                           onClick={() => start(async () => { await regenerateDraft({ invite_id: r.invite_id }); refresh(); })}
-                          className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-50"
+                          className="btn btn-sm"
                         >
                           Regenerate
                         </button>
@@ -222,7 +228,7 @@ export default function QueuePage() {
                           <button
                             disabled={isPending}
                             onClick={() => start(async () => { await resendInvite({ invite_id: r.invite_id }); refresh(); })}
-                            className="rounded bg-orange-600 px-2 py-1 text-white disabled:opacity-50"
+                            className="btn btn-sm"
                           >
                             Resend
                           </button>
