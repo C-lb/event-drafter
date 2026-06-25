@@ -21,6 +21,7 @@ export async function listEventsWithStats() {
       name: events.name,
       event_date: events.event_date,
       venue: events.venue,
+      note: events.note,
       status: events.status,
       total_invites: sql<number>`COUNT(DISTINCT ${invites.id})`,
       // "replied" counts distinct invites that have at least one reply, so a
@@ -165,6 +166,39 @@ export async function updateEvent(input: unknown): Promise<{ ok: true } | { ok: 
     })
     .where(eq(events.id, id))
     .run();
+  revalidatePath('/events');
+  revalidatePath(`/events/${id}`);
+  return { ok: true };
+}
+
+const cardSchema = z.object({
+  id: z.number().int().positive(),
+  name: z.string().trim().min(1, 'Name is required.').max(200),
+  note: z.string().max(2000).optional(),
+  event_date: z.string().min(1, 'Date is required.'),
+});
+
+/**
+ * Lightweight inline update for the home "sticky note" cards: just the title,
+ * the free-text note, and the date. Leaves EDM fields and everything else
+ * untouched (unlike the full updateEvent form).
+ */
+export async function updateEventCard(
+  input: unknown,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const parsed = cardSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'invalid input' };
+  const { id, name, note, event_date } = parsed.data;
+
+  const date = new Date(event_date);
+  if (Number.isNaN(date.getTime())) return { ok: false, error: 'Invalid date.' };
+
+  const db = getDb();
+  db.update(events)
+    .set({ name: name.trim(), note: note?.trim() || null, event_date: date })
+    .where(eq(events.id, id))
+    .run();
+  revalidatePath('/');
   revalidatePath('/events');
   revalidatePath(`/events/${id}`);
   return { ok: true };

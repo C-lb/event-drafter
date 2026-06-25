@@ -96,6 +96,19 @@
   .eyebrow {
     @apply text-xs font-semibold text-ink-2;
   }
+
+  /* Loading spinner: a spinning ring sized to the surrounding text. Use inside
+     a button (swap the label for it) or standalone next to a status message. */
+  .spinner {
+    @apply inline-block h-[1em] w-[1em] flex-none animate-spin rounded-full border-2 border-current border-t-transparent align-[-0.125em];
+  }
+
+  /* Async button mid-flight: dim + hold size, label is replaced by a spinner. */
+  .btn.is-loading,
+  .btn-primary.is-loading,
+  .btn-danger.is-loading {
+    @apply pointer-events-none opacity-80;
+  }
 }
 
 /* Global interactive feedback for any bare button/submit not using .btn*.
@@ -117,7 +130,7 @@
   input[type='submit']:focus-visible,
   [role='button']:focus-visible,
   a:focus-visible {
-    outline: 2px solid #2563eb;
+    outline: 2px solid #1c1c1f;
     outline-offset: 2px;
     border-radius: 6px;
   }

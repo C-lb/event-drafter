@@ -7,6 +7,8 @@ export const events = sqliteTable('events', {
   name: text('name').notNull(),
   event_date: integer('event_date', { mode: 'timestamp_ms' }).notNull(),
   venue: text('venue'),
+  // Free-text operator note, editable sticky-note style on the home dashboard.
+  note: text('note'),
   edm_subject: text('edm_subject'),
   edm_body: text('edm_body'),
   edm_summary: text('edm_summary'),
