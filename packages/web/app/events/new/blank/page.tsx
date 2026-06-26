@@ -38,7 +38,7 @@ export default function BlankEventPage() {
     start(async () => {
       const r = await createEventBlank({
         name,
-        event_date: new Date(dateLocal).toISOString(),
+        event_date: dateLocal ? new Date(dateLocal).toISOString() : '',
         venue,
         edm_subject: edmSubject,
         edm_body: edmBody,
@@ -83,13 +83,14 @@ export default function BlankEventPage() {
         </label>
 
         <label className="block text-xs">
-          <span className="font-medium">Date &amp; time</span>
+          <span className="font-medium">Date &amp; time (optional)</span>
           <input
             type="datetime-local"
             className="field mt-1.5 w-full"
             value={dateLocal}
             onChange={(e) => setDateLocal(e.target.value)}
           />
+          <span className="mt-1 block text-[11px] text-ink-3">Leave blank to set it later — defaults to now.</span>
         </label>
 
         <label className="block text-xs">
@@ -133,7 +134,7 @@ export default function BlankEventPage() {
           <button
             type="button"
             onClick={submit}
-            disabled={isPending || !name.trim() || !dateLocal}
+            disabled={isPending || !name.trim()}
             className="btn-primary"
           >
             {isPending ? 'Creating…' : 'Create event'}

@@ -76,7 +76,9 @@ const createSchema = z.object({
 
 const createBlankSchema = z.object({
   name: z.string().min(1).max(200),
-  event_date: z.string().min(1),
+  // Date is optional — only the title is mandatory. A blank date defaults to
+  // now and can be set later from the event's edit panel.
+  event_date: z.string().optional().or(z.literal('')),
   venue: z.string().max(200).optional().or(z.literal('')),
   edm_subject: z.string().max(300).optional().or(z.literal('')),
   edm_body: z.string().max(20000).optional().or(z.literal('')),
@@ -87,7 +89,8 @@ export async function createEventBlank(input: unknown): Promise<{ ok: true; id: 
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'invalid input' };
   const { name, event_date, venue, edm_subject, edm_body } = parsed.data;
 
-  const date = new Date(event_date);
+  // Blank → default to now (column is NOT NULL); a provided value must be valid.
+  const date = event_date && event_date.trim() ? new Date(event_date) : new Date();
   if (Number.isNaN(date.getTime())) return { ok: false, error: 'Invalid date.' };
 
   const body = edm_body?.trim() ?? '';
