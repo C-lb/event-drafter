@@ -9,6 +9,16 @@ import { beat } from './heartbeat.js';
 
 const STUCK_RUNNING_MS = 5 * 60 * 1000;
 
+// How many non-send (drafting / LLM) jobs to run concurrently per tick. Drafting
+// has no human-pacing constraint, so a batch of N invites becomes ceil(N/K) waves
+// of API round-trips instead of N serial ones. SQLite writes stay safe: each
+// handler awaits its own network I/O, and better-sqlite3 statements are atomic.
+// Read per-tick so the operator can tune ED_DRAFT_CONCURRENCY without a restart.
+function draftConcurrency(): number {
+  const n = Number(process.env.ED_DRAFT_CONCURRENCY ?? 4);
+  return Number.isFinite(n) ? Math.max(1, Math.floor(n)) : 4;
+}
+
 // Job kinds that actually deliver a WhatsApp message. A stuck one of these is
 // NEVER auto-reset: if it was mid-send when it stalled, re-queueing it could
 // fire the same message twice. The per-record send claim (status='sending')
@@ -49,27 +59,48 @@ export async function tick(now: Date = new Date()): Promise<number> {
     )
     .run();
 
-  const next = db
+  const eligible = and(
+    eq(jobs.status, 'queued'),
+    or(isNull(jobs.run_after), lte(jobs.run_after, now)),
+  );
+
+  // Peek at the oldest eligible job to decide the processing mode.
+  const head = db.select().from(jobs).where(eligible).orderBy(asc(jobs.created_at)).limit(1).all()[0];
+  if (!head) return 0;
+
+  // Send kinds deliver a real WhatsApp message: they run strictly one-at-a-time
+  // to preserve ordering and the per-record double-send guard. Never batched.
+  if (SEND_KINDS.has(head.kind as JobKind)) {
+    if (!tryClaimJob(head.id, now)) return 1; // lost the race — running elsewhere
+    await runJob(head as Job, now);
+    return 1;
+  }
+
+  // Non-send (drafting / LLM) kinds: claim and run a bounded concurrent batch of
+  // the oldest eligible non-send jobs.
+  const batch = db
     .select()
     .from(jobs)
-    .where(
-      and(
-        eq(jobs.status, 'queued'),
-        or(isNull(jobs.run_after), lte(jobs.run_after, now)),
-      ),
-    )
+    .where(and(eligible, notInArray(jobs.kind, [...SEND_KINDS])))
     .orderBy(asc(jobs.created_at))
-    .limit(1)
+    .limit(draftConcurrency())
     .all();
 
-  const job = next[0];
-  if (!job) return 0;
+  const claimed = batch.filter((j) => tryClaimJob(j.id, now));
+  if (claimed.length === 0) return 1; // all lost the race — something is running
+  await Promise.all(claimed.map((j) => runJob(j as Job, now)));
+  return claimed.length;
+}
 
-  // Lost the race to another poller — it's already running elsewhere. Skip.
-  if (!tryClaimJob(job.id, now)) return 1;
-
+/**
+ * Run a single already-claimed job to completion, recording its terminal status.
+ * A `JobDeferred` re-queues the job with a future `run_after` (and rolls back the
+ * attempt the claim charged), so deferral never counts against the retry budget.
+ */
+async function runJob(job: Job, now: Date): Promise<void> {
+  const db = getDb();
   try {
-    await handlers[job.kind as JobKind](job as Job);
+    await handlers[job.kind as JobKind](job);
     db.update(jobs)
       .set({ status: 'succeeded', finished_at: new Date(), last_error: null })
       .where(eq(jobs.id, job.id))
@@ -88,7 +119,7 @@ export async function tick(now: Date = new Date()): Promise<number> {
         })
         .where(eq(jobs.id, job.id))
         .run();
-      return 1;
+      return;
     }
     const msg = err instanceof Error ? err.stack ?? err.message : String(err);
     logger.error('job failed', { jobId: job.id, kind: job.kind, err: msg });
@@ -97,8 +128,6 @@ export async function tick(now: Date = new Date()): Promise<number> {
       .where(eq(jobs.id, job.id))
       .run();
   }
-
-  return 1;
 }
 
 export async function runForever(intervalMs = 1000): Promise<void> {

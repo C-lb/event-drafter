@@ -95,6 +95,72 @@ describe('tick()', () => {
   });
 });
 
+describe('tick() — concurrency policy', () => {
+  it('runs non-send (draft) jobs concurrently in one tick', async () => {
+    const db = getDb();
+    let active = 0;
+    let maxActive = 0;
+    let started = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    handlers.draft_invite = vi.fn().mockImplementation(async () => {
+      active++;
+      maxActive = Math.max(maxActive, active);
+      started++;
+      if (started >= 3) release(); // all three in flight — let them finish
+      await gate;
+      active--;
+    });
+
+    for (let i = 0; i < 3; i++) {
+      db.insert(jobs).values({ kind: 'draft_invite', payload: {} }).run();
+    }
+
+    const did = await tick();
+
+    expect(did).toBe(3);
+    expect(maxActive).toBe(3); // proves they overlapped, not serialized
+    const rows = db.select().from(jobs).all();
+    expect(rows.every((r) => r.status === 'succeeded')).toBe(true);
+  });
+
+  it('processes send-kind jobs one per tick (never concurrently)', async () => {
+    const db = getDb();
+    const spy = vi.fn().mockResolvedValue(undefined);
+    handlers.send_message = spy;
+
+    for (let i = 0; i < 3; i++) {
+      db.insert(jobs).values({ kind: 'send_message', payload: {} }).run();
+    }
+
+    const did = await tick();
+
+    expect(did).toBe(1);
+    expect(spy).toHaveBeenCalledOnce();
+    const succeeded = db.select().from(jobs).all().filter((r) => r.status === 'succeeded');
+    expect(succeeded).toHaveLength(1);
+  });
+
+  it('caps the concurrent batch at ED_DRAFT_CONCURRENCY', async () => {
+    const db = getDb();
+    process.env.ED_DRAFT_CONCURRENCY = '2';
+    const spy = vi.fn().mockResolvedValue(undefined);
+    handlers.draft_invite = spy;
+
+    for (let i = 0; i < 5; i++) {
+      db.insert(jobs).values({ kind: 'draft_invite', payload: {} }).run();
+    }
+
+    const did = await tick();
+
+    expect(did).toBe(2);
+    expect(spy).toHaveBeenCalledTimes(2);
+    delete process.env.ED_DRAFT_CONCURRENCY;
+  });
+});
+
 describe('tryClaimJob() — atomic compare-and-swap claim', () => {
   it('claims a queued job once; a second claim of the same job loses', () => {
     const db = getDb();
