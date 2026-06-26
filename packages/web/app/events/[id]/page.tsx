@@ -10,6 +10,7 @@ import { latestReplyCheck, maybeEnqueueAutoReplyCheck } from '../../replies/acti
 import { EventEditPanel } from './EventEditPanel';
 import { SummaryPanel } from './SummaryPanel';
 import { RsvpSummarySection } from './RsvpSummary';
+import { DelegateSheetField } from './DelegateSheetField';
 import { StarterDrafts } from './StarterDrafts';
 import { AutoRefresh } from '../../components/AutoRefresh';
 import { extractEdmSummary } from '@event-drafter/core/edm-extract';
@@ -120,6 +121,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
           below the `lg` breakpoint (1024px viewport). */}
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-6">
+          <DelegateSheetField eventId={event.id} initialUrl={event.delegate_sheet_url ?? null} />
           <RsvpSummarySection data={rsvpSummary} />
         </div>
         <div className="space-y-6">

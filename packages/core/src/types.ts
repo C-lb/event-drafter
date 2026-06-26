@@ -11,6 +11,7 @@ export const JOB_KINDS = [
   'generate_follow_ups',
   'send_follow_up',
   'cleanup_jobs',
+  'update_delegate_tracker',
 ] as const;
 export type JobKind = (typeof JOB_KINDS)[number];
 

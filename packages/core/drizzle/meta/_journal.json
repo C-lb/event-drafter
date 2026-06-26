@@ -92,6 +92,13 @@
       "when": 1781235000000,
       "tag": "0012_event_note",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1781236000000,
+      "tag": "0013_event_delegate_sheet",
+      "breakpoints": true
     }
   ]
 }

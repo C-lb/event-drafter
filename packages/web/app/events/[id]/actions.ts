@@ -218,6 +218,33 @@ export async function editDraft(input: unknown) {
 }
 
 const approveSchema = z.object({ invite_id: z.number() });
+// Persist (or clear) the per-event delegate tracker sheet link. Accepts a full
+// Google Sheets URL or a bare spreadsheet ID; empty string clears it. We only
+// sanity-check that an ID is extractable — the worker re-parses at write time.
+const SHEET_ID_RE = /\/d\/[a-zA-Z0-9-_]+|^[a-zA-Z0-9-_]{20,}$/;
+const delegateSheetSchema = z.object({
+  event_id: z.number().int().positive(),
+  url: z.string().trim().max(500),
+});
+export async function setDelegateSheet(
+  input: unknown,
+): Promise<{ ok: true; url: string | null } | { ok: false; error: string }> {
+  const parsed = delegateSheetSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: 'invalid input' };
+  const { event_id, url } = parsed.data;
+  const trimmed = url.trim();
+  if (trimmed && !SHEET_ID_RE.test(trimmed)) {
+    return { ok: false, error: 'That does not look like a Google Sheets link or ID.' };
+  }
+  const db = getDb();
+  db.update(events)
+    .set({ delegate_sheet_url: trimmed || null })
+    .where(eq(events.id, event_id))
+    .run();
+  revalidatePath(`/events/${event_id}`);
+  return { ok: true, url: trimmed || null };
+}
+
 export async function approveDraft(input: unknown) {
   const { invite_id } = approveSchema.parse(input);
   const db = getDb();
@@ -517,13 +544,45 @@ const responseActionSchema = z.object({ reply_id: z.number() });
 export async function approveResponse(input: unknown) {
   const { reply_id } = responseActionSchema.parse(input);
   const db = getDb();
+  const reply = db.select().from(replies).where(eq(replies.id, reply_id)).get();
+  // A yes/no whose classification the worker reached on its own (no manual
+  // override) is settled the moment its response is approved — record it in the
+  // RSVP summary and drop it from the Replies feed. Maybe/unclear and any
+  // operator-overridden reply stay visible for follow-up.
+  const autoResolve =
+    !!reply &&
+    (reply.classification === 'yes' || reply.classification === 'no') &&
+    reply.classification_source !== 'manual';
+
+  // A confirmed "yes" updates the event's delegate tracker sheet (if one is
+  // set): the worker shifts that delegate's row into the confirmed block.
+  let trackerEventId: number | null = null;
+  if (reply && reply.classification === 'yes') {
+    const inv = db.select().from(invites).where(eq(invites.id, reply.invite_id)).get();
+    if (inv) {
+      const ev = db.select().from(events).where(eq(events.id, inv.event_id)).get();
+      if (ev?.delegate_sheet_url) trackerEventId = ev.id;
+    }
+  }
+
   db.transaction((tx) => {
     tx.update(replies)
-      .set({ response_status: 'approved', response_approved_at: new Date() })
+      .set({
+        response_status: 'approved',
+        response_approved_at: new Date(),
+        ...(autoResolve ? { resolved: true, resolved_at: new Date() } : {}),
+      })
       .where(eq(replies.id, reply_id))
       .run();
     tx.insert(jobs).values({ kind: 'send_response', payload: { reply_id } }).run();
+    if (trackerEventId !== null) {
+      tx.insert(jobs).values({ kind: 'update_delegate_tracker', payload: { event_id: trackerEventId } }).run();
+    }
   });
+  if (autoResolve) {
+    revalidatePath('/replies');
+    revalidatePath('/');
+  }
 }
 
 export async function skipResponse(input: unknown) {

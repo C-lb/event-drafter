@@ -1,175 +1,90 @@
-import type { RsvpInvitee, RsvpSummary as RsvpSummaryData } from './actions';
+'use client';
+
+import { useState } from 'react';
+import type { RsvpSummary as RsvpSummaryData } from './actions';
 import { CopyNamesButton } from './CopyNamesButton';
 
-function FollowUpBadge({ invitee }: { invitee: RsvpInvitee }) {
-  if (invitee.follow_up_status) {
-    return (
-      <span className="badge badge-blue">
-        Follow-up: {invitee.follow_up_status}
-      </span>
-    );
-  }
-  if (invitee.follow_up_eligible) {
-    return (
-      <span className="badge badge-amber">
-        Follow-up suggested
-      </span>
-    );
-  }
-  return (
-    <span className="badge badge-neutral">
-      No follow-up yet
-    </span>
-  );
-}
+type TabKey = 'yes' | 'no' | 'maybe' | 'unclear' | 'no_reply_yet';
 
-function ExpectedBadge({ invitee }: { invitee: RsvpInvitee }) {
-  const map: Record<RsvpInvitee['expected_response'], { label: string; variant: string }> = {
-    'likely-yes': {
-      label: 'Likely to come back to us',
-      variant: 'badge-green',
-    },
-    unsure: {
-      label: 'May not respond without a nudge',
-      variant: 'badge-amber',
-    },
-    unlikely: {
-      label: 'Unlikely to respond again',
-      variant: 'badge-neutral',
-    },
-  };
-  const v = map[invitee.expected_response];
-  return <span className={`badge ${v.variant}`}>{v.label}</span>;
-}
-
-function InviteeCard({ invitee }: { invitee: RsvpInvitee }) {
-  return (
-    <li className="card-quiet p-4 space-y-1.5 text-sm">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <strong className="text-ink">{invitee.contact_name}</strong>
-        <span className="text-xs text-ink-3">
-          replied {invitee.days_since_reply !== null ? `${invitee.days_since_reply}d ago` : '—'} ·
-          invited {invitee.days_since_sent}d ago
-        </span>
-      </div>
-      {invitee.summary && (
-        <p className="text-xs italic text-ink-2">{invitee.summary}</p>
-      )}
-      {invitee.reply_text && (
-        <blockquote className="rounded-sm bg-surface p-2 text-xs text-ink-2 whitespace-pre-wrap">
-          {invitee.reply_text}
-        </blockquote>
-      )}
-      <div className="flex flex-wrap gap-1.5 pt-0.5">
-        <ExpectedBadge invitee={invitee} />
-        <FollowUpBadge invitee={invitee} />
-      </div>
-    </li>
-  );
-}
-
-function NoReplyCard({ invitee }: { invitee: RsvpInvitee }) {
-  return (
-    <li className="card-quiet p-4 space-y-1 text-sm">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <strong className="text-ink">{invitee.contact_name}</strong>
-        <span className="text-xs text-ink-3">invited {invitee.days_since_sent}d ago</span>
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        <FollowUpBadge invitee={invitee} />
-      </div>
-    </li>
-  );
-}
+const TABS: { key: TabKey; label: string; accent: string }[] = [
+  { key: 'yes', label: 'Yes', accent: 'text-emerald-700' },
+  { key: 'no', label: 'No', accent: 'text-red-700' },
+  { key: 'maybe', label: 'Maybe', accent: 'text-amber-700' },
+  { key: 'unclear', label: 'Unclear', accent: 'text-ink-2' },
+  { key: 'no_reply_yet', label: 'No reply yet', accent: 'text-ink-3' },
+];
 
 export function RsvpSummarySection({ data }: { data: RsvpSummaryData }) {
-  const total = data.yes.length + data.no.length + data.maybe.length + data.unclear.length + data.no_reply_yet.length;
+  const counts: Record<TabKey, number> = {
+    yes: data.yes.length,
+    no: data.no.length,
+    maybe: data.maybe.length,
+    unclear: data.unclear.length,
+    no_reply_yet: data.no_reply_yet.length,
+  };
+  const total = counts.yes + counts.no + counts.maybe + counts.unclear + counts.no_reply_yet;
+
+  // Open on the first category that has anyone in it, else Yes.
+  const firstNonEmpty = (TABS.find((t) => counts[t.key] > 0)?.key) ?? 'yes';
+  const [active, setActive] = useState<TabKey>(firstNonEmpty);
+
+  const names = data[active].map((r) => r.contact_name);
+  const activeMeta = TABS.find((t) => t.key === active)!;
 
   return (
-    <section className="card p-5 space-y-6">
+    <section className="card p-5 space-y-4">
       <div className="flex items-baseline justify-between">
         <h3 className="text-base font-semibold text-ink">RSVP summary</h3>
         <span className="text-xs text-ink-3">{total} sent invitations</span>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-1">
-          <div className="flex items-center justify-between gap-2">
-            <p className="eyebrow text-emerald-700">
-              Yes ({data.yes.length})
-            </p>
-            <CopyNamesButton names={data.yes.map((y) => y.contact_name)} label="yes list" />
-          </div>
-          {data.yes.length === 0 ? (
-            <p className="text-xs text-ink-3">No yeses yet.</p>
-          ) : (
-            <p className="text-sm text-ink">
-              {data.yes.map((y) => y.contact_name).join(', ')}
-            </p>
-          )}
-        </div>
-
-        <div className="space-y-1">
-          <div className="flex items-center justify-between gap-2">
-            <p className="eyebrow text-red-700">
-              No ({data.no.length})
-            </p>
-            <CopyNamesButton names={data.no.map((n) => n.contact_name)} label="no list" />
-          </div>
-          {data.no.length === 0 ? (
-            <p className="text-xs text-ink-3">No declines.</p>
-          ) : (
-            <p className="text-sm text-ink">
-              {data.no.map((n) => n.contact_name).join(', ')}
-            </p>
-          )}
-        </div>
+      {/* Segmented toggle — one category visible at a time. */}
+      <div className="flex flex-wrap gap-1.5 text-xs">
+        {TABS.map((t) => {
+          const isActive = t.key === active;
+          return (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setActive(t.key)}
+              aria-pressed={isActive}
+              className={`rounded-full px-3 py-1 ${
+                isActive ? 'bg-ink text-white shadow-raise' : 'bg-line text-ink-2 hover:bg-line-strong'
+              }`}
+            >
+              {t.label} ({counts[t.key]})
+            </button>
+          );
+        })}
       </div>
 
-      <div className="space-y-2">
-        <p className="eyebrow text-amber-700">
-          Maybe ({data.maybe.length})
+      <div className="flex items-center justify-between">
+        <p className={`eyebrow ${activeMeta.accent}`}>
+          {activeMeta.label} · {names.length}
         </p>
-        {data.maybe.length === 0 ? (
-          <p className="text-xs text-ink-3">No maybes.</p>
-        ) : (
-          <ul className="space-y-2">
-            {data.maybe.map((i) => (
-              <InviteeCard key={i.invite_id} invitee={i} />
-            ))}
-          </ul>
-        )}
+        <CopyNamesButton names={names} label={`${activeMeta.label.toLowerCase()} list`} />
       </div>
 
-      <div className="space-y-2">
-        <p className="eyebrow text-ink-2">
-          Unclear ({data.unclear.length})
+      {/* Spreadsheet-style numbered rows. */}
+      {names.length === 0 ? (
+        <p className="rounded-sm border border-line bg-surface-2 p-4 text-xs text-ink-3">
+          Nobody here yet.
         </p>
-        {data.unclear.length === 0 ? (
-          <p className="text-xs text-ink-3">Nothing unclear.</p>
-        ) : (
-          <ul className="space-y-2">
-            {data.unclear.map((i) => (
-              <InviteeCard key={i.invite_id} invitee={i} />
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <p className="eyebrow text-ink-3">
-          No reply yet ({data.no_reply_yet.length})
-        </p>
-        {data.no_reply_yet.length === 0 ? (
-          <p className="text-xs text-ink-3">Everyone has responded.</p>
-        ) : (
-          <ul className="grid gap-2 md:grid-cols-2">
-            {data.no_reply_yet.map((i) => (
-              <NoReplyCard key={i.invite_id} invitee={i} />
-            ))}
-          </ul>
-        )}
-      </div>
+      ) : (
+        <ol className="overflow-hidden rounded-sm border border-line">
+          {names.map((name, i) => (
+            <li
+              key={`${active}-${i}`}
+              className={`flex items-baseline gap-3 px-3 py-2 text-sm ${i % 2 ? 'bg-surface-2' : 'bg-surface'} ${
+                i > 0 ? 'border-t border-line' : ''
+              }`}
+            >
+              <span className="w-8 flex-none text-right font-mono text-xs tabular-nums text-ink-3">{i + 1}</span>
+              <span className="min-w-0 truncate text-ink">{name}</span>
+            </li>
+          ))}
+        </ol>
+      )}
     </section>
   );
 }

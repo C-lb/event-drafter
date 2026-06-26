@@ -3,7 +3,10 @@ import type { OAuth2Client, Credentials } from 'google-auth-library';
 import { getSetting, setSetting } from '@event-drafter/core/settings';
 
 export const SCOPES = [
-  'https://www.googleapis.com/auth/spreadsheets.readonly',
+  // Read-write: the delegate tracker shifts confirmed rows in the operator's
+  // sheet, so a read-only scope is no longer enough. Existing tokens minted
+  // under spreadsheets.readonly must be re-authorized (visit /setup/google).
+  'https://www.googleapis.com/auth/spreadsheets',
   'https://www.googleapis.com/auth/gmail.readonly',
 ];
 

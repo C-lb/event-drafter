@@ -49,6 +49,95 @@ export async function getSpreadsheetTitle(spreadsheet_id: string): Promise<strin
   return data.properties?.title ?? '(untitled)';
 }
 
+/**
+ * Normalize a phone number to its last 8 digits (Singapore mobile length) so a
+ * sheet value like "+65 9123 4567" matches a stored "+6591234567".
+ */
+export function phoneKey(raw: string | null | undefined): string {
+  const digits = String(raw ?? '').replace(/\D/g, '');
+  return digits.slice(-8);
+}
+
+export interface DelegateReorderPlan {
+  /** Full grid (header + rows) in the new order, ready to write back. */
+  values: string[][];
+  /** How many rows were moved into the confirmed block. */
+  confirmed: number;
+  changed: boolean;
+}
+
+/**
+ * Pure reorder: given the sheet's full values (row 0 = headers) and the set of
+ * confirmed phone keys, move every matching row into a contiguous confirmed
+ * block at the top (stable within each group), renumber the "No" column 1..N,
+ * and return the new grid. No I/O — unit-testable.
+ *
+ * Returns changed=false when there is no "Mobile No." column or the order and
+ * numbering already match (so the caller can skip the write).
+ */
+export function planDelegateReorder(
+  values: string[][],
+  confirmedKeys: Set<string>,
+): DelegateReorderPlan {
+  if (values.length < 2) return { values, confirmed: 0, changed: false };
+  const headers = values[0]!.map((h) => String(h ?? '').trim());
+  const mobileCol = headers.findIndex((h) => /mobile/i.test(h));
+  const noCol = headers.findIndex((h) => h.toLowerCase() === 'no' || h.toLowerCase() === 'no.');
+  if (mobileCol === -1) return { values, confirmed: 0, changed: false };
+
+  const dataRows = values.slice(1);
+  const confirmed: string[][] = [];
+  const pending: string[][] = [];
+  for (const row of dataRows) {
+    if (confirmedKeys.has(phoneKey(row[mobileCol]))) confirmed.push(row);
+    else pending.push(row);
+  }
+  const ordered = [...confirmed, ...pending];
+
+  // Renumber the "No" column to match the new top-to-bottom order.
+  if (noCol !== -1) {
+    ordered.forEach((row, i) => {
+      while (row.length <= noCol) row.push('');
+      row[noCol] = String(i + 1);
+    });
+  }
+
+  const newValues = [values[0]!, ...ordered];
+  const changed = JSON.stringify(newValues) !== JSON.stringify(values);
+  return { values: newValues, confirmed: confirmed.length, changed };
+}
+
+/**
+ * Shift the rows of confirmed delegates to the top of their tracker sheet.
+ * Reads the first tab, reorders via planDelegateReorder, and writes the grid
+ * back (values only — cell formatting stays with its position). Idempotent.
+ */
+export async function shiftConfirmedToTop(
+  spreadsheet_id: string,
+  confirmedKeys: Set<string>,
+): Promise<{ confirmed: number; changed: boolean }> {
+  const api = sheets();
+  const meta = await api.spreadsheets.get({
+    spreadsheetId: spreadsheet_id,
+    fields: 'sheets.properties.title',
+  });
+  const title = meta.data.sheets?.[0]?.properties?.title;
+  if (!title) throw new Error('tracker sheet has no tabs');
+
+  const { data } = await api.spreadsheets.values.get({ spreadsheetId: spreadsheet_id, range: title });
+  const values = (data.values ?? []).map((r) => r.map((c) => String(c ?? '')));
+  const plan = planDelegateReorder(values, confirmedKeys);
+  if (!plan.changed) return { confirmed: plan.confirmed, changed: false };
+
+  await api.spreadsheets.values.update({
+    spreadsheetId: spreadsheet_id,
+    range: `${title}!A1`,
+    valueInputOption: 'RAW',
+    requestBody: { values: plan.values },
+  });
+  return { confirmed: plan.confirmed, changed: true };
+}
+
 export async function fetchAllRows(cfg: ContactsSheet): Promise<SheetRow[]> {
   const { data } = await sheets().spreadsheets.values.get({
     spreadsheetId: cfg.spreadsheet_id,

@@ -11,6 +11,7 @@ import { sendResponseHandler } from './send-response.js';
 import { generateFollowUpsHandler } from './generate-follow-ups.js';
 import { sendFollowUpHandler } from './send-follow-up.js';
 import { cleanupJobsHandler } from './cleanup-jobs.js';
+import { updateDelegateTrackerHandler } from './update-delegate-tracker.js';
 
 export type JobHandler = (job: Job) => Promise<void>;
 
@@ -28,4 +29,5 @@ export const handlers: Record<JobKind, JobHandler> = {
   generate_follow_up: generateFollowUpsHandler,
   send_follow_up: sendFollowUpHandler,
   cleanup_jobs: cleanupJobsHandler,
+  update_delegate_tracker: updateDelegateTrackerHandler,
 };

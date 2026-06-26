@@ -14,6 +14,10 @@ export const events = sqliteTable('events', {
   edm_summary: text('edm_summary'),
   draft_overrides: text('draft_overrides', { mode: 'json' }).$type<Partial<Record<string, string>>>(),
   gmail_message_id: text('gmail_message_id'),
+  // Google Sheet link for this event's delegate tracker. Set by the operator
+  // after the event is created; a yes-confirmation shifts that delegate's row
+  // into the confirmed block. Nullable — no tracker until a link is set.
+  delegate_sheet_url: text('delegate_sheet_url'),
   status: text('status').notNull().$type<EventStatus>().default('draft'),
   created_at: integer('created_at', { mode: 'timestamp_ms' })
     .notNull()
