@@ -34,6 +34,32 @@ export function TemplatePopover({ eventId, onApplied }: { eventId: number; onApp
     });
   };
 
+  // Wrap the current selection in a WhatsApp formatting marker (* for bold,
+  // _ for italic). With no selection, drop an empty pair and park the caret
+  // between them so the operator can just start typing.
+  const wrap = (marker: string) => {
+    const ta = taRef.current;
+    if (!ta) {
+      setTemplate((t) => t + marker + marker);
+      return;
+    }
+    const start = ta.selectionStart ?? template.length;
+    const end = ta.selectionEnd ?? template.length;
+    const selected = template.slice(start, end);
+    const next = template.slice(0, start) + marker + selected + marker + template.slice(end);
+    setTemplate(next);
+    requestAnimationFrame(() => {
+      ta.focus();
+      if (selected) {
+        // Keep the same text selected, now sitting inside the markers.
+        ta.setSelectionRange(start + marker.length, end + marker.length);
+      } else {
+        const pos = start + marker.length;
+        ta.setSelectionRange(pos, pos);
+      }
+    });
+  };
+
   const apply = async () => {
     if (!template.trim() || busy) return;
     setBusy(true);
@@ -67,10 +93,30 @@ export function TemplatePopover({ eventId, onApplied }: { eventId: number; onApp
               </button>
             </div>
             <p className="mt-1 text-xs text-ink-2">
-              Applies to all invites not yet approved or sent, replacing the worker&apos;s drafts. Tap a variable to insert it.
+              Applies to all invites not yet approved or sent, replacing the worker&apos;s drafts. Tap a variable to insert it, or select text and tap B / I to format.
             </p>
 
-            <div className="mt-3 flex flex-wrap gap-1.5">
+            <div className="mt-3 flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => wrap('*')}
+                className="rounded-md bg-line px-2.5 py-1 text-xs font-bold text-ink-2 hover:bg-line-strong"
+                title="Bold — wraps selection in *asterisks*"
+              >
+                B
+              </button>
+              <button
+                type="button"
+                onClick={() => wrap('_')}
+                className="rounded-md bg-line px-2.5 py-1 text-xs italic text-ink-2 hover:bg-line-strong"
+                title="Italic — wraps selection in _underscores_"
+              >
+                I
+              </button>
+              <span className="ml-1 text-[11px] text-ink-3">WhatsApp formatting</span>
+            </div>
+
+            <div className="mt-2 flex flex-wrap gap-1.5">
               {VARIABLES.map((v) => (
                 <button
                   key={v}
