@@ -11,6 +11,19 @@ export interface SheetRow {
   email: string | null;
   remarks: string | null;
   sheet_row_hash: string;
+  /** 1-based row number in the source sheet (matches the Google Sheets row gutter). */
+  sheet_row_index: number;
+}
+
+/**
+ * The 1-based starting row of a sheet range. `A1:Z` -> 1, `Sheet1!A5:G` -> 5,
+ * `A:Z` (no row) -> 1. Lets us report the real gutter row even when the
+ * configured range doesn't start at the top.
+ */
+export function rangeStartRow(range: string): number {
+  const cell = range.includes('!') ? range.slice(range.indexOf('!') + 1) : range;
+  const m = cell.match(/[A-Za-z]+(\d+)/);
+  return m ? parseInt(m[1]!, 10) : 1;
 }
 
 export interface SheetPreview {
@@ -159,12 +172,18 @@ export async function fetchAllRows(cfg: ContactsSheet): Promise<SheetRow[]> {
   if (idx.first_name === -1) throw new Error(`Mapped column not found: ${cfg.column_mapping.first_name}`);
   if (idx.phone_e164 === -1) throw new Error(`Mapped column not found: ${cfg.column_mapping.phone_e164}`);
 
+  // Header sits on the first row of the range; data starts one row below it.
+  // Preserve each contact's real gutter row so order and serial numbers
+  // mirror the sheet, skipping blank/incomplete rows along the way.
+  const dataStartRow = rangeStartRow(cfg.range) + 1;
+
   const out: SheetRow[] = [];
-  for (const raw of all.slice(1)) {
-    const get = (i: number): string | null => (i >= 0 ? String(raw[i] ?? '').trim() || null : null);
+  all.slice(1).forEach((raw, i) => {
+    const sheet_row_index = dataStartRow + i;
+    const get = (j: number): string | null => (j >= 0 ? String(raw[j] ?? '').trim() || null : null);
     const first_name = get(idx.first_name);
     const phone_e164 = get(idx.phone_e164);
-    if (!first_name || !phone_e164) continue;
+    if (!first_name || !phone_e164) return;
 
     const fields = {
       first_name,
@@ -175,7 +194,7 @@ export async function fetchAllRows(cfg: ContactsSheet): Promise<SheetRow[]> {
       remarks: get(idx.remarks),
     };
     const hash = createHash('sha256').update(JSON.stringify(fields)).digest('hex');
-    out.push({ ...fields, sheet_row_hash: hash });
-  }
+    out.push({ ...fields, sheet_row_hash: hash, sheet_row_index });
+  });
   return out;
 }

@@ -5,6 +5,7 @@ import { updateContact, deleteContact, clearAllContacts } from './actions';
 
 interface Row {
   id: number;
+  sheet_row_index: number | null;
   first_name: string;
   last_name: string | null;
   phone_e164: string;
@@ -132,6 +133,7 @@ export function ContactsTable({ rows: initial }: Props) {
       <table className="w-full text-sm">
         <thead className="bg-surface-2 text-ink-2">
           <tr>
+            <th className="border-b border-line px-3 py-2 text-right font-medium w-12" title="Source sheet row number">#</th>
             <th className="border-b border-line px-3 py-2 text-left font-medium">First name</th>
             <th className="border-b border-line px-3 py-2 text-left font-medium">Last name</th>
             <th className="border-b border-line px-3 py-2 text-left font-medium">Phone</th>
@@ -149,6 +151,7 @@ export function ContactsTable({ rows: initial }: Props) {
               <tr key={r.id} className={isEditing ? 'bg-accent-soft' : ''}>
                 {isEditing ? (
                   <>
+                    <td className="border-b border-line px-3 py-1.5 text-right font-mono text-xs tabular-nums text-ink-3">{r.sheet_row_index ?? '·'}</td>
                     <td className="border-b border-line px-2 py-1.5">
                       <input className={inputCls} value={draft.first_name} onChange={(e) => setDraft({ ...draft, first_name: e.target.value })} />
                     </td>
@@ -178,6 +181,7 @@ export function ContactsTable({ rows: initial }: Props) {
                   </>
                 ) : (
                   <>
+                    <td className="border-b border-line px-3 py-2 text-right font-mono text-xs tabular-nums text-ink-3">{r.sheet_row_index ?? '·'}</td>
                     <td className="border-b border-line px-3 py-2">{r.first_name}</td>
                     <td className="border-b border-line px-3 py-2">{r.last_name ?? ''}</td>
                     <td className="border-b border-line px-3 py-2">{r.phone_e164}</td>
@@ -194,7 +198,7 @@ export function ContactsTable({ rows: initial }: Props) {
             );
           })}
           {rows.length === 0 && (
-            <tr><td colSpan={7} className="border-b border-line px-3 py-4 text-center text-ink-3">No contacts. Re-sync from your Sheet to repopulate.</td></tr>
+            <tr><td colSpan={8} className="border-b border-line px-3 py-4 text-center text-ink-3">No contacts. Re-sync from your Sheet to repopulate.</td></tr>
           )}
         </tbody>
       </table>

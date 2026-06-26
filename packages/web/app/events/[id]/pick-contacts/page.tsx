@@ -6,11 +6,11 @@ import { listCandidatesForEvent, enqueueDraftsForContacts } from '../actions';
 import type { Contact } from '@event-drafter/core';
 
 /**
- * Parse a row-range expression like "12-41, 52, 69-106" into a sorted list of
- * 1-based row numbers, clamped to [1, max]. Anything out of range or malformed
- * sets hadInvalid so the UI can warn.
+ * Parse a row-range expression like "12-41, 52, 69-106" into the set of sheet
+ * row numbers it names. Ranges expand fully; gaps (row numbers with no contact)
+ * are fine and just match nothing. Only non-numeric junk sets hadInvalid.
  */
-function parseRowExpr(expr: string, max: number): { rows: number[]; hadInvalid: boolean } {
+function parseRowExpr(expr: string): { rows: Set<number>; hadInvalid: boolean } {
   const rows = new Set<number>();
   let hadInvalid = false;
   for (const rawPart of expr.split(',')) {
@@ -21,19 +21,14 @@ function parseRowExpr(expr: string, max: number): { rows: number[]; hadInvalid: 
       let a = Number(range[1]);
       let b = Number(range[2]);
       if (a > b) [a, b] = [b, a];
-      for (let n = a; n <= b; n++) {
-        if (n >= 1 && n <= max) rows.add(n);
-        else hadInvalid = true;
-      }
+      for (let n = a; n <= b; n++) rows.add(n);
     } else if (/^\d+$/.test(part)) {
-      const n = Number(part);
-      if (n >= 1 && n <= max) rows.add(n);
-      else hadInvalid = true;
+      rows.add(Number(part));
     } else {
       hadInvalid = true;
     }
   }
-  return { rows: [...rows].sort((x, y) => x - y), hadInvalid };
+  return { rows, hadInvalid };
 }
 
 export default function PickContactsPage() {
@@ -79,19 +74,28 @@ export default function PickContactsPage() {
 
   const selectByRows = () => {
     if (!rowExpr.trim()) return;
-    const { rows, hadInvalid } = parseRowExpr(rowExpr, candidates.length);
-    if (rows.length === 0) {
-      setRowNote(`No valid rows in 1–${candidates.length}.`);
+    const { rows, hadInvalid } = parseRowExpr(rowExpr);
+    if (rows.size === 0) {
+      setRowNote('Type sheet row numbers like 12-41, 52.');
       return;
     }
+    // Match against each contact's real sheet row number, not its position in
+    // the list. Row numbers in the expression that hit a gap match nothing.
     const next = new Set(picked);
-    for (const n of rows) {
-      const c = candidates[n - 1]; // rows are 1-based
-      if (c) next.add(c.id);
+    let matched = 0;
+    for (const c of candidates) {
+      if (c.sheet_row_index != null && rows.has(c.sheet_row_index)) {
+        next.add(c.id);
+        matched++;
+      }
     }
     setPicked(next);
     setLastIndex(null);
-    setRowNote(`Added ${rows.length} row${rows.length === 1 ? '' : 's'}${hadInvalid ? ` · ignored entries outside 1–${candidates.length}` : ''}.`);
+    if (matched === 0) {
+      setRowNote('No contacts match those row numbers.');
+    } else {
+      setRowNote(`Added ${matched} contact${matched === 1 ? '' : 's'}${hadInvalid ? ' · ignored malformed entries' : ''}.`);
+    }
   };
 
   const selectAll = () => {
@@ -158,7 +162,7 @@ export default function PickContactsPage() {
         </button>
       </div>
       <p className="text-[11px] text-ink-3">
-        {rowNote ?? 'Tip: shift-click to select a range, or type row numbers above. Rows are numbered in the list below and follow the current search/sort.'}
+        {rowNote ?? 'Tip: shift-click to select a range, or type row numbers above. Numbers match the source sheet rows (gaps are normal).'}
       </p>
 
       <ul className="space-y-1">
@@ -168,7 +172,7 @@ export default function PickContactsPage() {
             onClick={(e) => toggle(c.id, i, e.shiftKey)}
             className={`flex cursor-pointer select-none items-baseline gap-3 rounded-sm p-3 text-sm ${picked.has(c.id) ? 'bg-accent-soft ring-1 ring-inset ring-accent-line' : 'card'}`}
           >
-            <span className="w-10 flex-none text-right font-mono text-xs tabular-nums text-ink-3">{i + 1}</span>
+            <span className="w-10 flex-none text-right font-mono text-xs tabular-nums text-ink-3">{c.sheet_row_index ?? '·'}</span>
             <span className="min-w-0">
               <p className="font-medium">{c.first_name}{c.last_name ? ' ' + c.last_name : ''} <span className="text-xs text-ink-3">{c.phone_e164}</span></p>
               {c.remarks && <p className="text-xs text-ink-2">{c.remarks}</p>}

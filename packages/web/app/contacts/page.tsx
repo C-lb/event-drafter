@@ -32,6 +32,7 @@ export default async function ContactsPage() {
       </p>
       <ContactsTable rows={all.map((c) => ({
         id: c.id,
+        sheet_row_index: c.sheet_row_index,
         first_name: c.first_name,
         last_name: c.last_name,
         phone_e164: c.phone_e164,

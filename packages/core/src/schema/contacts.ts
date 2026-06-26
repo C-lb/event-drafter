@@ -12,6 +12,10 @@ export const contacts = sqliteTable(
     email: text('email'),
     remarks: text('remarks'),
     sheet_row_hash: text('sheet_row_hash'),
+    // 1-based row number in the source sheet (header offset included), so the
+    // operator's serial numbers match what they see in Google Sheets. Null for
+    // hand-added contacts that never came from a sheet.
+    sheet_row_index: integer('sheet_row_index'),
     created_at: integer('created_at', { mode: 'timestamp_ms' })
       .notNull()
       .default(sql`(unixepoch() * 1000)`),

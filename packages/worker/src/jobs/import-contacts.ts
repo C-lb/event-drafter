@@ -33,8 +33,17 @@ export async function importContactsHandler(_job: Job): Promise<void> {
             secondary_phone_e164: row.secondary_phone_e164,
             remarks: row.remarks,
             sheet_row_hash: row.sheet_row_hash,
+            sheet_row_index: row.sheet_row_index,
             updated_at: sql`(unixepoch() * 1000)`,
           })
+          .where(eq(contacts.id, existing.id))
+          .run();
+        updated++;
+      } else if (existing.sheet_row_index !== row.sheet_row_index) {
+        // Content identical but the contact moved rows in the sheet — keep the
+        // serial/order in sync without bumping updated_at.
+        tx.update(contacts)
+          .set({ sheet_row_index: row.sheet_row_index })
           .where(eq(contacts.id, existing.id))
           .run();
         updated++;

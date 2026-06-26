@@ -84,5 +84,11 @@ export async function clearAllContacts(input: unknown): Promise<{ ok: true; dele
 
 export async function listContactsAll() {
   const db = getDb();
-  return db.select().from(contacts).orderBy(sql`${contacts.first_name} COLLATE NOCASE`).all();
+  // Mirror the source sheet's row order. Sheet-synced contacts sort by their
+  // real gutter row; hand-added rows (null index) fall to the bottom.
+  return db
+    .select()
+    .from(contacts)
+    .orderBy(sql`${contacts.sheet_row_index} IS NULL, ${contacts.sheet_row_index} ASC, ${contacts.id} ASC`)
+    .all();
 }

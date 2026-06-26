@@ -75,7 +75,7 @@ export async function getEventRsvpSummary(event_id: number): Promise<RsvpSummary
     .leftJoin(replies, eq(replies.invite_id, invites.id))
     .leftJoin(follow_ups, eq(follow_ups.invite_id, invites.id))
     .where(and(eq(invites.event_id, event_id), eq(invites.status, 'sent')))
-    .orderBy(contacts.first_name)
+    .orderBy(sql`${contacts.sheet_row_index} IS NULL, ${contacts.sheet_row_index} ASC, ${contacts.id} ASC`)
     .all();
 
   const summary: RsvpSummary = { yes: [], no: [], maybe: [], unclear: [], no_reply_yet: [] };
@@ -148,7 +148,7 @@ export async function listInvitesForEvent(event_id: number) {
     .from(invites)
     .innerJoin(contacts, eq(invites.contact_id, contacts.id))
     .where(eq(invites.event_id, event_id))
-    .orderBy(contacts.first_name)
+    .orderBy(sql`${contacts.sheet_row_index} IS NULL, ${contacts.sheet_row_index} ASC, ${contacts.id} ASC`)
     .all();
 }
 
