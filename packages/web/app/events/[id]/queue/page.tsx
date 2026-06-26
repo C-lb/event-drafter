@@ -7,6 +7,7 @@ import {
   editDraft,
   approveDraft,
   approveBatch,
+  approveAll,
   skipDraft,
   regenerateDraft,
   markSent,
@@ -16,6 +17,7 @@ import {
   setAutoSendEnabled,
 } from '../actions';
 import { RateLimitTimer } from './RateLimitTimer';
+import { TemplatePopover } from './TemplatePopover';
 
 type Row = Awaited<ReturnType<typeof listInvitesForEvent>>[number];
 
@@ -67,22 +69,52 @@ export default function QueuePage() {
     });
   };
 
+  const approveEverything = () => {
+    if (draftedCount === 0) return;
+    if (!confirm(`Approve all ${draftedCount} drafted invite${draftedCount === 1 ? '' : 's'}? The worker still paces the actual sends per the rate limiter.`)) return;
+    setBatchBanner(null);
+    start(async () => {
+      try {
+        const r = await approveAll({ event_id: eventId });
+        setBatchBanner({ kind: 'ok', text: `Approved all ${r.approved} draft${r.approved === 1 ? '' : 's'}. Worker will pre-fill them on its rate-limited cadence (CONTEXT.md).` });
+        refresh();
+      } catch (e) {
+        setBatchBanner({ kind: 'err', text: e instanceof Error ? e.message : 'unknown' });
+      }
+    });
+  };
+
   return (
     <section className="space-y-6">
-      <div className="flex items-baseline justify-between">
+      <div className="flex items-start justify-between gap-3">
         <h2 className="text-2xl font-semibold tracking-tight">Review queue</h2>
-        <button
-          onClick={approveNext}
-          disabled={isPending || batchSize === 0}
-          className="btn-primary bg-emerald-600 hover:bg-emerald-700"
-          title={
-            batchSize === 0
-              ? 'No drafted invites to approve.'
-              : `Approves the next ${batchSize} drafted invite${batchSize === 1 ? '' : 's'} (oldest first). Send cadence still applies per CONTEXT.md.`
-          }
-        >
-          Approve next {batchSize || 5}
-        </button>
+        <div className="flex items-center gap-2">
+          <TemplatePopover eventId={eventId} onApplied={refresh} />
+          <button
+            onClick={approveNext}
+            disabled={isPending || batchSize === 0}
+            className="btn-primary bg-emerald-600 hover:bg-emerald-700"
+            title={
+              batchSize === 0
+                ? 'No drafted invites to approve.'
+                : `Approves the next ${batchSize} drafted invite${batchSize === 1 ? '' : 's'} (oldest first). Send cadence still applies per CONTEXT.md.`
+            }
+          >
+            Approve next {batchSize || 5}
+          </button>
+          <button
+            onClick={approveEverything}
+            disabled={isPending || draftedCount === 0}
+            className="btn-primary bg-emerald-600 hover:bg-emerald-700"
+            title={
+              draftedCount === 0
+                ? 'No drafted invites to approve.'
+                : `Approves all ${draftedCount} drafted invite${draftedCount === 1 ? '' : 's'}. Send cadence still applies per CONTEXT.md.`
+            }
+          >
+            Approve all{draftedCount ? ` (${draftedCount})` : ''}
+          </button>
+        </div>
       </div>
 
       {batchBanner && (

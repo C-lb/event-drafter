@@ -34,6 +34,7 @@ interface SettingTypes {
   auto_send_enabled: boolean;
   setup_completed: boolean;
   worker_heartbeat: { ts: number; node: string };
+  worker_restart_requested: { ts: number };
   llm_last_ok: { ts: number };
   llm_last_error: { ts: number; message: string };
   sheet_history: Array<{

@@ -68,7 +68,7 @@ export function EventStickyCard({ ev, isPast }: { ev: StickyEvent; isPast: boole
     // Keep the original time-of-day, only the calendar date is editable here.
     const [y, m, d] = dateStr.split('-').map(Number);
     const orig = new Date(ev.event_date_ms);
-    const combined = new Date(y, (m ?? 1) - 1, d ?? 1, orig.getHours(), orig.getMinutes(), orig.getSeconds());
+    const combined = new Date(y ?? orig.getFullYear(), (m ?? 1) - 1, d ?? 1, orig.getHours(), orig.getMinutes(), orig.getSeconds());
     const res = await updateEventCard({
       id: ev.id,
       name,
@@ -146,7 +146,14 @@ export function EventStickyCard({ ev, isPast }: { ev: StickyEvent; isPast: boole
   }
 
   return (
-    <li className={`card p-5 ${isPast ? 'opacity-70' : ''}`}>
+    <li className={`card group relative p-5 transition-colors hover:border-line-strong ${isPast ? 'opacity-70' : ''}`}>
+      {/* Stretched overlay: the whole card navigates to the event. Interactive
+          controls below opt out by sitting above it with relative z-10. */}
+      <Link
+        href={`/events/${ev.id}`}
+        className="absolute inset-0 z-0 rounded-card"
+        aria-label={`Open ${ev.name}`}
+      />
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           {isPast && (
@@ -160,9 +167,9 @@ export function EventStickyCard({ ev, isPast }: { ev: StickyEvent; isPast: boole
               </svg>
             </span>
           )}
-          <Link href={`/events/${ev.id}`} className="truncate font-semibold hover:text-accent">
+          <span className="truncate font-semibold group-hover:text-accent">
             {ev.name}
-          </Link>
+          </span>
         </div>
         <span className="badge badge-neutral flex-none" suppressHydrationWarning>
           {fmtDate(ev.event_date_ms)}
@@ -172,20 +179,17 @@ export function EventStickyCard({ ev, isPast }: { ev: StickyEvent; isPast: boole
       {ev.note ? (
         <p className="mt-3 whitespace-pre-wrap rounded-sm bg-surface-2 p-3 text-sm text-ink-2">{ev.note}</p>
       ) : (
-        <button type="button" onClick={startEdit} className="mt-3 text-sm text-ink-3 hover:text-ink-2">
+        <button type="button" onClick={startEdit} className="relative z-10 mt-3 text-sm text-ink-3 hover:text-ink-2">
           Add a note
         </button>
       )}
 
       {statBadges}
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="relative z-10 mt-4 flex flex-wrap gap-2">
         <button type="button" onClick={startEdit} className="btn btn-sm">
           Edit
         </button>
-        <Link href={`/events/${ev.id}`} className="btn btn-sm">
-          Open
-        </Link>
       </div>
     </li>
   );

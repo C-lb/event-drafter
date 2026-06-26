@@ -4,7 +4,8 @@ import { getSetting } from '@event-drafter/core/settings';
 import { SCHEDULES } from '@event-drafter/worker/scheduler';
 import { nextRunFor, ago } from '@/lib/cron-format';
 import { eq, sql } from 'drizzle-orm';
-import { triggerCleanup } from './actions';
+import { triggerCleanup, restartWorker } from './actions';
+import { RestartWorkerButton } from './RestartWorkerButton';
 import { AutoRefresh } from '../components/AutoRefresh';
 
 export const dynamic = 'force-dynamic';
@@ -88,18 +89,21 @@ export default async function StatusPage() {
       {/* Keep the page live whenever ANY job is queued or running, so progress
           text (jobs.progress) and counters update without a manual reload. */}
       <AutoRefresh active={inFlight.length > 0} />
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-start justify-between gap-3">
         <h2 className="text-2xl font-semibold tracking-tight">Status</h2>
-        <form action={triggerCleanup}>
-          <button
-            type="submit"
-            disabled={cleanupInFlight}
-            className="btn btn-sm"
-            title={lastCleanup ? `Last cleanup: ${lastCleanup.status} ${ago(((lastCleanup.finished_at ?? lastCleanup.created_at) as Date | null)?.getTime() ?? null)}` : 'No prior cleanup'}
-          >
-            {cleanupInFlight ? 'Cleaning up…' : 'Run cleanup now'}
-          </button>
-        </form>
+        <div className="flex items-start gap-2">
+          <form action={triggerCleanup}>
+            <button
+              type="submit"
+              disabled={cleanupInFlight}
+              className="btn btn-sm"
+              title={lastCleanup ? `Last cleanup: ${lastCleanup.status} ${ago(((lastCleanup.finished_at ?? lastCleanup.created_at) as Date | null)?.getTime() ?? null)}` : 'No prior cleanup'}
+            >
+              {cleanupInFlight ? 'Cleaning up…' : 'Run cleanup now'}
+            </button>
+          </form>
+          <RestartWorkerButton action={restartWorker} workerOk={workerOk} />
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">

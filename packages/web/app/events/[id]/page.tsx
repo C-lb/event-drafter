@@ -82,15 +82,6 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         </p>
       </div>
 
-      <div className="grid grid-cols-6 gap-3 text-center text-xs">
-        {(['total', 'drafted', 'approved', 'sent', 'skipped', 'failed'] as const).map((k) => (
-          <div key={k} className="card p-4">
-            <p className="text-ink-3">{k}</p>
-            <p className="text-lg font-semibold text-ink">{counts[k]}</p>
-          </div>
-        ))}
-      </div>
-
       <div className="grid grid-cols-4 gap-3 text-center text-xs">
         <div className="card p-4"><p className="text-ink-2">Yes</p><p className="text-lg font-semibold text-emerald-700">{replyCounts.yes}</p></div>
         <div className="card p-4"><p className="text-ink-2">No</p><p className="text-lg font-semibold text-red-700">{replyCounts.no}</p></div>

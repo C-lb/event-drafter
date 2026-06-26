@@ -57,12 +57,17 @@ export default async function HomePage() {
   const nowMs = now.getTime();
 
   const allEvents = await listEventsWithStats();
-  // Events dated within the current calendar month, sorted chronologically so
-  // the list reshuffles as dates are edited.
+  // Events dated within the current calendar month. Upcoming events first
+  // (soonest at the top); past events sink below, most recent first.
   const thisMonth = allEvents
     .map((e) => ({ ...e, ms: new Date(e.event_date).getTime() }))
     .filter((e) => e.ms >= monthStart && e.ms < monthEnd)
-    .sort((a, b) => a.ms - b.ms);
+    .sort((a, b) => {
+      const aPast = a.ms < nowMs;
+      const bPast = b.ms < nowMs;
+      if (aPast !== bPast) return aPast ? 1 : -1; // past sinks below upcoming
+      return aPast ? b.ms - a.ms : a.ms - b.ms; // upcoming asc, past desc
+    });
 
   // Unread (unresolved) replies, grouped under their event.
   const unread = await listAllReplies({ includeResolved: false });

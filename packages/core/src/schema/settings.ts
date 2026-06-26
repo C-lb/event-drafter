@@ -25,6 +25,7 @@ export const SETTING_KEYS = {
   auto_send_enabled: 'auto_send_enabled',
   setup_completed: 'setup_completed',
   worker_heartbeat: 'worker_heartbeat',
+  worker_restart_requested: 'worker_restart_requested',
   llm_last_ok: 'llm_last_ok',
   llm_last_error: 'llm_last_error',
   sheet_history: 'sheet_history',

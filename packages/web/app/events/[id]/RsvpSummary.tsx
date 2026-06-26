@@ -1,4 +1,5 @@
 import type { RsvpInvitee, RsvpSummary as RsvpSummaryData } from './actions';
+import { CopyNamesButton } from './CopyNamesButton';
 
 function FollowUpBadge({ invitee }: { invitee: RsvpInvitee }) {
   if (invitee.follow_up_status) {
@@ -93,9 +94,12 @@ export function RsvpSummarySection({ data }: { data: RsvpSummaryData }) {
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-1">
-          <p className="eyebrow text-emerald-700">
-            Yes ({data.yes.length})
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="eyebrow text-emerald-700">
+              Yes ({data.yes.length})
+            </p>
+            <CopyNamesButton names={data.yes.map((y) => y.contact_name)} label="yes list" />
+          </div>
           {data.yes.length === 0 ? (
             <p className="text-xs text-ink-3">No yeses yet.</p>
           ) : (
@@ -106,9 +110,12 @@ export function RsvpSummarySection({ data }: { data: RsvpSummaryData }) {
         </div>
 
         <div className="space-y-1">
-          <p className="eyebrow text-red-700">
-            No ({data.no.length})
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="eyebrow text-red-700">
+              No ({data.no.length})
+            </p>
+            <CopyNamesButton names={data.no.map((n) => n.contact_name)} label="no list" />
+          </div>
           {data.no.length === 0 ? (
             <p className="text-xs text-ink-3">No declines.</p>
           ) : (

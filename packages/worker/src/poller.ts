@@ -6,6 +6,7 @@ import { handlers } from './jobs/index.js';
 import { logger } from './logger.js';
 import { JobDeferred } from './errors.js';
 import { beat } from './heartbeat.js';
+import { maybeHandleRestart } from './restart.js';
 
 const STUCK_RUNNING_MS = 5 * 60 * 1000;
 
@@ -24,7 +25,7 @@ function draftConcurrency(): number {
 // fire the same message twice. The per-record send claim (status='sending')
 // guards the message itself; this guards the job from blind retry. A genuinely
 // stuck send is left 'running' for the operator to inspect.
-const SEND_KINDS: ReadonlySet<JobKind> = new Set([
+export const SEND_KINDS: ReadonlySet<JobKind> = new Set([
   'send_message',
   'send_follow_up',
   'send_response',
@@ -134,7 +135,9 @@ export async function runForever(intervalMs = 1000): Promise<void> {
   logger.info('worker poller started', { intervalMs });
   while (true) {
     beat();
+    // Honor a web-requested soft restart between ticks (no job in flight here).
+    const restarted = maybeHandleRestart();
     const did = await tick();
-    if (did === 0) await new Promise((r) => setTimeout(r, intervalMs));
+    if (did === 0 && !restarted) await new Promise((r) => setTimeout(r, intervalMs));
   }
 }

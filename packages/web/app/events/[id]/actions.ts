@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { getDb } from '@event-drafter/core/db';
 import { contacts, events, follow_ups, invites, jobs, replies } from '@event-drafter/core/schema';
 import { getSetting, setSetting } from '@event-drafter/core/settings';
-import { and, eq, like, notInArray, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, like, notInArray, or, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
 export async function getEventOrThrow(id: number) {
@@ -280,6 +280,107 @@ export async function approveBatch(input: unknown): Promise<{ approved: number }
     }
   });
   return { approved: candidates.length };
+}
+
+// Approve EVERY drafted invite for the event. Unlike approveBatch this has no
+// 5-row cap: approving only flips status + enqueues send jobs — the worker's
+// rate limiter still paces the actual WhatsApp sends per CONTEXT.md, so a large
+// approval can't burst messages. Bounded at 1000 purely as a runaway guard.
+const approveAllSchema = z.object({ event_id: z.number().int().positive() });
+export async function approveAll(input: unknown): Promise<{ approved: number }> {
+  const { event_id } = approveAllSchema.parse(input);
+  const db = getDb();
+  const candidates = db
+    .select({ id: invites.id })
+    .from(invites)
+    .where(and(eq(invites.event_id, event_id), eq(invites.status, 'drafted')))
+    .orderBy(invites.created_at)
+    .limit(1000)
+    .all();
+
+  if (candidates.length === 0) return { approved: 0 };
+
+  db.transaction((tx) => {
+    for (const c of candidates) {
+      tx.update(invites)
+        .set({ status: 'approved', approved_at: new Date() })
+        .where(eq(invites.id, c.id))
+        .run();
+      tx.insert(jobs).values({ kind: 'send_message', payload: { invite_id: c.id } }).run();
+    }
+  });
+  return { approved: candidates.length };
+}
+
+// Sara's own template: substitute variables per invite and write the draft
+// directly, bypassing the LLM. Tokens are case-insensitive: [first name],
+// [last name], [event name], [date], [venue]. Applies to invites that are not
+// yet approved/sent (pending + drafted), overwriting any existing draft.
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function fmtTemplateDate(d: Date): string {
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+function fillTemplate(
+  template: string,
+  vars: { first_name: string; last_name: string | null; event_name: string; date: string; venue: string | null },
+): string {
+  const map: Record<string, string> = {
+    'first name': vars.first_name,
+    'last name': vars.last_name ?? '',
+    'event name': vars.event_name,
+    date: vars.date,
+    venue: vars.venue ?? '',
+  };
+  const filled = template.replace(/\[([^\]]+)\]/g, (whole: string, name: string) => {
+    const val = map[name.trim().toLowerCase()];
+    return val !== undefined ? val : whole; // leave unknown tokens untouched
+  });
+  // Collapse the double spaces / stray spaces a blank [last name] or [venue] leaves.
+  return filled.replace(/[ \t]{2,}/g, ' ').replace(/ +([,.!?])/g, '$1').trim();
+}
+
+const TEMPLATE_TARGET_STATUSES = ['pending', 'drafted'] as const;
+const applyTemplateSchema = z.object({
+  event_id: z.number().int().positive(),
+  template: z.string().min(1).max(2000),
+});
+export async function applyTemplate(input: unknown): Promise<{ applied: number }> {
+  const { event_id, template } = applyTemplateSchema.parse(input);
+  const db = getDb();
+  const event = db.select().from(events).where(eq(events.id, event_id)).get();
+  if (!event) throw new Error(`event ${event_id} not found`);
+
+  const date = fmtTemplateDate(event.event_date as Date);
+  const rows = db
+    .select({
+      invite_id: invites.id,
+      first_name: contacts.first_name,
+      last_name: contacts.last_name,
+    })
+    .from(invites)
+    .innerJoin(contacts, eq(invites.contact_id, contacts.id))
+    .where(and(eq(invites.event_id, event_id), inArray(invites.status, [...TEMPLATE_TARGET_STATUSES])))
+    .all();
+
+  if (rows.length === 0) return { applied: 0 };
+
+  db.transaction((tx) => {
+    for (const r of rows) {
+      const draft_text = fillTemplate(template, {
+        first_name: r.first_name,
+        last_name: r.last_name,
+        event_name: event.name,
+        date,
+        venue: event.venue,
+      });
+      tx.update(invites)
+        .set({ draft_text, draft_generated_at: new Date(), status: 'drafted' })
+        .where(eq(invites.id, r.invite_id))
+        .run();
+    }
+  });
+  revalidatePath(`/events/${event_id}/queue`);
+  return { applied: rows.length };
 }
 
 const markSentSchema = z.object({ invite_id: z.number() });
