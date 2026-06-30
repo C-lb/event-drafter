@@ -30,9 +30,11 @@ extraResources:
     to: ms-playwright
 win:
   target: [nsis, msi]
+  icon: icons/icon.ico
 mac:
   target: [dmg, pkg]
   category: public.app-category.productivity
+  icon: icons/icon.icns
 nsis:
   oneClick: false
   perMachine: false
