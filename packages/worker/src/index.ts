@@ -3,6 +3,7 @@ import { runForever } from './poller.js';
 import { logger } from './logger.js';
 import { acquireSingletonLock } from './lock.js';
 import { runMissedRunCheck, startScheduler } from './scheduler.js';
+import { startHeartbeat } from './heartbeat.js';
 
 async function main() {
   // Refuse to start if another worker holds the lock — only one poller may run
@@ -11,6 +12,7 @@ async function main() {
   runMigrations();
   logger.info('worker startup', { node: process.version });
   startScheduler();
+  startHeartbeat();
   runMissedRunCheck();
   await runForever();
 }

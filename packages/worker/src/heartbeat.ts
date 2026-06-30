@@ -13,3 +13,15 @@ export function beat(): void {
   _lastBeat = now;
   setSetting('worker_heartbeat', { ts: now, node: process.version, startedAt: _startedAt, pid: process.pid });
 }
+
+export interface HeartbeatHandle { stop(): void; }
+
+/** Beats every 5s independent of the poll loop, so a long-running job does not
+ *  let the heartbeat go stale (which would show the worker as offline while it
+ *  is actually busy). Returns a handle to stop the timer (tests / shutdown). */
+export function startHeartbeat(): HeartbeatHandle {
+  beat(); // immediate first beat
+  const id = setInterval(() => beat(), 5000);
+  if (typeof id === 'object' && 'unref' in id) (id as { unref: () => void }).unref();
+  return { stop: () => clearInterval(id) };
+}
