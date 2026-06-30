@@ -68,6 +68,8 @@ export interface WorkerState {
   };
   /** Count of messages caught mid-send that need an operator decision. */
   limboCount: number;
+  /** True while the operator has engaged the emergency safety stop. */
+  safetyStopped: boolean;
 }
 
 export interface SummarizeInput {
@@ -127,6 +129,7 @@ export function summarizeWorker(input: SummarizeInput): WorkerState {
       queuedCount: queuedSends.length,
     },
     limboCount: 0,
+    safetyStopped: false,
   };
 }
 
@@ -134,6 +137,7 @@ export type PillTone = 'down' | 'busy' | 'idle';
 
 /** Presentational summary for the header pill — kept pure so it's testable. */
 export function pillSummary(state: WorkerState): { tone: PillTone; text: string } {
+  if (state.safetyStopped) return { tone: 'down', text: 'safety stop on' };
   if (!state.connected) return { tone: 'down', text: 'worker offline' };
   if (state.sends.current) return { tone: 'busy', text: `sending to ${state.sends.current.name}` };
   if (state.running.length > 0) {

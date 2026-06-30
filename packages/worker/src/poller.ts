@@ -7,8 +7,14 @@ import { logger } from './logger.js';
 import { JobDeferred } from './errors.js';
 import { beat } from './heartbeat.js';
 import { maybeHandleRestart } from './restart.js';
+import { getSetting } from '@event-drafter/core/settings';
 
 const STUCK_RUNNING_MS = 5 * 60 * 1000;
+
+/** True while the operator has engaged the emergency safety stop. */
+export function isSafetyStopped(): boolean {
+  return getSetting('worker_safety_stop')?.engaged === true;
+}
 
 // How many non-send (drafting / LLM) jobs to run concurrently per tick. Drafting
 // has no human-pacing constraint, so a batch of N invites becomes ceil(N/K) waves
@@ -135,6 +141,10 @@ export async function runForever(intervalMs = 1000): Promise<void> {
   logger.info('worker poller started', { intervalMs });
   while (true) {
     beat();
+    if (isSafetyStopped()) {
+      await new Promise((r) => setTimeout(r, intervalMs));
+      continue;
+    }
     // Honor a web-requested soft restart between ticks (no job in flight here).
     const restarted = maybeHandleRestart();
     const did = await tick();

@@ -136,4 +136,7 @@ describe('pillSummary', () => {
   it('shows idle when connected with nothing to do', () => {
     expect(live({}).tone).toBe('idle');
   });
+  it('shows safety stop first, even when connected and idle', () => {
+    expect(live({ safetyStopped: true })).toEqual({ tone: 'down', text: 'safety stop on' });
+  });
 });

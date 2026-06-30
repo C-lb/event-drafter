@@ -45,6 +45,7 @@ interface SettingTypes {
     last_used: number;
   }>;
   last_sheet_url: string;
+  worker_safety_stop: { engaged: boolean; ts: number };
 }
 
 export function getSetting<K extends SettingKey>(key: K): SettingTypes[K] | null {

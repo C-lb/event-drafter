@@ -100,5 +100,6 @@ export async function GET() {
     resolveRecipient,
   });
   const limboCount = readLimbo().count;
-  return NextResponse.json({ ...state, limboCount }, { headers: { 'Cache-Control': 'no-store' } });
+  const safetyStopped = getSetting('worker_safety_stop')?.engaged === true;
+  return NextResponse.json({ ...state, limboCount, safetyStopped }, { headers: { 'Cache-Control': 'no-store' } });
 }
