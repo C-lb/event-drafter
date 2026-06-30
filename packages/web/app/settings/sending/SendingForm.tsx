@@ -107,7 +107,7 @@ export function SendingForm({ initial }: { initial: RateLimitForm }) {
         className={`card p-4 text-sm${highlighted ? ' bg-amber-50' : ''}`}
         style={{ transition: 'background-color 0.6s ease' }}
       >
-        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-ink-3">Live status</p>
+        <p className="mb-1 text-xs font-medium tracking-wide text-ink-3">Live status</p>
         {rlState == null ? (
           <span className="text-ink-3">Connecting...</span>
         ) : rlState.delayMs == null ? (

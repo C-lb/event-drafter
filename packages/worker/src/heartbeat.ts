@@ -21,7 +21,7 @@ export interface HeartbeatHandle { stop(): void; }
  *  is actually busy). Returns a handle to stop the timer (tests / shutdown). */
 export function startHeartbeat(): HeartbeatHandle {
   beat(); // immediate first beat
-  const id = setInterval(() => beat(), 5000);
+  const id = setInterval(() => beat(), BEAT_INTERVAL_MS);
   if (typeof id === 'object' && 'unref' in id) (id as { unref: () => void }).unref();
   return { stop: () => clearInterval(id) };
 }
