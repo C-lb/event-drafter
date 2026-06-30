@@ -44,6 +44,15 @@ export interface Recipient {
   at: number | null;
 }
 
+/** Snapshot of the rate-limiter state for the live readout. */
+export interface RateLimitState {
+  delayMs: number | null;
+  reason: string | null;
+  inBatch: number;
+  sentLastHour: number;
+  lastSendAtMs: number | null;
+}
+
 export interface WorkerState {
   connected: boolean;
   beatAgeMs: number | null;
@@ -70,6 +79,8 @@ export interface WorkerState {
   limboCount: number;
   /** True while the operator has engaged the emergency safety stop. */
   safetyStopped: boolean;
+  /** Live rate-limiter state; null until the route attaches it. */
+  rateLimit: RateLimitState | null;
 }
 
 export interface SummarizeInput {
@@ -130,6 +141,7 @@ export function summarizeWorker(input: SummarizeInput): WorkerState {
     },
     limboCount: 0,
     safetyStopped: false,
+    rateLimit: null,
   };
 }
 

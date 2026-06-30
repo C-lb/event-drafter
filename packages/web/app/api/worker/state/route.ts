@@ -10,6 +10,7 @@ import {
   type JobRow,
   type Recipient,
 } from '@/lib/worker-state';
+import { getRateLimitState } from '@event-drafter/worker/rate-limit';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -101,5 +102,6 @@ export async function GET() {
   });
   const limboCount = readLimbo().count;
   const safetyStopped = getSetting('worker_safety_stop')?.engaged === true;
-  return NextResponse.json({ ...state, limboCount, safetyStopped }, { headers: { 'Cache-Control': 'no-store' } });
+  const rateLimit = getRateLimitState();
+  return NextResponse.json({ ...state, limboCount, safetyStopped, rateLimit }, { headers: { 'Cache-Control': 'no-store' } });
 }
