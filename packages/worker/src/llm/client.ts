@@ -1,6 +1,6 @@
 import { getSetting, setSetting } from '@event-drafter/core/settings';
 
-export const LLM_PROVIDER = (process.env.LLM_PROVIDER ?? 'ollama') as 'ollama' | 'anthropic';
+export const LLM_PROVIDER = (process.env.LLM_PROVIDER ?? 'anthropic') as 'ollama' | 'anthropic';
 
 export const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
 export const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'qwen2.5:7b-instruct';
