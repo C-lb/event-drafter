@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runMigrations } from '@event-drafter/core/migrate';
 import { closeDb, getDb } from '@event-drafter/core/db';
-import { events, contacts, invites } from '@event-drafter/core/schema';
+import { events, contacts, invites, jobs } from '@event-drafter/core/schema';
 import { setSetting } from '@event-drafter/core/settings';
 import { readLimbo } from './limbo-read';
 
@@ -54,5 +54,60 @@ describe('readLimbo', () => {
     seedInvite('approved');
     seedInvite('sent');
     expect(readLimbo().count).toBe(0);
+  });
+
+  it('shows a stranded sending invite even when the worker is connected, because its orphan job started before this session', () => {
+    // Seed a sending invite
+    const invId = seedInvite('sending');
+    setSetting('auto_send_enabled', false);
+
+    // The orphan job started at T=1000 (previous session)
+    const orphanStartedAt = 1000;
+    // Current session started at T=2000 (after the orphan)
+    const sessionStartedAt = 2000;
+
+    getDb()
+      .insert(jobs)
+      .values({
+        kind: 'send_message',
+        payload: { invite_id: invId },
+        status: 'running',
+        started_at: new Date(orphanStartedAt),
+      })
+      .run();
+
+    // Fresh heartbeat: ts=now, startedAt=2000 (this session started after the orphan)
+    setSetting('worker_heartbeat', { ts: Date.now(), node: 'test', startedAt: sessionStartedAt, pid: 1 });
+
+    const out = readLimbo();
+    expect(out.count).toBe(1);
+    expect(out.records.some((r) => r.id === invId)).toBe(true);
+  });
+
+  it('excludes the invite currently being sent by this session', () => {
+    // Seed a sending invite
+    const invId = seedInvite('sending');
+    setSetting('auto_send_enabled', false);
+
+    // Current session started at T=1000
+    const sessionStartedAt = 1000;
+    // The live job started at T=1500 (after session start — claimed by this session)
+    const liveJobStartedAt = 1500;
+
+    getDb()
+      .insert(jobs)
+      .values({
+        kind: 'send_message',
+        payload: { invite_id: invId },
+        status: 'running',
+        started_at: new Date(liveJobStartedAt),
+      })
+      .run();
+
+    setSetting('worker_heartbeat', { ts: Date.now(), node: 'test', startedAt: sessionStartedAt, pid: 1 });
+
+    const out = readLimbo();
+    expect(out.records.some((r) => r.id === invId)).toBe(false);
+    expect(out.count).toBe(0);
   });
 });

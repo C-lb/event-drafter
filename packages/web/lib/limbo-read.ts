@@ -3,7 +3,7 @@ import 'server-only';
 import { getDb } from '@/lib/db';
 import { getSetting } from '@event-drafter/core/settings';
 import { invites, follow_ups, replies, contacts, events, jobs } from '@event-drafter/core/schema';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, sql } from 'drizzle-orm';
 import { STALE_MS } from './worker-state';
 import { selectLimbo, type LimboList, type LimboRecord, type LimboType } from './limbo';
 
@@ -45,12 +45,20 @@ function replyCandidates(): LimboRecord[] {
     .map((r) => ({ type: 'reply' as LimboType, id: r.id, state: r.status as 'sending' | 'prefilled', name: r.name, eventId: r.eventId, eventName: r.eventName }));
 }
 
-/** The record the running send job targets, mapped to {type,id}. Null if none. */
-function runningSendTarget(): { type: LimboType; id: number } | null {
+/** The record the running send job targets, mapped to {type,id}. Null if none.
+ *  Only considers jobs claimed by the CURRENT worker session (started_at >= sessionStart),
+ *  so orphaned jobs from a crashed previous session are not excluded from limbo. */
+function runningSendTarget(sessionStart: number): { type: LimboType; id: number } | null {
   const job = getDb()
     .select({ kind: jobs.kind, payload: jobs.payload })
     .from(jobs)
-    .where(and(eq(jobs.status, 'running'), inArray(jobs.kind, ['send_message', 'send_follow_up', 'send_response'])))
+    .where(
+      and(
+        eq(jobs.status, 'running'),
+        inArray(jobs.kind, ['send_message', 'send_follow_up', 'send_response']),
+        gte(jobs.started_at, new Date(sessionStart)),
+      ),
+    )
     .limit(1)
     .get();
   if (!job) return null;
@@ -65,7 +73,7 @@ export function readLimbo(now: number = Date.now()): LimboList {
   const autoSend = getSetting('auto_send_enabled') === true;
   const hb = getSetting('worker_heartbeat');
   const connected = !!hb && now - hb.ts < STALE_MS;
-  const activeSend = connected ? runningSendTarget() : null;
+  const activeSend = connected && hb?.startedAt != null ? runningSendTarget(hb.startedAt) : null;
   const records = [...inviteCandidates(), ...followUpCandidates(), ...replyCandidates()];
   return selectLimbo({ records, autoSend, activeSend });
 }
