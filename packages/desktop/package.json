@@ -8,10 +8,11 @@
     "start": "electron .",
     "test": "vitest run",
     "rebuild-native": "electron-rebuild -f -w better-sqlite3",
-    "fetch-browser": "node scripts/fetch-browser.mjs"
+    "fetch-browser": "node scripts/fetch-browser.mjs",
+    "dist": "npm run build && electron-builder --publish never"
   },
   "devDependencies": {
-    "electron": "^33.0.0",
+    "electron": "33.4.11",
     "@electron/rebuild": "^3.7.0",
     "electron-builder": "^25.1.0",
     "typescript": "^5.6.0",

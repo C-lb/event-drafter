@@ -1,0 +1,36 @@
+appId: com.eventdrafter.app
+productName: Event Drafter
+asar: false
+directories:
+  output: release
+  buildResources: build
+# Exclude ms-playwright from app source — it ships via extraResources below.
+# Without this exclusion, electron-builder tries to copy the Chromium .framework symlinks
+# as app source files and fails on macOS.
+files:
+  - "**/*"
+  - "!resources/ms-playwright/**"
+# Ship the built monorepo pieces the forked children need, plus the browser.
+extraResources:
+  - from: ../../packages/web/.next
+    to: app/packages/web/.next
+  - from: ../../packages/web/public
+    to: app/packages/web/public
+  - from: ../../packages/web/next.config.ts
+    to: app/packages/web/next.config.ts
+  - from: ../../packages/worker/dist
+    to: app/packages/worker/dist
+  - from: ../../packages/core/dist
+    to: app/packages/core/dist
+  - from: ../../node_modules
+    to: app/node_modules
+  - from: resources/ms-playwright
+    to: ms-playwright
+win:
+  target: [nsis, msi]
+mac:
+  target: [dmg, pkg]
+  category: public.app-category.productivity
+nsis:
+  oneClick: false
+  perMachine: false
