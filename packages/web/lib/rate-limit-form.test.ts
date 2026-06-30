@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { toMs, fromMs, warnings, FORM_DEFAULTS } from './rate-limit-form';
 
-describe('rate-limit-form — round-trip', () => {
+describe('rate-limit-form: round-trip', () => {
   it('toMs(fromMs(x)) === x for the defaults', () => {
     const ms = toMs(FORM_DEFAULTS);
     const back = fromMs(ms);
@@ -14,7 +14,7 @@ describe('rate-limit-form — round-trip', () => {
   });
 });
 
-describe('rate-limit-form — warnings', () => {
+describe('rate-limit-form: warnings', () => {
   it('is empty for the defaults', () => {
     expect(Object.keys(warnings(FORM_DEFAULTS))).toHaveLength(0);
   });

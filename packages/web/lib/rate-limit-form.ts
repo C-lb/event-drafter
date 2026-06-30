@@ -18,7 +18,7 @@ export interface RateLimitMs {
   maxSendsPerHour: number;
 }
 
-/** Mirrors RATE_LIMIT_DEFAULTS in the worker — keep in sync if either changes. */
+/** Mirrors RATE_LIMIT_DEFAULTS in the worker: keep in sync if either changes. */
 export const FORM_DEFAULTS: RateLimitForm = {
   minGapSec: 10,
   maxGapSec: 15,
@@ -32,10 +32,10 @@ export function toMs(f: RateLimitForm): RateLimitMs {
   return {
     minGapMs: Math.round(f.minGapSec * 1000),
     maxGapMs: Math.round(f.maxGapSec * 1000),
-    batchLimit: f.batchLimit,
+    batchLimit: Math.round(f.batchLimit),
     cooldownMinMs: Math.round(f.cooldownMinMin * 60_000),
     cooldownMaxMs: Math.round(f.cooldownMaxMin * 60_000),
-    maxSendsPerHour: f.maxSendsPerHour,
+    maxSendsPerHour: Math.round(f.maxSendsPerHour),
   };
 }
 

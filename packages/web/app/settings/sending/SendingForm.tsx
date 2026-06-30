@@ -49,7 +49,7 @@ export function SendingForm({ initial }: { initial: RateLimitForm }) {
         }
         prevDelayRef.current = newDelay;
       } catch {
-        // ignore network errors — readout just stays stale
+        // ignore network errors; readout just stays stale
       }
     }
 
