@@ -6,7 +6,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "electron .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "rebuild-native": "electron-rebuild -f -w better-sqlite3",
+    "fetch-browser": "node scripts/fetch-browser.mjs"
   },
   "devDependencies": {
     "electron": "^33.0.0",
