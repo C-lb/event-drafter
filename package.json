@@ -9,7 +9,8 @@
     "build": "npm -w @event-drafter/core run build && npm -w @event-drafter/worker run build && npm -w @event-drafter/web run build",
     "test": "npm -ws --if-present run test",
     "migrate": "ED_DB_PATH=\"$PWD/data/app.db\" npm -w @event-drafter/core run migrate",
-    "lint": "npm -ws --if-present run lint"
+    "lint": "npm -ws --if-present run lint",
+    "desktop:dev": "npm -w @event-drafter/desktop run build && ED_DESKTOP_URL=http://127.0.0.1:3000 npm -w @event-drafter/desktop run start"
   },
   "devDependencies": {
     "concurrently": "^9.0.0",
