@@ -11,7 +11,7 @@
     "migrate": "ED_DB_PATH=\"$PWD/data/app.db\" npm -w @event-drafter/core run migrate",
     "lint": "npm -ws --if-present run lint",
     "desktop:dev": "npm -w @event-drafter/desktop run build && ED_DESKTOP_URL=http://127.0.0.1:3000 npm -w @event-drafter/desktop run start",
-    "desktop:dist": "npm run build && npm -w @event-drafter/desktop run fetch-browser && npm -w @event-drafter/desktop run rebuild-native && npm -w @event-drafter/desktop run dist"
+    "desktop:dist": "npm run build && npm -w @event-drafter/desktop run fetch-browser && npm -w @event-drafter/desktop run dist"
   },
   "devDependencies": {
     "concurrently": "^9.0.0",

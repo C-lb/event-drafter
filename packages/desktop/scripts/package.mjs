@@ -34,8 +34,22 @@ try {
     repoRoot,
   );
 
-  console.log('\n[package] running electron-builder...');
-  run('electron-builder --publish never', desktopDir);
+  // Notarization is opt-in and credential-gated so it never blocks a normal build.
+  // Enable with ED_NOTARIZE=1 + APPLE_TEAM_ID, and supply notarytool creds via env
+  // (APPLE_API_KEY/APPLE_API_KEY_ID/APPLE_API_ISSUER, or APPLE_ID/APPLE_APP_SPECIFIC_PASSWORD).
+  // Code signing itself is auto-enabled by electron-builder when CSC_LINK/WIN_CSC_LINK
+  // are present in the env; no flag needed here. See docs/setup/code-signing.md.
+  const args = ['electron-builder', '--publish', process.env.ED_PUBLISH ?? 'never'];
+  if (process.env.ED_NOTARIZE === '1') {
+    if (!process.env.APPLE_TEAM_ID) {
+      throw new Error('ED_NOTARIZE=1 requires APPLE_TEAM_ID (and notarytool creds) in the env');
+    }
+    args.push(`--config.mac.notarize.teamId=${process.env.APPLE_TEAM_ID}`);
+    console.log('[package] notarization ENABLED (teamId set)');
+  }
+  const signing = process.env.CSC_LINK || process.env.WIN_CSC_LINK ? 'signed (CSC creds present)' : 'UNSIGNED (no CSC creds)';
+  console.log(`\n[package] running electron-builder — ${signing}...`);
+  run(args.join(' '), desktopDir);
 } finally {
   console.log('\n[package] restoring better-sqlite3 for system Node...');
   run('npm rebuild better-sqlite3', repoRoot);

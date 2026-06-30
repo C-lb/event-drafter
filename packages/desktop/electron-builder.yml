@@ -38,10 +38,25 @@ extraResources:
 win:
   target: [nsis, msi]
   icon: icons/icon.ico
+  # Authenticode signing is credential-gated: electron-builder signs automatically
+  # when WIN_CSC_LINK (base64 .pfx) + WIN_CSC_KEY_PASSWORD are present in the env,
+  # and silently skips signing when they are absent (so local/unsigned builds work).
+  # See docs/setup/code-signing.md for the Azure Trusted Signing alternative.
 mac:
   target: [dmg, pkg]
   category: public.app-category.productivity
   icon: icons/icon.icns
+  # Hardened runtime + entitlements are REQUIRED for notarization. They only take
+  # effect when the app is actually signed (a Developer ID identity in the keychain,
+  # or CSC_LINK + CSC_KEY_PASSWORD in the env); with no identity, electron-builder
+  # skips signing and these are inert, so unsigned local builds are unaffected.
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  # Notarization is OFF by default and enabled opt-in by scripts/package.mjs
+  # (ED_NOTARIZE=1 + APPLE_TEAM_ID), so it never blocks an unsigned build.
+  notarize: false
 nsis:
   oneClick: false
   perMachine: false
