@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { pillSummary, type WorkerState } from '@/lib/worker-state';
+import { engageSafetyStop, releaseSafetyStop } from '@/app/status/safety-actions';
 
 const POLL_MS = 4000;
 
@@ -38,6 +39,8 @@ export function WorkerStatus() {
   const [error, setError] = useState(false);
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [stopBusy, setStopBusy] = useState(false);
+  const [, startStop] = useTransition();
   const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setMounted(true), []);
@@ -120,10 +123,34 @@ export function WorkerStatus() {
         </a>
       )}
 
+      {state.safetyStopped ? (
+        <button
+          type="button"
+          onClick={() => { setStopBusy(true); startStop(async () => { await releaseSafetyStop(); setStopBusy(false); }); }}
+          disabled={stopBusy}
+          className="btn btn-sm ml-2"
+        >
+          {stopBusy ? <span className="spinner" /> : 'Resume worker'}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => { setStopBusy(true); startStop(async () => { await engageSafetyStop(); setStopBusy(false); }); }}
+          disabled={stopBusy}
+          className="btn-danger btn-sm ml-2"
+        >
+          {stopBusy ? <span className="spinner" /> : 'Safety stop'}
+        </button>
+      )}
+
       {open && <Popover state={state} />}
+
+      {mounted && state.safetyStopped &&
+        createPortal(<SafetyBanner onResume={() => { setStopBusy(true); startStop(async () => { await releaseSafetyStop(); setStopBusy(false); }); }} busy={stopBusy} />, getBannerSlot())}
 
       {mounted &&
         !state.connected &&
+        !state.safetyStopped &&
         createPortal(<OfflineBanner state={state} />, getBannerSlot())}
     </div>
   );
@@ -223,6 +250,25 @@ function Popover({ state }: { state: WorkerState }) {
       </div>
 
       <a href="/status" className="btn btn-sm mt-3 w-full">Open full status</a>
+    </div>
+  );
+}
+
+function SafetyBanner({ onResume, busy }: { onResume: () => void; busy: boolean }) {
+  return (
+    <div className="border-b border-red-600/25 bg-red-50 text-red-800">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-3 gap-y-1 px-6 py-2.5 text-sm">
+        <span className="inline-flex items-center gap-2 font-semibold text-red-900">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 flex-none" aria-hidden>
+            <circle cx="12" cy="12" r="9" /><path d="M9 9h6v6H9z" />
+          </svg>
+          Safety stop engaged
+        </span>
+        <span className="text-red-700">The worker is halted. No messages will be sent until you resume.</span>
+        <button type="button" onClick={onResume} disabled={busy} className="btn btn-sm ml-auto border-red-600/30 bg-white/70">
+          {busy ? <span className="spinner" /> : 'Resume worker'}
+        </button>
+      </div>
     </div>
   );
 }
