@@ -46,6 +46,7 @@ interface SettingTypes {
   }>;
   last_sheet_url: string;
   worker_safety_stop: { engaged: boolean; ts: number };
+  rate_limit_config: Partial<{ minGapMs: number; maxGapMs: number; batchLimit: number; cooldownMinMs: number; cooldownMaxMs: number; maxSendsPerHour: number }>;
 }
 
 export function getSetting<K extends SettingKey>(key: K): SettingTypes[K] | null {

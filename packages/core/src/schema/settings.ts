@@ -31,6 +31,7 @@ export const SETTING_KEYS = {
   sheet_history: 'sheet_history',
   last_sheet_url: 'last_sheet_url',
   worker_safety_stop: 'worker_safety_stop',
+  rate_limit_config: 'rate_limit_config',
 } as const;
 
 export type SettingKey = (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS];
