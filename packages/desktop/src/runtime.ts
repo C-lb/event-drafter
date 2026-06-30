@@ -4,7 +4,7 @@ import { createServer } from 'node:net';
 /** Fixed port for the packaged desktop web server.
  *  Register `http://127.0.0.1:41000/api/auth/google/callback` in your Google Console.
  *  If 41000 is occupied (e.g. another instance), boot falls back to a free port and
- *  prints the actual URL — re-auth will need to be performed at that URL. */
+ *  prints the actual URL; re-auth will need to be performed at that URL. */
 export const DESKTOP_PREFERRED_PORT = 41000;
 
 export function resolveRuntimeEnv(opts: { userData: string; browsersPath: string; port: number }) {
@@ -41,7 +41,7 @@ export function pickPreferredPort(preferred: number): Promise<number> {
     const srv = createServer();
     srv.unref();
     srv.once('error', () => {
-      // Preferred port is in use — pick any free port instead.
+      // Preferred port is in use - pick any free port instead.
       srv.close(() => pickFreePort().then(resolve));
     });
     srv.listen(preferred, '127.0.0.1', () => {

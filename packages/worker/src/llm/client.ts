@@ -22,7 +22,7 @@ export class LLMModelMissing extends Error {
 
 export class AnthropicNotConfigured extends Error {
   constructor() {
-    super('No Anthropic API key — set it in Setup (LLM provider page)');
+    super('No Anthropic API key - set it in Setup (LLM provider page)');
   }
 }
 

@@ -12,13 +12,13 @@ export const SCOPES = [
 
 export class GoogleOAuthNotConfigured extends Error {
   constructor() {
-    super('Google client credentials not configured — enter them in Setup (Connect Google page)');
+    super('Google client credentials not configured - enter them in Setup (Connect Google page)');
   }
 }
 
 export class GoogleNotAuthorized extends Error {
   constructor() {
-    super('Google not yet authorized — visit /setup/google');
+    super('Google not yet authorized - visit /setup/google');
   }
 }
 
@@ -26,6 +26,9 @@ export class GoogleNotAuthorized extends Error {
 function envOrThrow(): { id: string; secret: string; redirect: string } {
   const id = getSetting('google_client_id') ?? process.env.GOOGLE_CLIENT_ID;
   const secret = getSetting('google_client_secret') ?? process.env.GOOGLE_CLIENT_SECRET;
+  // Desktop injects the port-correct redirect via GOOGLE_REDIRECT_URI env; no code path writes
+  // the 'google_redirect_uri' setting today, so the injected env always wins. A future writer
+  // who stores it via setSetting would shadow the env - intentional precedence by design.
   const redirect = getSetting('google_redirect_uri') ?? process.env.GOOGLE_REDIRECT_URI;
   if (!id || !secret || !redirect) throw new GoogleOAuthNotConfigured();
   return { id, secret, redirect };
@@ -50,7 +53,7 @@ export async function exchangeCode(code: string): Promise<void> {
   const client = buildClient();
   const { tokens } = await client.getToken(code);
   if (!tokens.refresh_token) {
-    throw new Error('No refresh_token in response — revoke app access in Google Account and retry');
+    throw new Error('No refresh_token in response - revoke app access in Google Account and retry');
   }
   persistTokens(tokens);
 }
