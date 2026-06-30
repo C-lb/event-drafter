@@ -33,7 +33,7 @@ interface SettingTypes {
   operator_persona_role: string;
   auto_send_enabled: boolean;
   setup_completed: boolean;
-  worker_heartbeat: { ts: number; node: string };
+  worker_heartbeat: { ts: number; node: string; startedAt?: number; pid?: number };
   worker_restart_requested: { ts: number };
   llm_last_ok: { ts: number };
   llm_last_error: { ts: number; message: string };

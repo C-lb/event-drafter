@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { DM_Sans } from 'next/font/google';
 import { SetupBanner } from './components/SetupBanner';
 import { Nav } from './components/Nav';
+import { WorkerStatus } from './components/WorkerStatus';
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -28,9 +29,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               </span>
               <span className="text-[15px] font-semibold tracking-tight">Event Drafter</span>
             </a>
-            <Nav />
+            <div className="flex flex-wrap items-center gap-3">
+              <Nav />
+              <WorkerStatus />
+            </div>
           </div>
         </header>
+        {/* Full-width worker-offline banner mounts here (portal target). */}
+        <div id="worker-banner-slot" />
         <SetupBanner />
         <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>
       </body>
