@@ -16,9 +16,13 @@ export type NewSetting = typeof settings.$inferInsert;
 export const SETTING_KEYS = {
   google_tokens: 'google_tokens',
   google_client_id: 'google_client_id',
+  google_client_secret: 'google_client_secret',
+  google_redirect_uri: 'google_redirect_uri',
   contacts_sheet: 'contacts_sheet',
   style_guide: 'style_guide',
   llm_ready: 'llm_ready',
+  llm_provider: 'llm_provider',
+  anthropic_api_key: 'anthropic_api_key',
   wa_ready: 'wa_ready',
   operator_persona_name: 'operator_persona_name',
   operator_persona_role: 'operator_persona_role',

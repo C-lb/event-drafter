@@ -1,7 +1,14 @@
 import { join } from 'node:path';
 import { createServer } from 'node:net';
 
+/** Fixed port for the packaged desktop web server.
+ *  Register `http://127.0.0.1:41000/api/auth/google/callback` in your Google Console.
+ *  If 41000 is occupied (e.g. another instance), boot falls back to a free port and
+ *  prints the actual URL — re-auth will need to be performed at that URL. */
+export const DESKTOP_PREFERRED_PORT = 41000;
+
 export function resolveRuntimeEnv(opts: { userData: string; browsersPath: string; port: number }) {
+  const redirectUri = `http://127.0.0.1:${opts.port}/api/auth/google/callback`;
   const env: Record<string, string> = {
     ED_DB_PATH: join(opts.userData, 'app.db'),
     ED_WA_PROFILE_DIR: join(opts.userData, 'wa-profile'),
@@ -9,8 +16,10 @@ export function resolveRuntimeEnv(opts: { userData: string; browsersPath: string
     ED_WORKER_LOCK_PORT: '47615',
     PORT: String(opts.port),
     HOSTNAME: '127.0.0.1',
+    // Computed from the actual port so Google OAuth works without a .env.
+    GOOGLE_REDIRECT_URI: redirectUri,
   };
-  return { env, port: opts.port };
+  return { env, port: opts.port, redirectUri };
 }
 
 export function pickFreePort(): Promise<number> {
@@ -22,6 +31,21 @@ export function pickFreePort(): Promise<number> {
       const addr = srv.address();
       const port = typeof addr === 'object' && addr ? addr.port : 0;
       srv.close(() => resolve(port));
+    });
+  });
+}
+
+/** Try to bind `preferred`; fall back to a random free port if it is busy. */
+export function pickPreferredPort(preferred: number): Promise<number> {
+  return new Promise((resolve) => {
+    const srv = createServer();
+    srv.unref();
+    srv.once('error', () => {
+      // Preferred port is in use — pick any free port instead.
+      srv.close(() => pickFreePort().then(resolve));
+    });
+    srv.listen(preferred, '127.0.0.1', () => {
+      srv.close(() => resolve(preferred));
     });
   });
 }

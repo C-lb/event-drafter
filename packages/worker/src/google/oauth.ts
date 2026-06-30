@@ -12,7 +12,7 @@ export const SCOPES = [
 
 export class GoogleOAuthNotConfigured extends Error {
   constructor() {
-    super('GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_REDIRECT_URI missing from .env');
+    super('Google client credentials not configured — enter them in Setup (Connect Google page)');
   }
 }
 
@@ -22,10 +22,11 @@ export class GoogleNotAuthorized extends Error {
   }
 }
 
+/** Settings take priority over env so the packaged app needs no .env. */
 function envOrThrow(): { id: string; secret: string; redirect: string } {
-  const id = process.env.GOOGLE_CLIENT_ID;
-  const secret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirect = process.env.GOOGLE_REDIRECT_URI;
+  const id = getSetting('google_client_id') ?? process.env.GOOGLE_CLIENT_ID;
+  const secret = getSetting('google_client_secret') ?? process.env.GOOGLE_CLIENT_SECRET;
+  const redirect = getSetting('google_redirect_uri') ?? process.env.GOOGLE_REDIRECT_URI;
   if (!id || !secret || !redirect) throw new GoogleOAuthNotConfigured();
   return { id, secret, redirect };
 }

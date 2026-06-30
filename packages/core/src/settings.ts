@@ -25,6 +25,10 @@ export interface ContactsSheet {
 interface SettingTypes {
   google_tokens: GoogleTokens;
   google_client_id: string;
+  google_client_secret: string;
+  google_redirect_uri: string;
+  anthropic_api_key: string;
+  llm_provider: 'ollama' | 'anthropic';
   contacts_sheet: ContactsSheet;
   style_guide: string;
   llm_ready: boolean;
