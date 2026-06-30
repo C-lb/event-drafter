@@ -41,4 +41,19 @@ describe('electron-builder.yml shipped paths', () => {
   it('does not ship the nonexistent packages/web/public directory', () => {
     expect(yml).not.toContain('packages/web/public');
   });
+
+  // Regression guard: the packaged app runs entirely on Electron's Node (every
+  // child is forked with execPath=electron + ELECTRON_RUN_AS_NODE), so the
+  // shipped better-sqlite3 must be Electron-ABI. Plain `electron-builder` does
+  // NOT rebuild the hoisted root copy (better-sqlite3 isn't a declared desktop
+  // dep), so it silently ships the system-Node-ABI binary and the app crashes
+  // at runtime with ERR_DLOPEN_FAILED / NODE_MODULE_VERSION mismatch. The dist
+  // script MUST route through scripts/package.mjs, which rebuilds for Electron,
+  // packages, then restores the system-Node binary for dev/test.
+  it('dist script rebuilds the native binary via scripts/package.mjs', () => {
+    const pkg = JSON.parse(
+      readFileSync(join(__dirname, '..', 'package.json'), 'utf-8'),
+    );
+    expect(pkg.scripts.dist).toContain('scripts/package.mjs');
+  });
 });
