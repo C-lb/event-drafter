@@ -126,7 +126,7 @@ export function WorkerStatus() {
       {state.safetyStopped ? (
         <button
           type="button"
-          onClick={() => { setStopBusy(true); startStop(async () => { await releaseSafetyStop(); setStopBusy(false); }); }}
+          onClick={() => { setStopBusy(true); startStop(async () => { try { await releaseSafetyStop(); } finally { setStopBusy(false); } }); }}
           disabled={stopBusy}
           className="btn btn-sm ml-2"
         >
@@ -135,7 +135,7 @@ export function WorkerStatus() {
       ) : (
         <button
           type="button"
-          onClick={() => { setStopBusy(true); startStop(async () => { await engageSafetyStop(); setStopBusy(false); }); }}
+          onClick={() => { setStopBusy(true); startStop(async () => { try { await engageSafetyStop(); } finally { setStopBusy(false); } }); }}
           disabled={stopBusy}
           className="btn-danger btn-sm ml-2"
         >
@@ -146,7 +146,7 @@ export function WorkerStatus() {
       {open && <Popover state={state} />}
 
       {mounted && state.safetyStopped &&
-        createPortal(<SafetyBanner onResume={() => { setStopBusy(true); startStop(async () => { await releaseSafetyStop(); setStopBusy(false); }); }} busy={stopBusy} />, getBannerSlot())}
+        createPortal(<SafetyBanner onResume={() => { setStopBusy(true); startStop(async () => { try { await releaseSafetyStop(); } finally { setStopBusy(false); } }); }} busy={stopBusy} />, getBannerSlot())}
 
       {mounted &&
         !state.connected &&
