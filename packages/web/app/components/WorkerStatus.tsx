@@ -110,6 +110,16 @@ export function WorkerStatus() {
         {label}
       </button>
 
+      {state.limboCount > 0 && (
+        <a
+          href="/status"
+          className="badge badge-amber ml-2 cursor-pointer"
+          title="Messages caught mid-send need your decision"
+        >
+          {state.limboCount} need a decision
+        </a>
+      )}
+
       {open && <Popover state={state} />}
 
       {mounted &&
@@ -239,6 +249,9 @@ function OfflineBanner({ state }: { state: WorkerState }) {
           {state.queued.total > 0 ? ` · ${state.queued.total} job${state.queued.total > 1 ? 's' : ''} waiting` : ' · nothing queued'}
           {state.sends.next ? `, next up ${state.sends.next.name}` : ''}
         </span>
+        {state.limboCount > 0 && (
+          <span className="font-semibold text-amber-900"> · {state.limboCount} need a decision</span>
+        )}
         <a href="/status" className="btn btn-sm ml-auto border-amber-600/30 bg-white/60">
           Open status
         </a>

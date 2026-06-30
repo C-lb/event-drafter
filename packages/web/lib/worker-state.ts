@@ -66,6 +66,8 @@ export interface WorkerState {
     /** How many send jobs are still waiting. */
     queuedCount: number;
   };
+  /** Count of messages caught mid-send that need an operator decision. */
+  limboCount: number;
 }
 
 export interface SummarizeInput {
@@ -124,6 +126,7 @@ export function summarizeWorker(input: SummarizeInput): WorkerState {
       recent: recentSendJobs.map(resolveRecipient).filter((r): r is Recipient => r !== null),
       queuedCount: queuedSends.length,
     },
+    limboCount: 0,
   };
 }
 

@@ -49,6 +49,11 @@ describe('summarizeWorker — liveness', () => {
     expect(s.connected).toBe(false);
     expect(s.beatAgeMs).toBeNull();
   });
+
+  it('defaults limboCount to 0', () => {
+    const s = summarizeWorker({ ...base, heartbeat: { ts: NOW } });
+    expect(s.limboCount).toBe(0);
+  });
 });
 
 describe('summarizeWorker — concurrent work and backlog', () => {

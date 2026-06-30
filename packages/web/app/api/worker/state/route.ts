@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getSetting } from '@event-drafter/core/settings';
+import { readLimbo } from '@/lib/limbo-read';
 import { jobs, invites, contacts, follow_ups, replies } from '@event-drafter/core/schema';
 import { asc, desc, eq, inArray } from 'drizzle-orm';
 import {
@@ -98,6 +99,6 @@ export async function GET() {
     recentFinished,
     resolveRecipient,
   });
-
-  return NextResponse.json(state, { headers: { 'Cache-Control': 'no-store' } });
+  const limboCount = readLimbo().count;
+  return NextResponse.json({ ...state, limboCount }, { headers: { 'Cache-Control': 'no-store' } });
 }
