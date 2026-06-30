@@ -6,6 +6,8 @@ import { and, eq, sql } from 'drizzle-orm';
 import { readLimbo } from '@/lib/limbo-read';
 import type { LimboType } from '@/lib/limbo';
 
+type DbHandle = ReturnType<typeof getDb>;
+
 export async function listLimbo() {
   return readLimbo();
 }
@@ -13,8 +15,8 @@ export async function listLimbo() {
 interface Desc {
   sendKind: 'send_message' | 'send_follow_up' | 'send_response';
   payloadKey: 'invite_id' | 'follow_up_id' | 'reply_id';
-  markSent: (db: ReturnType<typeof getDb>, id: number) => void;
-  reApprove: (db: ReturnType<typeof getDb>, id: number) => void;
+  markSent: (db: DbHandle, id: number) => void;
+  reApprove: (db: DbHandle, id: number) => void;
 }
 
 const DESC: Record<LimboType, Desc> = {
@@ -39,11 +41,19 @@ const DESC: Record<LimboType, Desc> = {
 };
 
 /** Fail the stuck running send job for this record so it stops reading as in-flight. */
-function failOrphanJob(db: ReturnType<typeof getDb>, d: Desc, id: number): void {
+function failOrphanJob(db: DbHandle, d: Desc, id: number): void {
   db.update(jobs)
     .set({ status: 'failed', finished_at: new Date(), last_error: 'superseded by operator recovery' })
     .where(and(eq(jobs.status, 'running'), eq(jobs.kind, d.sendKind), sql`json_extract(${jobs.payload}, ${'$.' + d.payloadKey}) = ${id}`))
     .run();
+}
+
+/** Core resend logic — must run inside a caller-owned transaction. */
+function resendOne(tx: DbHandle, type: LimboType, id: number): void {
+  const d = DESC[type];
+  d.reApprove(tx, id);
+  failOrphanJob(tx, d, id);
+  tx.insert(jobs).values({ kind: d.sendKind, payload: { [d.payloadKey]: id } }).run();
 }
 
 export async function recoverMarkSent(input: { type: LimboType; id: number }) {
@@ -56,17 +66,13 @@ export async function recoverMarkSent(input: { type: LimboType; id: number }) {
 }
 
 export async function recoverResend(input: { type: LimboType; id: number }) {
-  const d = DESC[input.type];
-  const db = getDb();
-  db.transaction((tx) => {
-    d.reApprove(tx, input.id);
-    failOrphanJob(tx, d, input.id);
-    tx.insert(jobs).values({ kind: d.sendKind, payload: { [d.payloadKey]: input.id } }).run();
-  });
+  getDb().transaction((tx) => resendOne(tx, input.type, input.id));
 }
 
 export async function recoverResendAllPrefilled(): Promise<{ resent: number }> {
   const prefilled = readLimbo().records.filter((r) => r.state === 'prefilled');
-  for (const r of prefilled) await recoverResend({ type: r.type, id: r.id });
+  getDb().transaction((tx) => {
+    for (const r of prefilled) resendOne(tx, r.type, r.id);
+  });
   return { resent: prefilled.length };
 }

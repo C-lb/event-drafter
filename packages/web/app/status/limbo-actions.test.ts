@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runMigrations } from '@event-drafter/core/migrate';
 import { closeDb, getDb } from '@event-drafter/core/db';
-import { events, contacts, invites, jobs } from '@event-drafter/core/schema';
+import { events, contacts, invites, follow_ups, replies, jobs } from '@event-drafter/core/schema';
 import { eq } from 'drizzle-orm';
 import { setSetting } from '@event-drafter/core/settings';
 import { recoverMarkSent, recoverResend, recoverResendAllPrefilled } from './limbo-actions';
@@ -32,6 +32,22 @@ function seedInvite(status: string): number {
 function stuckJob(invite_id: number) {
   getDb().insert(jobs).values({ kind: 'send_message', payload: { invite_id }, status: 'running', started_at: new Date() }).run();
 }
+function seedFollowUp(invite_id: number, status: string): number {
+  const fu = getDb()
+    .insert(follow_ups)
+    .values({ invite_id, draft_text: 'following up', status: status as never })
+    .returning()
+    .get();
+  return fu.id;
+}
+function seedReply(invite_id: number): number {
+  const r = getDb()
+    .insert(replies)
+    .values({ invite_id, wa_message_text: 'yes pls', wa_sent_at: new Date(), response_status: 'sending' as never })
+    .returning()
+    .get();
+  return r.id;
+}
 
 describe('recovery actions', () => {
   it('mark-sent sets the invite sent and fails the orphan job', async () => {
@@ -55,6 +71,26 @@ describe('recovery actions', () => {
     expect(queued.some((j) => j.kind === 'send_message')).toBe(true);
     const failed = getDb().select().from(jobs).where(eq(jobs.status, 'failed')).get();
     expect(failed).toBeTruthy();
+  });
+
+  it('follow_up resend re-approves and enqueues send_follow_up', async () => {
+    const invId = seedInvite('approved');
+    const fuId = seedFollowUp(invId, 'sending');
+    await recoverResend({ type: 'follow_up', id: fuId });
+    const fu = getDb().select().from(follow_ups).where(eq(follow_ups.id, fuId)).get();
+    expect(fu?.status).toBe('approved');
+    expect(fu?.prefilled_at).toBeNull();
+    const queued = getDb().select().from(jobs).where(eq(jobs.status, 'queued')).all();
+    expect(queued.some((j) => j.kind === 'send_follow_up')).toBe(true);
+  });
+
+  it('reply mark-sent sets response_status=sent and response_sent_at', async () => {
+    const invId = seedInvite('sent');
+    const rId = seedReply(invId);
+    await recoverMarkSent({ type: 'reply', id: rId });
+    const reply = getDb().select().from(replies).where(eq(replies.id, rId)).get();
+    expect(reply?.response_status).toBe('sent');
+    expect(reply?.response_sent_at).not.toBeNull();
   });
 
   it('bulk resend re-approves every prefilled record', async () => {
