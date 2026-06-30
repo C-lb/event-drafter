@@ -50,8 +50,12 @@ export const SEL = {
 };
 
 export const WAIT = {
-  appReadyMs: 30_000,
-  inputReadyMs: 20_000,
+  // WA Web's "Your messages are downloading" splash can run for minutes on large
+  // accounts, and every send navigation re-enters it. These must be generous
+  // enough to outlast that splash or the worker mis-reads a loading page as
+  // "not logged in" / "selector mismatch" and defers the job. See driver.prefillDraft.
+  appReadyMs: 120_000,
+  inputReadyMs: 60_000,
   inputFilledMs: 10_000,
   conversationReadyMs: 15_000,
   // After clicking send: how long to wait for the draft to appear as an

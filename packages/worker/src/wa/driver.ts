@@ -146,25 +146,34 @@ export async function waitForLogin(timeoutMs = 5 * 60 * 1000): Promise<void> {
 export async function prefillDraft(phoneE164: string, text: string): Promise<void> {
   const { page } = await ensureContext();
 
-  await page.goto(WA_URL.base, { waitUntil: 'domcontentloaded' });
-  await humanPause(page);
-  const loginState = await detectLoginState(page);
-  if (loginState !== 'logged-in') throw new WaNotLoggedIn();
-
-  await humanPause(page);
+  // Single navigation: the /send deep-link loads the app AND opens the chat
+  // (pre-filling the composer from the &text= param). We deliberately do NOT
+  // first goto(base) + detectLoginState — that's a second full reload, and each
+  // reload re-enters WA Web's multi-minute "downloading messages" splash, which
+  // is what was causing every send to time out and defer. Instead we infer
+  // state from whichever element wins the race below:
+  //   composer visible  → logged in AND ready
+  //   QR canvas visible → genuinely logged out (needs re-scan)
+  //   invalid dialog    → number not on WhatsApp
+  //   none within appReadyMs → still loading / layout drift
   await page.goto(WA_URL.send(phoneE164, text), { waitUntil: 'domcontentloaded' });
   await humanPause(page);
 
   const inputLocator = page.locator(SEL.messageInputBox).first();
-  const invalidLocator = page.locator(SEL.invalidNumberDialog).first();
+  const qrLocator = page.locator(SEL.qrCanvas).first();
+  const invalidLocator = page
+    .getByText(/phone number shared via url is invalid|invalid phone number/i)
+    .first();
 
   const winner = await Promise.race([
-    inputLocator.waitFor({ state: 'visible', timeout: WAIT.inputReadyMs }).then(() => 'input' as const),
-    invalidLocator.waitFor({ state: 'visible', timeout: WAIT.inputReadyMs }).then(() => 'invalid' as const),
+    inputLocator.waitFor({ state: 'visible', timeout: WAIT.appReadyMs }).then(() => 'input' as const),
+    qrLocator.waitFor({ state: 'visible', timeout: WAIT.appReadyMs }).then(() => 'qr' as const),
+    invalidLocator.waitFor({ state: 'visible', timeout: WAIT.appReadyMs }).then(() => 'invalid' as const),
   ]).catch(() => 'timeout' as const);
 
+  if (winner === 'qr') throw new WaNotLoggedIn();
   if (winner === 'invalid') throw new WaInvalidNumber(phoneE164);
-  if (winner === 'timeout') throw new WaSelectorMismatch('messageInputBox or invalidNumberDialog');
+  if (winner === 'timeout') throw new WaSelectorMismatch('messageInputBox/qrCanvas/invalidNumber within appReadyMs');
 
   const deadline = Date.now() + WAIT.inputFilledMs;
   while (Date.now() < deadline) {
