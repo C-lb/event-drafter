@@ -1,21 +1,37 @@
 import { app, BrowserWindow } from 'electron';
+import { join } from 'node:path';
+import { resolveRuntimeEnv, pickFreePort, waitForPort, repoRoot } from './runtime';
+import { forkWebServer, forkWorker } from './children';
+import type { ChildProcess } from 'node:child_process';
 
-const APP_URL = process.env.ED_DESKTOP_URL ?? 'http://127.0.0.1:3000';
+let web: ChildProcess | null = null;
+let worker: ChildProcess | null = null;
 
-function createWindow() {
-  const win = new BrowserWindow({
-    width: 1280,
-    height: 860,
-    title: 'Event Drafter',
-    webPreferences: { contextIsolation: true },
-  });
-  win.loadURL(APP_URL);
+async function boot() {
+  // Packaged layout: point root + browser at the shipped resources BEFORE forking.
+  if (app.isPackaged) {
+    process.env.ED_APP_ROOT = join(process.resourcesPath, 'app');
+    process.env.PLAYWRIGHT_BROWSERS_PATH = join(process.resourcesPath, 'ms-playwright');
+  }
+  const root = repoRoot(__dirname);
+  const userData = app.getPath('userData');
+  const browsersPath = process.env.PLAYWRIGHT_BROWSERS_PATH ?? join(userData, 'ms-playwright');
+  const port = await pickFreePort();
+  const { env } = resolveRuntimeEnv({ userData, browsersPath, port });
+
+  // Migrations: require core's compiled migrate and run against ED_DB_PATH.
+  process.env.ED_DB_PATH = env.ED_DB_PATH;
+  const { runMigrations } = require(join(root, 'packages', 'core', 'dist', 'migrate.js'));
+  runMigrations();
+
+  web = forkWebServer(env);
+  worker = forkWorker(env);
+  await waitForPort(port);
+
+  const win = new BrowserWindow({ width: 1280, height: 860, title: 'Event Drafter' });
+  win.loadURL(`http://127.0.0.1:${port}`);
 }
 
-app.whenReady().then(createWindow);
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) createWindow();
-});
+app.whenReady().then(boot);
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+app.on('before-quit', () => { web?.kill(); worker?.kill(); });
