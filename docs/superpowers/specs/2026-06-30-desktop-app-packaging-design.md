@@ -7,9 +7,10 @@ Status: draft spec (preparation) — not yet planned/implemented
 
 Ship event-drafter as a downloadable desktop app that bundles the worker, so a
 non-technical operator installs one file, opens it, logs into WhatsApp once, and
-everything (web UI + background worker + local DB) runs inside the app. Primary
-target: **Windows** (`.exe` / `.msi`). Secondary, from the same setup: **macOS**
-(`.dmg` / `.pkg`).
+everything (web UI + background worker + local DB) runs inside the app. Launch
+targets (both, confirmed 2026-06-30): **Windows** (`.exe` / `.msi`) and **macOS**
+(`.dmg` / `.pkg`), from one Electron setup. Windows is where the worker runs
+today, so smoke-test there first; macOS ships in the same release.
 
 Android `.apk` is explicitly out of scope: the worker automates WhatsApp Web in a
 real desktop Chromium via Playwright; there is no desktop Chromium to drive on
@@ -128,8 +129,10 @@ settings-backed fallback so a packaged app with no `.env` still works.
   today), but distributing the tool widens exposure — keep it an internal tool.
 - **Signing certs** are the real lead-time item (especially Apple notarization and
   a Windows OV/EV cert). Start that procurement early if both OSes are wanted.
-- **Which OSes ship first?** Windows is primary (the worker laptop is Windows).
-  Confirm whether macOS is also a launch target or a later add.
+- **OS targets: both Windows and macOS at launch** (confirmed). Practical
+  consequence: start the Apple Developer enrollment + notarization setup and the
+  Windows code-signing cert (OV/EV) procurement EARLY — these are the long
+  lead-time items and gate a distributable (non-warning) build on each OS.
 - **better-sqlite3 + Electron ABI** can be finicky across Electron upgrades; pin
   Electron and rebuild in CI.
 
