@@ -191,13 +191,17 @@ git commit -m "feat(worker): settings-backed rate-limit config read live"
 
 ---
 
-### Task 3: Sending-cadence settings page
+### Task 3: Sending-cadence settings page (live apply + microinteraction)
+
+**Immediate-apply requirement:** Saving must take effect on the worker *immediately, even mid-wait*. Reading config per-send (Task 2) covers future sends, but a send already DEFERRED sits on its old `run_after`, so a shortened gap wouldn't speed it up. The save action therefore also clears `run_after` on queued (deferred) send jobs, so the poller re-evaluates them under the new limits on its very next tick (~1s). The form shows a LIVE "next send" readout (from `getRateLimitState()`) that visibly re-paces after a save — that, plus the Save confirmation, is the microinteraction.
 
 **Files:**
 - Create: `packages/web/app/settings/sending/actions.ts`
 - Create: `packages/web/app/settings/sending/page.tsx`
 - Create: `packages/web/app/settings/sending/SendingForm.tsx` (client form)
 - Create: `packages/web/lib/rate-limit-form.ts` (pure ms<->human conversion + warnings) + test `packages/web/lib/rate-limit-form.test.ts`
+- Modify: `packages/web/app/api/worker/state/route.ts` (add a `rateLimit` field from `getRateLimitState()`)
+- Modify: `packages/web/lib/worker-state.ts` (add `rateLimit` to `WorkerState`, default `null`)
 - Modify: `packages/web/app/setup/page.tsx` (add a "Sending cadence" card linking to `/settings/sending`)
 
 - [ ] **Step 1: Pure conversion + warnings (red).** `packages/web/lib/rate-limit-form.ts` holds the ms<->human mapping and the "is this below safe" check, so it's testable without React.
@@ -262,20 +266,40 @@ const schema = z.object({
 }).refine((v) => v.maxGapMs >= v.minGapMs, { message: 'max gap must be >= min gap', path: ['maxGapMs'] })
   .refine((v) => v.cooldownMaxMs >= v.cooldownMinMs, { message: 'max cooldown must be >= min cooldown', path: ['cooldownMaxMs'] });
 
-export async function saveRateLimit(input: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function saveRateLimit(input: unknown): Promise<{ ok: true; repaced: number } | { ok: false; error: string }> {
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'invalid' };
   setSetting('rate_limit_config', parsed.data);
-  return { ok: true };
+
+  // IMMEDIATE APPLY (even mid-wait): clear run_after on deferred send jobs so the
+  // poller re-evaluates them under the NEW limits on its next tick (~1s), instead
+  // of sitting on a run_after computed under the OLD gap. A job that still needs to
+  // wait simply re-defers with the new (e.g. shorter) delay; a job past the new gap
+  // sends now. Other deferral reasons (WA-not-logged-in, selector mismatch) just
+  // re-evaluate harmlessly. The per-record send claim still guards double-sends.
+  const db = getDb();
+  const res = db.update(jobs)
+    .set({ run_after: null })
+    .where(and(inArray(jobs.kind, [...SEND_KINDS]), eq(jobs.status, 'queued'), isNotNull(jobs.run_after)))
+    .run();
+  return { ok: true, repaced: res.changes };
 }
 ```
+Add the imports this needs at the top of the file: `import { getDb } from '@event-drafter/core/db';`, `import { jobs } from '@event-drafter/core/schema';`, `import { and, eq, inArray, isNotNull } from 'drizzle-orm';`, and a local `const SEND_KINDS = ['send_message','send_follow_up','send_response'] as const;` (do not import the worker for this).
 > The defaults live in `lib/rate-limit-form.ts` (`FORM_DEFAULTS`), so this action does not import the worker package — avoids any web→worker dist build-order coupling. Keep `FORM_DEFAULTS` numerically in sync with the worker's `RATE_LIMIT_DEFAULTS` (both encode 10s/15s/8/15min/30min/18).
 
-- [ ] **Step 4: Page + client form.** `page.tsx` (server) loads `getRateLimitMs()` → `fromMs` → passes to `<SendingForm initial={...} />`. `SendingForm.tsx` (client): six number inputs in human units, live `warnings()` rendered as amber helper text under each field (semantic warning, with a small icon), a Save button with loading + a success toast/inline confirm and an error message on failure. On save: `toMs(form)` → `saveRateLimit(ms)`; show "Saved" for ~1.2s. Use the house `.field`, `.btn-primary`, `.badge-amber`/amber helper, sentence-case labels, no em dashes. Include a short note: "The worker applies changes on the next send, no restart needed." Show the defaults as placeholder/help.
+- [ ] **Step 3b: Surface the live rate-limit state.** In `packages/web/lib/worker-state.ts` add `rateLimit: RateLimitState | null` to `WorkerState` (import the type, or inline `{ delayMs: number|null; reason: string|null; inBatch: number; sentLastHour: number; lastSendAtMs: number|null } | null`) and default it to `null` in `summarizeWorker`. In `packages/web/app/api/worker/state/route.ts`, import `getRateLimitState` from `@event-drafter/worker/rate-limit` (it only touches the DB — no Playwright) and attach it: `return NextResponse.json({ ...state, limboCount, safetyStopped, rateLimit: getRateLimitState() }, ...)`. (If the worker import path causes a build issue, add a tiny web action `getLiveRateLimit()` that calls it and poll that instead — but prefer the route so the existing 4s poll carries it.) Rebuild worker if needed so the `./rate-limit` export resolves.
+
+- [ ] **Step 4: Page + client form with the microinteraction.** `page.tsx` (server) loads `getRateLimitMs()` → `fromMs` → `<SendingForm initial={...} />`. `SendingForm.tsx` (client):
+  - Six number inputs in human units; live `warnings()` as amber helper text under each field (semantic warning + small icon).
+  - A **live "next send" readout** that polls `/api/worker/state` every ~2s and shows the `rateLimit` state: "Ready to send now" when `delayMs` is null, else "Next send in `Math.ceil(delayMs/1000)`s (`reason`)" and "`sentLastHour`/`maxPerHour` this hour". Keep a ref of the previous `delayMs`; when it CHANGES, briefly add a highlight class (e.g. an amber→transparent fade via a 600ms CSS transition or a `key` bump) so the operator SEES it re-pace.
+  - **Save microinteraction:** the Save button shows a spinner while saving, then swaps its label to a check + "Applied to worker" for ~1.6s (the house copy-confirm pattern), then reverts to "Save". If `repaced > 0`, show a one-line note under the button: "Re-paced N waiting send(s) to the new limits." On error, show a red inline message. After a successful save, the live readout updates within one poll, visibly reflecting the change (this is the proof of immediate apply).
+  - House classes: `.field`, `.btn-primary`, amber helper, sentence-case, no em dashes. Short note: "Changes apply immediately, no restart. Lower values send faster but raise WhatsApp ban risk."
+  - Respect `prefers-reduced-motion`: skip the highlight fade, keep the text update.
 
 - [ ] **Step 5: Link from Setup.** In `packages/web/app/setup/page.tsx`, add a card/link to `/settings/sending` titled "Sending cadence" with a one-line description ("Tune the WhatsApp send rate limiter").
 
-- [ ] **Step 6: Build + suite.** `npm -w @event-drafter/web run build && npm test` green; `/settings/sending` listed.
+- [ ] **Step 6: Build + suite.** `npm -w @event-drafter/web run build && npm test` green; `/settings/sending` listed. The worker-state unit tests must still pass with the new `rateLimit` default (`null`).
 
 - [ ] **Step 7: Commit.**
 ```bash
@@ -287,5 +311,5 @@ git commit -m "feat(web): sending-cadence settings page to tune the rate limiter
 
 ## Final verification
 - [ ] `npm run build` clean; `npm test` green.
-- [ ] Manual smoke: open `/settings/sending`, lower the per-message gap to 5s (amber warning appears), Save (succeeds); confirm `rate_limit_config` is stored and `getRateLimitConfig()` in the worker now returns `minGapMs: 5000` (the next send paces at 5s). Restore to defaults.
+- [ ] Manual smoke: open `/settings/sending`, lower the per-message gap to 5s (amber warning appears), Save → button confirms "Applied to worker" and the live "next send" readout re-paces within a poll; confirm `rate_limit_config` is stored, `getRateLimitConfig()` in the worker returns `minGapMs: 5000`, and any deferred send's `run_after` was cleared (immediate apply, even mid-wait). Restore to defaults.
 - [ ] `git push origin main`.
