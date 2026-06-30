@@ -4,7 +4,7 @@ asar: false
 directories:
   output: release
   buildResources: build
-# Exclude ms-playwright from app source — it ships via extraResources below.
+# Exclude ms-playwright from app source (it ships via extraResources below).
 # Without this exclusion, electron-builder tries to copy the Chromium .framework symlinks
 # as app source files and fails on macOS.
 files:
@@ -20,8 +20,15 @@ extraResources:
     to: app/packages/web/next.config.ts
   - from: ../../packages/worker/dist
     to: app/packages/worker/dist
+  # worker + core are "type": "module"; without their package.json the packaged
+  # tree's nearest package.json is the desktop (CJS) manifest, so their ESM dist
+  # is parsed as CommonJS and throws "Cannot use import statement outside a module".
+  - from: ../../packages/worker/package.json
+    to: app/packages/worker/package.json
   - from: ../../packages/core/dist
     to: app/packages/core/dist
+  - from: ../../packages/core/package.json
+    to: app/packages/core/package.json
   - from: ../../packages/core/drizzle
     to: app/packages/core/drizzle
   - from: ../../node_modules

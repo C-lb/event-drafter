@@ -18,6 +18,10 @@ describe('electron-builder.yml shipped paths', () => {
     { path: '../../packages/core/drizzle', description: 'core/drizzle/meta/_journal.json' },
     // worker dist - forked child entry point
     { path: '../../packages/worker/dist', description: 'worker/dist/index.js' },
+    // worker + core are "type": "module"; their package.json must ship so node
+    // parses the dist as ESM, else: "Cannot use import statement outside a module"
+    { path: '../../packages/worker/package.json', description: 'worker/package.json (ESM type marker)' },
+    { path: '../../packages/core/package.json', description: 'core/package.json (ESM type marker)' },
     // node_modules - next binary + all runtime deps
     { path: '../../node_modules', description: 'node_modules/next/dist/bin/next' },
     // web .next build

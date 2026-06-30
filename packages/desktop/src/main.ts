@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog } from 'electron';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { resolveRuntimeEnv, pickPreferredPort, DESKTOP_PREFERRED_PORT, waitForPort, repoRoot } from './runtime';
 import { forkWebServer, forkWorker } from './children';
 import type { ChildProcess } from 'node:child_process';
@@ -43,9 +44,16 @@ async function boot() {
     }
     const { env } = resolveRuntimeEnv({ userData, browsersPath, port });
 
-    // Migrations: require core's compiled migrate and run against ED_DB_PATH.
+    // Migrations: load core's compiled migrate and run against ED_DB_PATH.
+    // core is "type": "module" (ESM); this main process runs as CommonJS under
+    // Electron's Node, which cannot require() ESM. Load it via a dynamic import.
+    // The indirection through a Function hides import() from tsc, which would
+    // otherwise down-level it back to require() under module: CommonJS.
+    // pathToFileURL keeps the absolute path valid on Windows.
     process.env.ED_DB_PATH = env.ED_DB_PATH;
-    const { runMigrations } = require(join(root, 'packages', 'core', 'dist', 'migrate.js'));
+    const importEsm = new Function('p', 'return import(p)') as (p: string) => Promise<{ runMigrations: () => void }>;
+    const migratePath = join(root, 'packages', 'core', 'dist', 'migrate.js');
+    const { runMigrations } = await importEsm(pathToFileURL(migratePath).href);
     runMigrations();
 
     web = forkWebServer(env);
