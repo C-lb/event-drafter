@@ -61,8 +61,8 @@ export default function BlankEventPage() {
       </div>
 
       <p className="text-sm text-ink-2">
-        For events where there's no email to pull from. Fill in the event facts; optionally
-        paste the EDM body and we'll extract the structured summary used by the LLM and the
+        For events where there&apos;s no email to pull from. Fill in the event facts; optionally
+        paste the EDM body and we&apos;ll extract the structured summary used by the LLM and the
         starter-draft cards.
       </p>
 

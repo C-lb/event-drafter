@@ -23,10 +23,15 @@ export default async function StatusPage() {
   const db = getDb();
 
   const heartbeat = getSetting('worker_heartbeat');
+  // Server component (force-dynamic): rendered once per request, so reading the
+  // wall clock here is deterministic for that render — the purity rule targets
+  // client components that re-render.
+  // eslint-disable-next-line react-hooks/purity
   const heartbeatAge = heartbeat?.ts ? Date.now() - heartbeat.ts : null;
   const workerOk = heartbeatAge !== null && heartbeatAge < 15_000;
 
   const tokens = getSetting('google_tokens');
+  // eslint-disable-next-line react-hooks/purity -- see note above; server render
   const tokenExpMs = tokens ? tokens.expiry_date - Date.now() : null;
   // Auth is healthy as long as we have a refresh_token — access tokens expire
   // hourly but googleapis auto-refreshes them via the 'tokens' event in

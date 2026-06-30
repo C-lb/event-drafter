@@ -80,9 +80,12 @@ export function QueueProvider({
   );
 
   // Keep the latest orderedIds/highlightedId readable inside the keydown
-  // listener without re-binding it on every render.
+  // listener without re-binding it on every render. Updated in an effect (after
+  // commit) rather than during render so the ref is never written mid-render.
   const navRef = useRef({ orderedIds, highlightedId, isTerminal });
-  navRef.current = { orderedIds, highlightedId, isTerminal };
+  useEffect(() => {
+    navRef.current = { orderedIds, highlightedId, isTerminal };
+  });
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
