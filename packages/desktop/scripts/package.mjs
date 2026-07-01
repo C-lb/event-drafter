@@ -29,8 +29,11 @@ const run = (cmd, cwd) => execSync(cmd, { stdio: 'inherit', cwd });
 
 try {
   console.log(`\n[package] rebuilding better-sqlite3 for Electron ${electronVersion}...`);
+  // Invoke the bin bare (not ./node_modules/.bin/...): npm puts node_modules/.bin
+  // on PATH for this script, so this resolves the .cmd shim on Windows too. An
+  // explicit ./node_modules/.bin/ Unix path fails under cmd.exe (no .cmd, slashes).
   run(
-    `./node_modules/.bin/electron-rebuild -f -w better-sqlite3 --version ${electronVersion}`,
+    `electron-rebuild -f -w better-sqlite3 --version ${electronVersion}`,
     repoRoot,
   );
 
