@@ -1,22 +1,10 @@
 import Link from 'next/link';
-import { getSetting } from '@event-drafter/core/settings';
-
-interface StepStatus {
-  label: string;
-  done: boolean;
-  href: string;
-}
+import { getSetupSteps, type SetupStep } from '../setup/status';
 
 export async function SetupBanner() {
-  let steps: StepStatus[];
+  let steps: SetupStep[];
   try {
-    steps = [
-      { label: 'LLM Provider', done: getSetting('llm_ready') === true, href: '/setup/llm' },
-      { label: 'Google Account', done: getSetting('google_tokens') !== null, href: '/setup/google' },
-      { label: 'Contacts Sheet', done: getSetting('contacts_sheet') !== null, href: '/setup/sheet' },
-      { label: 'Import Contacts', done: getSetting('setup_completed') === true, href: '/setup/import' },
-      { label: 'WhatsApp Web', done: getSetting('wa_ready') === true, href: '/setup/wa' },
-    ];
+    steps = getSetupSteps();
   } catch {
     // The root layout renders this banner, so it also runs during the static
     // prerender of /_not-found at `next build` time — when no migrated DB
