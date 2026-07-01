@@ -20,6 +20,10 @@ export interface WorkerJobRow {
   last_error?: string | null;
   /** Resolved recipient name for send kinds, else null. */
   recipient?: string | null;
+  /** Position of this send within its batch (1-based), for the "3 of 12" counter. */
+  batchIndex?: number | null;
+  /** Total sends in this batch. Counter only shows when this is > 1. */
+  batchSize?: number | null;
 }
 
 export interface WorkerEvent {
@@ -32,6 +36,8 @@ export interface WorkerEvent {
   at: number;
   recipient?: string | null;
   error?: string | null;
+  batchIndex?: number | null;
+  batchSize?: number | null;
 }
 
 export interface WorkerEventsResult {
@@ -63,6 +69,8 @@ export function buildWorkerEvents(rows: WorkerJobRow[], since: number): WorkerEv
         status: r.status,
         at: r.started_at,
         recipient: r.recipient ?? null,
+        batchIndex: r.batchIndex ?? null,
+        batchSize: r.batchSize ?? null,
       });
     }
     if (r.finished_at != null && r.finished_at >= since && FINISHED.has(r.status)) {
@@ -75,6 +83,8 @@ export function buildWorkerEvents(rows: WorkerJobRow[], since: number): WorkerEv
         at: r.finished_at,
         recipient: r.recipient ?? null,
         error: r.status === 'failed' ? r.last_error ?? null : null,
+        batchIndex: r.batchIndex ?? null,
+        batchSize: r.batchSize ?? null,
       });
     }
   }
@@ -102,14 +112,26 @@ function sendPhrase(kind: string, phase: EventPhase, name: string): string {
 export interface DescribedEvent {
   tone: EventTone;
   title: string;
+  /** Dimmed secondary line, e.g. the "3 of 12" batch counter. */
+  meta?: string;
   body?: string;
   /** ms before auto-dismiss; null keeps failures until acknowledged. */
   duration: number | null;
 }
 
+/** The "3 of 12" batch position, only when the send is part of a real batch. */
+function batchMeta(e: WorkerEvent): string | undefined {
+  if (!isSendKind(e.kind)) return undefined;
+  if (e.batchSize && e.batchSize > 1 && e.batchIndex) {
+    return `${e.batchIndex} of ${e.batchSize}`;
+  }
+  return undefined;
+}
+
 /** Map an event to the toast to show for it. */
 export function describeWorkerEvent(e: WorkerEvent): DescribedEvent {
   const failed = e.phase === 'finished' && e.status === 'failed';
+  const meta = batchMeta(e);
 
   let title: string;
   if (isSendKind(e.kind)) {
@@ -129,12 +151,12 @@ export function describeWorkerEvent(e: WorkerEvent): DescribedEvent {
   }
 
   if (failed) {
-    return { tone: 'error', title, body: e.error ?? undefined, duration: null };
+    return { tone: 'error', title, meta, body: e.error ?? undefined, duration: null };
   }
   if (e.phase === 'started') {
-    return { tone: 'info', title, duration: 4000 };
+    return { tone: 'info', title, meta, duration: 4000 };
   }
-  return { tone: 'success', title, duration: 5000 };
+  return { tone: 'success', title, meta, duration: 5000 };
 }
 
 /** "send_follow_up" → "Send follow up" for unknown-kind fallbacks. */

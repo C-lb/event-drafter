@@ -45,6 +45,9 @@ export async function GET(req: Request) {
       finished_at: toMs(j.finished_at),
       payload: j.payload,
     };
+    const p = j.payload ?? {};
+    const batchIndex = typeof p.batch_index === 'number' ? p.batch_index : null;
+    const batchSize = typeof p.batch_size === 'number' ? p.batch_size : null;
     return {
       id: j.id,
       kind: j.kind,
@@ -53,6 +56,8 @@ export async function GET(req: Request) {
       finished_at: jobRow.finished_at,
       last_error: j.last_error,
       recipient: isSendKind(j.kind) ? resolveRecipientName(db, jobRow) : null,
+      batchIndex,
+      batchSize,
     };
   });
 

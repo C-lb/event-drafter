@@ -348,17 +348,19 @@ export async function approveBatch(input: unknown): Promise<{ approved: number }
 
   if (candidates.length === 0) return { approved: 0 };
 
+  const total = candidates.length;
   db.transaction((tx) => {
-    for (const c of candidates) {
+    candidates.forEach((c, i) => {
       tx.update(invites)
         .set({ status: 'approved', approved_at: new Date() })
         .where(eq(invites.id, c.id))
         .run();
+      // batch_index/batch_size drive the "3 of 12" counter on send toasts.
       tx.insert(jobs).values({
         kind: 'send_message',
-        payload: { invite_id: c.id },
+        payload: { invite_id: c.id, batch_index: i + 1, batch_size: total },
       }).run();
-    }
+    });
   });
   return { approved: candidates.length };
 }
@@ -381,14 +383,19 @@ export async function approveAll(input: unknown): Promise<{ approved: number }> 
 
   if (candidates.length === 0) return { approved: 0 };
 
+  const total = candidates.length;
   db.transaction((tx) => {
-    for (const c of candidates) {
+    candidates.forEach((c, i) => {
       tx.update(invites)
         .set({ status: 'approved', approved_at: new Date() })
         .where(eq(invites.id, c.id))
         .run();
-      tx.insert(jobs).values({ kind: 'send_message', payload: { invite_id: c.id } }).run();
-    }
+      // batch_index/batch_size drive the "3 of 12" counter on send toasts.
+      tx.insert(jobs).values({
+        kind: 'send_message',
+        payload: { invite_id: c.id, batch_index: i + 1, batch_size: total },
+      }).run();
+    });
   });
   return { approved: candidates.length };
 }

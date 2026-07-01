@@ -39,7 +39,7 @@ export function WorkerActivityToasts() {
           if (seen.current.has(ev.key)) continue;
           seen.current.add(ev.key);
           const t = describeWorkerEvent(ev);
-          show({ tone: t.tone, title: t.title, body: t.body, duration: t.duration });
+          show({ tone: t.tone, title: t.title, meta: t.meta, body: t.body, duration: t.duration });
         }
         // Advance the cursor, never rewind it.
         if (typeof data.cursor === 'number') {

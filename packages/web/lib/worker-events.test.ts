@@ -108,4 +108,34 @@ describe('describeWorkerEvent', () => {
     expect(describeWorkerEvent(ev({ kind: 'weird_task', phase: 'started', status: 'running' })).title)
       .toBe('Working: Weird task');
   });
+
+  it('adds a "3 of 12" batch counter to batched send toasts', () => {
+    const d = describeWorkerEvent(
+      ev({ kind: 'send_message', phase: 'finished', status: 'succeeded', recipient: 'Alice', batchIndex: 3, batchSize: 12 }),
+    );
+    expect(d).toMatchObject({ title: 'Sent invite to Alice', meta: '3 of 12' });
+  });
+
+  it('omits the counter for a single (non-batch) send', () => {
+    expect(describeWorkerEvent(ev({ kind: 'send_follow_up', phase: 'started', status: 'running', recipient: 'Bob', batchSize: 1, batchIndex: 1 })).meta)
+      .toBeUndefined();
+    expect(describeWorkerEvent(ev({ kind: 'send_message', phase: 'started', status: 'running', recipient: 'Bob' })).meta)
+      .toBeUndefined();
+  });
+
+  it('never adds a counter to non-send kinds', () => {
+    expect(describeWorkerEvent(ev({ kind: 'check_replies', phase: 'started', status: 'running', batchSize: 5, batchIndex: 2 })).meta)
+      .toBeUndefined();
+  });
+});
+
+describe('buildWorkerEvents batch fields', () => {
+  it('carries batchIndex/batchSize onto started and finished events', () => {
+    const { events } = buildWorkerEvents(
+      [row({ id: 9, kind: 'send_message', status: 'succeeded', started_at: SINCE + 1, finished_at: SINCE + 2, recipient: 'Alice', batchIndex: 4, batchSize: 10 })],
+      SINCE,
+    );
+    expect(events).toHaveLength(2);
+    for (const e of events) expect(e).toMatchObject({ batchIndex: 4, batchSize: 10 });
+  });
 });
