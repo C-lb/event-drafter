@@ -139,6 +139,42 @@ export async function createEventFromMessage(input: unknown) {
   return { id: row.id };
 }
 
+export async function duplicateEvent(
+  input: unknown,
+): Promise<{ ok: true; id: number } | { ok: false; error: string }> {
+  const id = typeof input === 'object' && input !== null ? (input as { id?: unknown }).id : input;
+  if (!Number.isFinite(id) || (id as number) <= 0) return { ok: false, error: 'Invalid event id.' };
+
+  const db = getDb();
+  const src = db.select().from(events).where(eq(events.id, id as number)).get();
+  if (!src) return { ok: false, error: 'Event not found.' };
+
+  // Copy the reusable details only. A duplicate is a clean slate: no contacts,
+  // invites, replies, or follow-ups, and no per-run fields (gmail provenance,
+  // delegate tracker sheet) carry over.
+  const row = db
+    .insert(events)
+    .values({
+      name: `${src.name} (copy)`,
+      event_date: src.event_date,
+      venue: src.venue,
+      note: src.note,
+      edm_subject: src.edm_subject,
+      edm_body: src.edm_body,
+      edm_summary: src.edm_summary,
+      draft_overrides: src.draft_overrides ?? null,
+      gmail_message_id: null,
+      delegate_sheet_url: null,
+      status: 'draft',
+    })
+    .returning()
+    .get();
+
+  revalidatePath('/');
+  revalidatePath('/events');
+  return { ok: true, id: row.id };
+}
+
 const updateSchema = z.object({
   id: z.number().int().positive(),
   name: z.string().min(1).max(200),

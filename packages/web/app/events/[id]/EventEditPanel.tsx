@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { updateEvent, deleteEvent } from '../actions';
+import { updateEvent, deleteEvent, duplicateEvent } from '../actions';
 
 interface Props {
   event: {
@@ -78,6 +78,16 @@ export function EventEditPanel({ event }: Props) {
     });
   };
 
+  const duplicate = () => {
+    setBanner(null);
+    start(async () => {
+      const res = await duplicateEvent({ id: event.id });
+      if (!res.ok) { setBanner({ kind: 'err', text: res.error }); return; }
+      // Land on the copy with its edit form open so details can be adjusted.
+      router.push(`/events/${res.id}#edit`);
+    });
+  };
+
   return (
     <div id="edit" className="space-y-3 scroll-mt-4">
       {banner && (
@@ -95,6 +105,15 @@ export function EventEditPanel({ event }: Props) {
           type="button"
         >
           {editing ? 'Cancel edit' : 'Edit event'}
+        </button>
+        <button
+          onClick={duplicate}
+          disabled={isPending}
+          className="btn btn-sm disabled:opacity-50"
+          type="button"
+          title="Create a new event with these details copied, but no contacts."
+        >
+          {isPending ? 'Duplicating…' : 'Duplicate event'}
         </button>
         <button
           onClick={() => setConfirmOpen((v) => !v)}
