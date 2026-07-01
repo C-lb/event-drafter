@@ -4,10 +4,9 @@ import { useEffect, useRef } from 'react';
 import { useToast } from './ToastProvider';
 import { getSetupStatus } from './actions';
 
-// Shown once per browser session so it greets you on open without nagging on
-// every navigation.
-const SESSION_KEY = 'ed-boot-status-shown';
-
+// Fires on every full page load (refresh) but not on soft in-app navigation:
+// the ref survives client-side route changes because this lives in the
+// persistent layout, and only resets on a real reload.
 export function BootStatusToast() {
   const { show } = useToast();
   const fired = useRef(false);
@@ -16,20 +15,9 @@ export function BootStatusToast() {
     if (fired.current) return;
     fired.current = true;
 
-    try {
-      if (sessionStorage.getItem(SESSION_KEY)) return;
-    } catch {
-      // sessionStorage unavailable (private mode); fall through and show once.
-    }
-
     (async () => {
       const res = await getSetupStatus();
       if (!res.ok) return; // could not read setup state; stay quiet
-      try {
-        sessionStorage.setItem(SESSION_KEY, '1');
-      } catch {
-        /* ignore */
-      }
 
       if (res.missing.length === 0) {
         show({

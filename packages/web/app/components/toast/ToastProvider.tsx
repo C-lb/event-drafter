@@ -37,7 +37,12 @@ export interface ToastOptions {
 interface ToastItem extends ToastOptions {
   id: number;
   tone: ToastTone;
+  leaving?: boolean;
 }
+
+// How long the slide-out animation runs before the toast unmounts. Keep in
+// sync with .ed-toast-leave in globals.css.
+const TOAST_EXIT_MS = 240;
 
 interface ToastApi {
   show: (opts: ToastOptions) => number;
@@ -74,12 +79,28 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const dismiss = useCallback(
+  const leavingIds = useRef(new Set<number>());
+
+  const remove = useCallback(
     (id: number) => {
       clearTimer(id);
+      leavingIds.current.delete(id);
       setToasts((prev) => prev.filter((t) => t.id !== id));
     },
     [clearTimer],
+  );
+
+  // Flag the toast as leaving so it plays the slide-out, then unmount it once
+  // the animation has finished.
+  const dismiss = useCallback(
+    (id: number) => {
+      if (leavingIds.current.has(id)) return;
+      leavingIds.current.add(id);
+      clearTimer(id);
+      setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, leaving: true } : t)));
+      timers.current.set(id, setTimeout(() => remove(id), TOAST_EXIT_MS));
+    },
+    [clearTimer, remove],
   );
 
   const arm = useCallback(
@@ -124,7 +145,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       {mounted &&
         createPortal(
-          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex flex-col items-end gap-3 p-4 sm:p-6">
+          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex flex-col items-end gap-3 overflow-hidden p-4 sm:p-6">
             {toasts.map((t) => (
               <ToastCard key={t.id} toast={t} onClose={() => dismiss(t.id)} />
             ))}
@@ -190,7 +211,7 @@ function ToastCard({ toast, onClose }: { toast: ToastItem; onClose: () => void }
     <div
       role="status"
       aria-live="polite"
-      className="ed-toast-enter pointer-events-auto relative w-[min(92vw,26rem)] rounded-2xl bg-[#17171b] p-4 pr-9 text-white shadow-[0_24px_60px_-16px_rgba(0,0,0,0.55)] ring-1 ring-white/10"
+      className={`${toast.leaving ? 'ed-toast-leave' : 'ed-toast-enter'} pointer-events-auto relative w-[min(92vw,26rem)] rounded-2xl bg-[#17171b] p-4 pr-9 text-white shadow-[0_24px_60px_-16px_rgba(0,0,0,0.55)] ring-1 ring-white/10`}
     >
       {toast.tone === 'success' && toast.sparkle && <SparkleBurst />}
 
