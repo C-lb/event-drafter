@@ -27,18 +27,15 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          # node 24 to match the working local build; node 22's npm did not
-          # materialize app-builder-bin's binaries on the runner.
-          node-version: '24'
+          # node 22: better-sqlite3 ships a prebuilt for it (node 24 has none on
+          # Windows, forcing a from-source gyp build that fails on the runner).
+          node-version: '22'
 
       - name: Install
         # npm install, not npm ci: ci does not reliably materialize the 216MB
-        # app-builder-bin (electron-builder's helper binaries), so electron-builder
-        # spawns app-builder and gets ENOENT. install mirrors the working local setup.
+        # app-builder-bin (electron-builder's helper binaries). install mirrors
+        # the working local setup.
         run: npm install --no-audit --no-fund
-
-      - name: Verify app-builder-bin binaries present
-        run: node -e "const fs=require('fs'),p='node_modules/app-builder-bin';console.log('dir:',fs.readdirSync(p));const b=process.platform==='win32'?p+'/win/x64/app-builder.exe':p+'/mac/app-builder_'+(process.arch==='x64'?'amd64':process.arch);console.log('binary',b,'exists:',fs.existsSync(b))"
 
       - name: Build installers
         # desktop:dist = build all packages -> fetch bundled Chromium -> tsc desktop
