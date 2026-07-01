@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -27,23 +27,7 @@ const electronVersion = JSON.parse(readFileSync(electronPkg, 'utf8')).version;
 
 const run = (cmd, cwd) => execSync(cmd, { stdio: 'inherit', cwd });
 
-// TEMP diagnostic: app-builder-bin (electron-builder's helper) goes missing on
-// CI between install and packaging. Log its presence at each pipeline stage.
-const abbBinary =
-  process.platform === 'win32'
-    ? join(repoRoot, 'node_modules', 'app-builder-bin', 'win', 'x64', 'app-builder.exe')
-    : join(repoRoot, 'node_modules', 'app-builder-bin', 'mac', `app-builder_${process.arch === 'x64' ? 'amd64' : process.arch}`);
-const checkAbb = (when) => {
-  try {
-    const st = statSync(abbBinary);
-    console.log(`[package] app-builder-bin @ ${when}: exists size=${st.size} mode=${(st.mode & 0o777).toString(8)}`);
-  } catch (e) {
-    console.log(`[package] app-builder-bin @ ${when}: MISSING (${e.code})`);
-  }
-};
-
 try {
-  checkAbb('start of package.mjs');
   console.log(`\n[package] rebuilding better-sqlite3 for Electron ${electronVersion}...`);
   // Invoke the bin bare (not ./node_modules/.bin/...): npm puts node_modules/.bin
   // on PATH for this script, so this resolves the .cmd shim on Windows too. An
@@ -52,7 +36,6 @@ try {
     `electron-rebuild -f -w better-sqlite3 --version ${electronVersion}`,
     repoRoot,
   );
-  checkAbb('after electron-rebuild');
 
   // Notarization is opt-in and credential-gated so it never blocks a normal build.
   // Enable with ED_NOTARIZE=1 + APPLE_TEAM_ID, and supply notarytool creds via env
@@ -69,7 +52,6 @@ try {
   }
   const signing = process.env.CSC_LINK || process.env.WIN_CSC_LINK ? 'signed (CSC creds present)' : 'UNSIGNED (no CSC creds)';
   console.log(`\n[package] running electron-builder — ${signing}...`);
-  checkAbb('before electron-builder');
   run(args.join(' '), desktopDir);
 } finally {
   console.log('\n[package] restoring better-sqlite3 for system Node...');
