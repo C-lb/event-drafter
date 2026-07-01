@@ -15,6 +15,7 @@ import {
   resendInvite,
   getAutoSendEnabled,
   setAutoSendEnabled,
+  autoDraftEvent,
 } from '../actions';
 import { RateLimitTimer } from './RateLimitTimer';
 import { TemplatePopover } from './TemplatePopover';
@@ -52,8 +53,25 @@ export default function QueuePage() {
 
   const visible = rows.filter((r) => filter === 'all' || r.status === filter);
   const draftedCount = rows.filter((r) => r.status === 'drafted').length;
+  const pendingCount = rows.filter((r) => r.status === 'pending').length;
   const batchSize = Math.min(5, draftedCount);
   const [batchBanner, setBatchBanner] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+
+  const autoDraft = () => {
+    if (pendingCount === 0) return;
+    setBatchBanner(null);
+    start(async () => {
+      const r = await autoDraftEvent({ event_id: eventId });
+      if (!r.ok) { setBatchBanner({ kind: 'err', text: r.error }); return; }
+      setBatchBanner({
+        kind: 'ok',
+        text: r.drafting === 0
+          ? 'Nothing to draft. Every contact already has a message or is already being drafted.'
+          : `Drafting ${r.drafting} message${r.drafting === 1 ? '' : 's'}. They appear here as the worker finishes (refreshes every 2s).`,
+      });
+      refresh();
+    });
+  };
 
   const approveNext = () => {
     if (batchSize === 0) return;
@@ -89,6 +107,18 @@ export default function QueuePage() {
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-2xl font-semibold tracking-tight">Review queue</h2>
         <div className="flex items-center gap-2">
+          <button
+            onClick={autoDraft}
+            disabled={isPending || pendingCount === 0}
+            className="btn"
+            title={
+              pendingCount === 0
+                ? 'No contacts are waiting for a message.'
+                : `Have the assistant draft messages for the ${pendingCount} contact${pendingCount === 1 ? '' : 's'} with no message yet.`
+            }
+          >
+            Auto-draft{pendingCount ? ` (${pendingCount})` : ''}
+          </button>
           <TemplatePopover eventId={eventId} onApplied={refresh} />
           <button
             onClick={approveNext}
@@ -197,7 +227,12 @@ export default function QueuePage() {
               {r.remarks && <p className="text-xs text-ink-2 italic">remarks: {r.remarks}</p>}
 
               {r.status === 'pending' ? (
-                <p className="text-xs text-ink-3">Drafting… (refreshes every 2s)</p>
+                <div className="rounded-sm bg-surface-2 px-3 py-2.5">
+                  <p className="text-xs font-medium text-ink-2">No message yet</p>
+                  <p className="mt-0.5 text-xs text-ink-3">
+                    Use Auto-draft above to generate one, or apply your own template. Drafts appear here automatically.
+                  </p>
+                </div>
               ) : (
                 <>
                   <textarea

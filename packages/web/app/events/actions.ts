@@ -283,8 +283,8 @@ export async function deleteEvent(input: unknown): Promise<{ ok: true; cascaded:
   const db = getDb();
   const ev = db.select().from(events).where(eq(events.id, id)).get();
   if (!ev) return { ok: false, error: 'Event not found.' };
-  if (confirm_phrase !== ev.name) {
-    return { ok: false, error: `Confirmation must match the event name exactly: "${ev.name}"` };
+  if (confirm_phrase !== 'XXX') {
+    return { ok: false, error: 'Type XXX to confirm deletion.' };
   }
 
   const inviteCount = db

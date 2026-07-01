@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { getDb } from '@event-drafter/core/db';
 import { contacts, events, follow_ups, invites, jobs, replies } from '@event-drafter/core/schema';
 import { getSetting, setSetting } from '@event-drafter/core/settings';
-import { and, eq, inArray, like, notInArray, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, like, notInArray, or, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
 export async function getEventOrThrow(id: number) {
@@ -191,7 +191,13 @@ const generateSchema = z.object({
   contact_ids: z.array(z.number()).min(1),
 });
 
-export async function enqueueDraftsForContacts(input: unknown) {
+/**
+ * Add contacts to an event as pending invites with NO message drafted. Drafting
+ * is opt-in: the operator reviews the contact list first, then clicks Auto-draft
+ * (or applies a template) to generate messages. This is why we no longer enqueue
+ * draft_invite jobs here.
+ */
+export async function addContactsToEvent(input: unknown) {
   const { event_id, contact_ids } = generateSchema.parse(input);
   const db = getDb();
   db.transaction((tx) => {
@@ -200,14 +206,62 @@ export async function enqueueDraftsForContacts(input: unknown) {
         .values({ event_id, contact_id: cid, status: 'pending' })
         .onConflictDoNothing()
         .run();
-      tx.insert(jobs).values({
-        kind: 'draft_invite',
-        payload: { event_id, contact_id: cid },
-      }).run();
     }
-    tx.update(events).set({ status: 'drafting' }).where(eq(events.id, event_id)).run();
   });
-  return { enqueued: contact_ids.length };
+  revalidatePath(`/events/${event_id}/queue`);
+  return { added: contact_ids.length };
+}
+
+const autoDraftSchema = z.object({ event_id: z.number().int().positive() });
+
+/**
+ * Enqueue a draft_invite job for every pending, undrafted invite on this event
+ * that doesn't already have an active (queued/running) draft job. Idempotent:
+ * clicking twice won't double-enqueue. Flips the event into 'drafting' so the
+ * dashboard reflects that the LLM is working.
+ */
+export async function autoDraftEvent(input: unknown): Promise<{ ok: true; drafting: number } | { ok: false; error: string }> {
+  const parsed = autoDraftSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: 'invalid input' };
+  const { event_id } = parsed.data;
+  const db = getDb();
+
+  // Contact pairs that already have an in-flight draft job, so we don't queue a
+  // second one for the same invite.
+  const activeDraftPairs = new Set(
+    db
+      .select({ payload: jobs.payload })
+      .from(jobs)
+      .where(and(eq(jobs.kind, 'draft_invite'), inArray(jobs.status, ['queued', 'running'])))
+      .all()
+      .map((j) => {
+        const p = j.payload as { event_id?: number; contact_id?: number } | null;
+        return `${p?.event_id}:${p?.contact_id}`;
+      }),
+  );
+
+  const undrafted = db
+    .select({ contact_id: invites.contact_id })
+    .from(invites)
+    .where(and(eq(invites.event_id, event_id), eq(invites.status, 'pending'), isNull(invites.draft_text)))
+    .all();
+
+  let drafting = 0;
+  db.transaction((tx) => {
+    for (const inv of undrafted) {
+      if (activeDraftPairs.has(`${event_id}:${inv.contact_id}`)) continue;
+      tx.insert(jobs)
+        .values({ kind: 'draft_invite', payload: { event_id, contact_id: inv.contact_id } })
+        .run();
+      drafting++;
+    }
+    if (drafting > 0) {
+      tx.update(events).set({ status: 'drafting' }).where(eq(events.id, event_id)).run();
+    }
+  });
+
+  revalidatePath(`/events/${event_id}/queue`);
+  return { ok: true, drafting };
 }
 
 const editSchema = z.object({ invite_id: z.number(), draft_text: z.string().min(1).max(2000) });

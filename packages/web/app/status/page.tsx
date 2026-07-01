@@ -1,7 +1,7 @@
 import { getDb } from '@/lib/db';
 import { jobs } from '@event-drafter/core/schema';
 import { getSetting } from '@event-drafter/core/settings';
-import { SCHEDULES } from '@event-drafter/worker/scheduler';
+import { SCHEDULES, getReplyCheckSchedule } from '@event-drafter/worker/scheduler';
 import { nextRunFor, ago } from '@/lib/cron-format';
 import { eq, sql } from 'drizzle-orm';
 import { triggerCleanup, restartWorker } from './actions';
@@ -230,7 +230,10 @@ export default async function StatusPage() {
       )}
 
       <div>
-        <h3 className="eyebrow mb-2">Cron schedule</h3>
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="eyebrow">Cron schedule</h3>
+          <a href="/settings/timing" className="text-xs font-medium text-accent hover:text-accent-hover">Edit reply-check times</a>
+        </div>
         <table className="w-full text-xs">
           <thead className="bg-surface-2 text-ink-2">
             <tr>
@@ -241,6 +244,14 @@ export default async function StatusPage() {
             </tr>
           </thead>
           <tbody>
+            {getReplyCheckSchedule().map((s) => (
+              <tr key={`reply-${s.time}`} className="border-b border-line">
+                <td className="px-2 py-1">{s.label}</td>
+                <td className="px-2 py-1 font-mono">{s.time} SGT</td>
+                <td className="px-2 py-1">{s.kind}</td>
+                <td className="px-2 py-1 text-ink-3">daily</td>
+              </tr>
+            ))}
             {Object.entries(SCHEDULES).map(([name, s]) => {
               const next = nextRunFor(s.cron);
               return (

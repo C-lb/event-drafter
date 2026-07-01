@@ -147,19 +147,19 @@ export function EventEditPanel({ event }: Props) {
             Delete this event and cascade-delete all of its invites, replies, and follow-ups.
           </p>
           <p className="mt-1 text-red-700">
-            Type the event name exactly to confirm: <code className="rounded-sm bg-surface px-1 font-mono">{event.name}</code>
+            Type <code className="rounded-sm bg-surface px-1 font-mono">XXX</code> to confirm.
           </p>
           <div className="mt-3 flex gap-2">
             <input
               type="text"
               value={confirmPhrase}
               onChange={(e) => setConfirmPhrase(e.target.value)}
-              placeholder={event.name}
+              placeholder="XXX"
               className="field flex-1 font-mono"
             />
             <button
               onClick={remove}
-              disabled={isPending || confirmPhrase !== event.name}
+              disabled={isPending || confirmPhrase !== 'XXX'}
               className="btn-danger btn-sm disabled:opacity-50"
             >
               {isPending ? 'Deleting…' : 'Delete event'}

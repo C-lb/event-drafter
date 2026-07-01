@@ -27,12 +27,15 @@ export default function FollowUpsPage() {
     <section className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-2xl font-semibold tracking-tight">Follow-ups</h2>
-        <button
-          onClick={() => start(async () => { await triggerFollowUpGeneration(); refresh(); })}
-          className="btn btn-sm"
-        >
-          Generate now
-        </button>
+        <div className="flex items-center gap-2">
+          <a href="/settings/timing" className="btn btn-sm">Timing</a>
+          <button
+            onClick={() => start(async () => { await triggerFollowUpGeneration(); refresh(); })}
+            className="btn btn-sm"
+          >
+            Generate now
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3 text-sm">
@@ -72,6 +75,7 @@ export default function FollowUpsPage() {
                       disabled={isPending}
                       onClick={() => start(async () => { await markFollowUpSent({ follow_up_id: r.follow_up_id }); refresh(); })}
                       className="btn-primary btn-sm bg-emerald-600 hover:bg-emerald-700"
+                      style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18), 0 12px 26px -16px rgba(5,150,105,0.6)' }}
                     >Mark sent</button>
                   </>
                 ) : (
@@ -85,6 +89,7 @@ export default function FollowUpsPage() {
                       disabled={isPending || r.status === 'approved' || r.status === 'sent'}
                       onClick={() => start(async () => { await approveFollowUp({ follow_up_id: r.follow_up_id }); refresh(); })}
                       className="btn-primary btn-sm bg-emerald-600 hover:bg-emerald-700"
+                      style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18), 0 12px 26px -16px rgba(5,150,105,0.6)' }}
                     >Approve &amp; send</button>
                     <button
                       disabled={isPending || r.status === 'sent'}

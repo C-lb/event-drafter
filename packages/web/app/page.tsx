@@ -10,8 +10,6 @@ import { RefreshButton } from './RefreshButton';
 
 export const dynamic = 'force-dynamic';
 
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
 function snippet(text: string, n = 90): string {
   const t = text.replace(/\s+/g, ' ').trim();
   return t.length > n ? `${t.slice(0, n)}…` : t;
@@ -52,22 +50,15 @@ export default async function HomePage() {
   const replyCount = db.select({ count: sql<number>`count(*)` }).from(replies).where(eq(replies.resolved, false)).all()[0]?.count ?? 0;
 
   const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const nowMs = now.getTime();
 
   const allEvents = await listEventsWithStats();
-  // Events dated within the current calendar month. Upcoming events first
-  // (soonest at the top); past events sink below, most recent first.
-  const thisMonth = allEvents
+  // All upcoming events (dated today or later), soonest first.
+  const upcoming = allEvents
     .map((e) => ({ ...e, ms: new Date(e.event_date).getTime() }))
-    .filter((e) => e.ms >= monthStart && e.ms < monthEnd)
-    .sort((a, b) => {
-      const aPast = a.ms < nowMs;
-      const bPast = b.ms < nowMs;
-      if (aPast !== bPast) return aPast ? 1 : -1; // past sinks below upcoming
-      return aPast ? b.ms - a.ms : a.ms - b.ms; // upcoming asc, past desc
-    });
+    .filter((e) => e.ms >= todayStart)
+    .sort((a, b) => a.ms - b.ms);
 
   // Unread (unresolved) replies, grouped under their event.
   const unread = await listAllReplies({ includeResolved: false });
@@ -92,7 +83,7 @@ export default async function HomePage() {
     await triggerReplyCheck();
   }
 
-  const preview = thisMonth.slice(0, 3);
+  const preview = upcoming.slice(0, 3);
 
   return (
     <section className="space-y-8">
@@ -116,7 +107,7 @@ export default async function HomePage() {
             <Link href="/events" className="text-xs font-medium text-accent hover:text-accent-hover">All</Link>
           </div>
           {preview.length === 0 ? (
-            <p className="mt-3 text-sm text-ink-3">No events this month.</p>
+            <p className="mt-3 text-sm text-ink-3">No upcoming events.</p>
           ) : (
             <ul className="mt-3 space-y-2">
               {preview.map((e) => (
@@ -149,19 +140,19 @@ export default async function HomePage() {
 
       <div className="space-y-3">
         <div className="flex items-baseline justify-between">
-          <h3 className="text-base font-semibold">Events this month</h3>
-          <span className="text-sm text-ink-3">{MONTHS[now.getMonth()]} {now.getFullYear()}</span>
+          <h3 className="text-base font-semibold">Upcoming events</h3>
+          <span className="text-sm text-ink-3">{upcoming.length} scheduled</span>
         </div>
-        {thisMonth.length === 0 ? (
+        {upcoming.length === 0 ? (
           <p className="card p-5 text-sm text-ink-2">
-            No events this month.{' '}
+            No upcoming events.{' '}
             <Link href="/events/new" className="font-medium text-accent hover:text-accent-hover">Create from Gmail</Link>
             {' '}or{' '}
             <Link href="/events/new/blank" className="font-medium text-accent hover:text-accent-hover">create a blank one</Link>.
           </p>
         ) : (
           <ul className="space-y-3">
-            {thisMonth.map((e) => {
+            {upcoming.map((e) => {
               const sticky: StickyEvent = {
                 id: e.id,
                 name: e.name,

@@ -8,8 +8,8 @@ import { chooseReactionRsvp, reactionRsvpDecision } from '../wa/reactions.js';
 import { WaInvalidNumber, WaNotLoggedIn, WaSelectorMismatch } from '../wa/session.js';
 import { JobDeferred } from '../errors.js';
 import { logger } from '../logger.js';
+import { getTimingConfig } from '@event-drafter/core/settings';
 
-const LOOKBACK_DAYS = 14;
 const READ_GAP_MS = 2000;
 
 function setProgress(jobId: number, text: string | null): void {
@@ -23,7 +23,8 @@ function startOfDay(d: Date): Date {
 
 export async function checkRepliesHandler(job: Job): Promise<void> {
   const db = getDb();
-  const cutoff = new Date(Date.now() - LOOKBACK_DAYS * 24 * 3600 * 1000);
+  const lookbackDays = getTimingConfig().reply_lookback_days;
+  const cutoff = new Date(Date.now() - lookbackDays * 24 * 3600 * 1000);
 
   const rows = db
     .select({

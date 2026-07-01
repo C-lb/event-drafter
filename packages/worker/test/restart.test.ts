@@ -59,8 +59,11 @@ describe('maybeHandleRestart()', () => {
     expect(after?.status).toBe('running');
   });
 
-  it('re-runs the scheduler catch-up (enqueues missed jobs)', () => {
+  it('re-runs the scheduler catch-up (enqueues a due reply check)', () => {
     const db = getDb();
+    // Reply checks are now time-driven: one is enqueued only once a configured
+    // daily time has passed. Configure 00:00 so a check is always due today.
+    setSetting('timing_config', { reply_check_times: ['00:00'] });
     setSetting('worker_restart_requested', { ts: 1000 });
     maybeHandleRestart();
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { listCandidatesForEvent, enqueueDraftsForContacts } from '../actions';
+import { listCandidatesForEvent, addContactsToEvent } from '../actions';
 import type { Contact } from '@event-drafter/core';
 
 /**
@@ -107,8 +107,8 @@ export default function PickContactsPage() {
     setLastIndex(null);
   };
 
-  const generate = () => start(async () => {
-    await enqueueDraftsForContacts({ event_id: eventId, contact_ids: Array.from(picked) });
+  const addContacts = () => start(async () => {
+    await addContactsToEvent({ event_id: eventId, contact_ids: Array.from(picked) });
     router.push(`/events/${eventId}/queue`);
   });
 
@@ -183,12 +183,15 @@ export default function PickContactsPage() {
 
       <div className="sticky bottom-0 bg-canvas p-3 border-t border-line">
         <button
-          onClick={generate}
+          onClick={addContacts}
           disabled={isPending || picked.size === 0}
           className="btn-primary"
         >
-          Generate {picked.size} draft{picked.size === 1 ? '' : 's'}
+          {isPending ? 'Adding…' : `Add ${picked.size} contact${picked.size === 1 ? '' : 's'}`}
         </button>
+        <p className="mt-1.5 text-[11px] text-ink-3">
+          Contacts are added with no message yet. Draft them from the review queue with Auto-draft or a template.
+        </p>
       </div>
     </section>
   );

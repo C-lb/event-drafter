@@ -51,6 +51,7 @@ interface SettingTypes {
   last_sheet_url: string;
   worker_safety_stop: { engaged: boolean; ts: number };
   rate_limit_config: Partial<{ minGapMs: number; maxGapMs: number; batchLimit: number; cooldownMinMs: number; cooldownMaxMs: number; maxSendsPerHour: number }>;
+  timing_config: Partial<TimingConfig>;
 }
 
 export function getSetting<K extends SettingKey>(key: K): SettingTypes[K] | null {
@@ -76,3 +77,55 @@ export function deleteSetting(key: SettingKey): void {
 }
 
 export { SETTING_KEYS };
+
+// ---------------------------------------------------------------------------
+// Timing config: operator-tunable schedule knobs, read live (no worker restart).
+//   - follow_up_delay_days: how long after an invite is sent, with no reply,
+//     before a follow-up is drafted.
+//   - reply_lookback_days: how far back a reply scan looks at sent invites.
+//   - reply_check_times: daily wall-clock times (Asia/Singapore) the worker
+//     scans WhatsApp for replies. 24h "HH:MM".
+// ---------------------------------------------------------------------------
+
+export interface TimingConfig {
+  follow_up_delay_days: number;
+  reply_lookback_days: number;
+  reply_check_times: string[];
+}
+
+export const TIMING_DEFAULTS: TimingConfig = {
+  follow_up_delay_days: 3,
+  reply_lookback_days: 14,
+  reply_check_times: ['12:00', '18:00'],
+};
+
+/** Reply-check timezone. Times are entered and displayed in this zone. */
+export const TIMING_TZ = 'Asia/Singapore';
+
+const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+/** True if `s` is a valid 24h "HH:MM" string. */
+export function isValidTime(s: string): boolean {
+  return TIME_RE.test(s);
+}
+
+/** Settings override merged over defaults; invalid fields fall back to default.
+ *  Read per call so a saved change applies on the next scheduler tick / job. */
+export function getTimingConfig(): TimingConfig {
+  const o = (getSetting('timing_config') ?? {}) as Partial<TimingConfig>;
+  const posInt = (v: unknown, d: number) =>
+    typeof v === 'number' && Number.isFinite(v) && v > 0 ? Math.floor(v) : d;
+
+  let times = Array.isArray(o.reply_check_times)
+    ? o.reply_check_times.filter((t): t is string => typeof t === 'string' && isValidTime(t))
+    : [];
+  // De-dupe and sort ascending; fall back to defaults if nothing valid remains.
+  times = [...new Set(times)].sort();
+  if (times.length === 0) times = [...TIMING_DEFAULTS.reply_check_times];
+
+  return {
+    follow_up_delay_days: posInt(o.follow_up_delay_days, TIMING_DEFAULTS.follow_up_delay_days),
+    reply_lookback_days: posInt(o.reply_lookback_days, TIMING_DEFAULTS.reply_lookback_days),
+    reply_check_times: times,
+  };
+}

@@ -93,16 +93,28 @@ export default async function SetupHome() {
 
       <div className="border-t border-surface-2 pt-6">
         <p className="mb-3 text-xs font-medium text-ink-3">Settings</p>
-        <Link
-          href="/settings/sending"
-          className="card flex items-start gap-3 p-4 hover:bg-surface-2 transition-colors"
-        >
-          <div className="flex-1">
-            <p className="text-sm font-medium">Sending cadence</p>
-            <p className="text-xs text-ink-2">Tune the WhatsApp send rate limiter.</p>
-          </div>
-          <span className="mt-0.5 text-ink-3">&#8250;</span>
-        </Link>
+        <div className="space-y-2">
+          <Link
+            href="/settings/sending"
+            className="card flex items-start gap-3 p-4 hover:bg-surface-2 transition-colors"
+          >
+            <div className="flex-1">
+              <p className="text-sm font-medium">Sending cadence</p>
+              <p className="text-xs text-ink-2">Tune the WhatsApp send rate limiter.</p>
+            </div>
+            <span className="mt-0.5 text-ink-3">&#8250;</span>
+          </Link>
+          <Link
+            href="/settings/timing"
+            className="card flex items-start gap-3 p-4 hover:bg-surface-2 transition-colors"
+          >
+            <div className="flex-1">
+              <p className="text-sm font-medium">Timing</p>
+              <p className="text-xs text-ink-2">Reply-check times, follow-up delay, and reply lookback window.</p>
+            </div>
+            <span className="mt-0.5 text-ink-3">&#8250;</span>
+          </Link>
+        </div>
       </div>
     </section>
   );
