@@ -31,7 +31,10 @@ jobs:
           cache: npm
 
       - name: Install
-        run: npm ci
+        # npm install, not npm ci: ci does not reliably materialize the 216MB
+        # app-builder-bin (electron-builder's helper binaries), so electron-builder
+        # spawns app-builder and gets ENOENT. install mirrors the working local setup.
+        run: npm install --no-audit --no-fund
 
       - name: Build installers
         # desktop:dist = build all packages -> fetch bundled Chromium -> tsc desktop
