@@ -56,7 +56,10 @@ async function boot() {
     const { runMigrations } = await importEsm(pathToFileURL(migratePath).href);
     runMigrations();
 
-    web = forkWebServer(env);
+    // The desktop forks its own worker below, so tell the web NOT to auto-start
+    // one via its instrumentation hook (avoids a redundant spawn that the
+    // worker's singleton lock would just reject).
+    web = forkWebServer({ ...env, ED_EXTERNAL_WORKER: '1' });
     worker = forkWorker(env);
     attachChildGuard(web, 'web');
     attachChildGuard(worker, 'worker');

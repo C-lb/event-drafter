@@ -5,7 +5,9 @@
   "type": "module",
   "workspaces": ["packages/*"],
   "scripts": {
-    "dev": "ED_DB_PATH=\"$PWD/data/app.db\" ED_WA_PROFILE_DIR=\"$PWD/data/wa-profile\" concurrently -k -n web,worker -c blue,magenta \"npm -w @event-drafter/web run dev\" \"npm -w @event-drafter/worker run dev\"",
+    "dev": "ED_DB_PATH=\"$PWD/data/app.db\" ED_WA_PROFILE_DIR=\"$PWD/data/wa-profile\" npm -w @event-drafter/web run dev",
+    "dev:worker": "ED_DB_PATH=\"$PWD/data/app.db\" ED_WA_PROFILE_DIR=\"$PWD/data/wa-profile\" npm -w @event-drafter/worker run dev",
+    "dev:all": "ED_DB_PATH=\"$PWD/data/app.db\" ED_WA_PROFILE_DIR=\"$PWD/data/wa-profile\" concurrently -k -n web,worker -c blue,magenta \"npm -w @event-drafter/web run dev\" \"npm -w @event-drafter/worker run dev\"",
     "build": "npm -w @event-drafter/core run build && npm -w @event-drafter/worker run build && npm -w @event-drafter/web run build",
     "test": "npm -ws --if-present run test",
     "migrate": "ED_DB_PATH=\"$PWD/data/app.db\" npm -w @event-drafter/core run migrate",

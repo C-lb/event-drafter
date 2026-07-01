@@ -4,6 +4,9 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { pillSummary, type WorkerState } from '@/lib/worker-state';
 import { engageSafetyStop, releaseSafetyStop } from '@/app/status/safety-actions';
+import { startWorker } from '@/app/status/worker-control-actions';
+import { waitForWorkerUp } from '@/lib/worker-client';
+import { useToast } from '@/app/components/toast/ToastProvider';
 
 const POLL_MS = 4000;
 
@@ -298,10 +301,59 @@ function OfflineBanner({ state }: { state: WorkerState }) {
         {state.limboCount > 0 && (
           <span className="font-semibold text-amber-900"> · {state.limboCount} need a decision</span>
         )}
-        <a href="/status" className="btn btn-sm ml-auto border-amber-600/30 bg-white/60">
-          Open status
-        </a>
+        <div className="ml-auto flex items-center gap-2">
+          <StartWorkerButton />
+          <a href="/status" className="btn btn-sm border-amber-600/30 bg-white/60">
+            Open status
+          </a>
+        </div>
       </div>
     </div>
+  );
+}
+
+function StartWorkerButton() {
+  const { show, update } = useToast();
+  const [busy, start] = useTransition();
+
+  const onClick = () => {
+    start(async () => {
+      const id = show({
+        tone: 'loading',
+        title: 'Starting worker',
+        meta: 'please wait',
+        body: 'Launching the background worker.',
+        duration: null,
+        dismissible: false,
+      });
+      try {
+        const res = await startWorker();
+        if (!res.ok) {
+          update(id, { tone: 'error', title: 'Could not start worker', body: res.message ?? 'Spawn failed.', duration: null, dismissible: true });
+          return;
+        }
+        update(id, { tone: 'loading', title: 'Worker launched', meta: 'checking', body: 'Waiting for it to report online.', dismissible: false });
+        const up = await waitForWorkerUp(20000);
+        if (up) {
+          update(id, { tone: 'success', title: 'Worker is online', meta: 'running', body: 'The worker is up and processing jobs.', sparkle: true, duration: 6000, dismissible: true });
+        } else {
+          update(id, { tone: 'warning', title: 'Worker not confirmed', body: 'It was launched but has not reported back yet.', duration: null, dismissible: true });
+        }
+      } catch (err) {
+        update(id, { tone: 'error', title: 'Could not start worker', body: err instanceof Error ? err.message : 'Unknown error', duration: null, dismissible: true });
+      }
+    });
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={busy}
+      className="btn-primary btn-sm disabled:cursor-not-allowed disabled:opacity-60"
+      title="Launch the background worker. No terminal needed."
+    >
+      {busy ? 'Starting…' : 'Start worker'}
+    </button>
   );
 }

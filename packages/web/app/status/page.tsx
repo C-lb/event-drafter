@@ -6,7 +6,7 @@ import { nextRunFor, ago } from '@/lib/cron-format';
 import { eq, sql } from 'drizzle-orm';
 import { triggerCleanup, restartWorker } from './actions';
 import { listLimbo } from './limbo-actions';
-import { RestartWorkerButton } from './RestartWorkerButton';
+import { WorkerControls } from './WorkerControls';
 import { MessagesInLimbo } from './MessagesInLimbo';
 import { AutoRefresh } from '../components/AutoRefresh';
 
@@ -106,7 +106,7 @@ export default async function StatusPage() {
               {cleanupInFlight ? 'Cleaning up…' : 'Run cleanup now'}
             </button>
           </form>
-          <RestartWorkerButton action={restartWorker} workerOk={workerOk} />
+          <WorkerControls restartAction={restartWorker} workerOk={workerOk} />
         </div>
       </div>
 

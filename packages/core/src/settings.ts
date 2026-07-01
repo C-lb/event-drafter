@@ -52,6 +52,9 @@ interface SettingTypes {
   worker_safety_stop: { engaged: boolean; ts: number };
   rate_limit_config: Partial<{ minGapMs: number; maxGapMs: number; batchLimit: number; cooldownMinMs: number; cooldownMaxMs: number; maxSendsPerHour: number }>;
   timing_config: Partial<TimingConfig>;
+  // When false, the web server will NOT auto-start the worker on boot. Set false
+  // by an explicit "Stop worker", set true again by "Start worker". Unset = auto.
+  worker_autostart: boolean;
 }
 
 export function getSetting<K extends SettingKey>(key: K): SettingTypes[K] | null {

@@ -37,6 +37,7 @@ export const SETTING_KEYS = {
   worker_safety_stop: 'worker_safety_stop',
   rate_limit_config: 'rate_limit_config',
   timing_config: 'timing_config',
+  worker_autostart: 'worker_autostart',
 } as const;
 
 export type SettingKey = (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS];
