@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -33,7 +33,14 @@ const abbBinary =
   process.platform === 'win32'
     ? join(repoRoot, 'node_modules', 'app-builder-bin', 'win', 'x64', 'app-builder.exe')
     : join(repoRoot, 'node_modules', 'app-builder-bin', 'mac', `app-builder_${process.arch === 'x64' ? 'amd64' : process.arch}`);
-const checkAbb = (when) => console.log(`[package] app-builder-bin present @ ${when}:`, existsSync(abbBinary));
+const checkAbb = (when) => {
+  try {
+    const st = statSync(abbBinary);
+    console.log(`[package] app-builder-bin @ ${when}: exists size=${st.size} mode=${(st.mode & 0o777).toString(8)}`);
+  } catch (e) {
+    console.log(`[package] app-builder-bin @ ${when}: MISSING (${e.code})`);
+  }
+};
 
 try {
   checkAbb('start of package.mjs');
