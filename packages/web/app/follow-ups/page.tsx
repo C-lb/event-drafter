@@ -38,9 +38,17 @@ export default function FollowUpsPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3 text-sm">
+      <div className="flex flex-wrap gap-2">
         {(['all', 'drafted', 'approved', 'prefilled', 'sent', 'skipped', 'failed'] as const).map((s) => (
-          <button key={s} onClick={() => setFilter(s)} className={`badge ${filter === s ? 'badge-blue' : 'badge-neutral'} capitalize`}>
+          <button
+            key={s}
+            onClick={() => setFilter(s)}
+            className={`rounded-full px-3 py-1 text-xs font-medium capitalize transition ${
+              filter === s
+                ? 'bg-ink text-white shadow-raise'
+                : 'bg-line text-ink-2 hover:bg-line-strong hover:text-ink'
+            }`}
+          >
             {s} ({rows.filter((r) => s === 'all' || r.status === s).length})
           </button>
         ))}
