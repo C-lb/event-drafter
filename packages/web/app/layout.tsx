@@ -6,6 +6,7 @@ import { Nav } from './components/Nav';
 import { WorkerStatus } from './components/WorkerStatus';
 import { ToastProvider } from './components/toast/ToastProvider';
 import { BootStatusToast } from './components/toast/BootStatusToast';
+import { WorkerActivityToasts } from './components/toast/WorkerActivityToasts';
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <div id="worker-banner-slot" />
         <SetupBanner />
         <BootStatusToast />
+        <WorkerActivityToasts />
         <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>
         </ToastProvider>
       </body>

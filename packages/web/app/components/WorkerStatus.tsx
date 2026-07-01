@@ -51,7 +51,6 @@ export function WorkerStatus() {
   useEffect(() => {
     let alive = true;
     async function poll() {
-      if (typeof document !== 'undefined' && document.hidden) return;
       try {
         const res = await fetch('/api/worker/state', { cache: 'no-store' });
         if (!res.ok) throw new Error(String(res.status));
@@ -64,11 +63,22 @@ export function WorkerStatus() {
         if (alive) setError(true);
       }
     }
+    // Always fetch once on mount so the pill resolves even in a background tab
+    // (otherwise it hangs on "checking worker…" until the tab is focused).
     poll();
-    const id = setInterval(poll, POLL_MS);
+    const id = setInterval(() => {
+      // Skip recurring polls while hidden to save work; resync on refocus.
+      if (typeof document !== 'undefined' && document.hidden) return;
+      poll();
+    }, POLL_MS);
+    function onVisible() {
+      if (typeof document !== 'undefined' && !document.hidden) poll();
+    }
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
       alive = false;
       clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, []);
 

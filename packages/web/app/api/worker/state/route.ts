@@ -2,14 +2,10 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getSetting } from '@event-drafter/core/settings';
 import { readLimbo } from '@/lib/limbo-read';
-import { jobs, invites, contacts, follow_ups, replies } from '@event-drafter/core/schema';
+import { jobs } from '@event-drafter/core/schema';
 import { asc, desc, eq, inArray } from 'drizzle-orm';
-import {
-  summarizeWorker,
-  isSendKind,
-  type JobRow,
-  type Recipient,
-} from '@/lib/worker-state';
+import { summarizeWorker, type JobRow } from '@/lib/worker-state';
+import { resolveRecipient } from '@/lib/recipient';
 import { getRateLimitState } from '@event-drafter/worker/rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -66,39 +62,13 @@ export async function GET() {
     .all()
     .map(toRow);
 
-  // Resolve a send job to its recipient by walking payload → invite → contact.
-  // send_message:   payload.invite_id
-  // send_follow_up: payload.follow_up_id → follow_ups.invite_id
-  // send_response:  payload.reply_id     → replies.invite_id
-  function resolveRecipient(job: JobRow): Recipient | null {
-    if (!isSendKind(job.kind)) return null;
-    const p = job.payload ?? {};
-    let inviteId: number | undefined;
-    if (job.kind === 'send_message') {
-      inviteId = p.invite_id as number | undefined;
-    } else if (job.kind === 'send_follow_up') {
-      const fu = db.select().from(follow_ups).where(eq(follow_ups.id, p.follow_up_id as number)).get();
-      inviteId = fu?.invite_id;
-    } else if (job.kind === 'send_response') {
-      const r = db.select().from(replies).where(eq(replies.id, p.reply_id as number)).get();
-      inviteId = r?.invite_id;
-    }
-    if (inviteId == null) return null;
-    const inv = db.select().from(invites).where(eq(invites.id, inviteId)).get();
-    if (!inv) return null;
-    const c = db.select().from(contacts).where(eq(contacts.id, inv.contact_id)).get();
-    if (!c) return null;
-    const name = [c.first_name, c.last_name].filter(Boolean).join(' ') || c.phone_e164;
-    return { jobId: job.id, kind: job.kind, name, phone: c.phone_e164, at: job.finished_at };
-  }
-
   const state = summarizeWorker({
     heartbeat,
     now: Date.now(),
     running,
     queued,
     recentFinished,
-    resolveRecipient,
+    resolveRecipient: (job: JobRow) => resolveRecipient(db, job),
   });
   const limboCount = readLimbo().count;
   const safetyStopped = getSetting('worker_safety_stop')?.engaged === true;
