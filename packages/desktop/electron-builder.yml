@@ -1,0 +1,85 @@
+appId: com.eventdrafter.app
+productName: Event Drafter
+asar: false
+directories:
+  output: release
+  buildResources: build
+# Exclude ms-playwright from app source (it ships via extraResources below).
+# Without this exclusion, electron-builder tries to copy the Chromium .framework symlinks
+# as app source files and fails on macOS.
+files:
+  - "**/*"
+  - "!resources/ms-playwright/**"
+# Ship the built monorepo pieces the forked children need, plus the browser.
+extraResources:
+  - from: ../../packages/web/.next
+    to: app/packages/web/.next
+  - from: ../../packages/web/package.json
+    to: app/packages/web/package.json
+  - from: ../../packages/web/next.config.ts
+    to: app/packages/web/next.config.ts
+  - from: ../../packages/worker/dist
+    to: app/packages/worker/dist
+  # worker + core are "type": "module"; without their package.json the packaged
+  # tree's nearest package.json is the desktop (CJS) manifest, so their ESM dist
+  # is parsed as CommonJS and throws "Cannot use import statement outside a module".
+  - from: ../../packages/worker/package.json
+    to: app/packages/worker/package.json
+  - from: ../../packages/core/dist
+    to: app/packages/core/dist
+  - from: ../../packages/core/package.json
+    to: app/packages/core/package.json
+  - from: ../../packages/core/drizzle
+    to: app/packages/core/drizzle
+  - from: ../../node_modules
+    to: app/node_modules
+    # Drop the npm-workspace self-symlinks (@event-drafter/core|worker|web|desktop
+    # -> ../../packages/*). electron-builder 26 copies them AS symlinks: web/desktop
+    # dangle in the packaged tree (macOS "not a file"), and WiX/light.exe can't
+    # harvest symlinks at all (Windows LGHT0103). We re-add core+worker as REAL
+    # copies below (web+desktop are never imported by bare specifier at runtime).
+    filter:
+      - "**/*"
+      - "!@event-drafter"
+      - "!@event-drafter/**"
+  # Real (dereferenced) copies of the two workspace packages that runtime code
+  # imports by bare specifier: web (`next start`) and the worker both resolve
+  # `@event-drafter/core`, and web also resolves `@event-drafter/worker`.
+  - from: ../../packages/core
+    to: app/node_modules/@event-drafter/core
+    filter:
+      - package.json
+      - dist/**
+      - drizzle/**
+  - from: ../../packages/worker
+    to: app/node_modules/@event-drafter/worker
+    filter:
+      - package.json
+      - dist/**
+  - from: resources/ms-playwright
+    to: ms-playwright
+win:
+  target: [nsis, msi]
+  icon: icons/icon.ico
+  # Authenticode signing is credential-gated: electron-builder signs automatically
+  # when WIN_CSC_LINK (base64 .pfx) + WIN_CSC_KEY_PASSWORD are present in the env,
+  # and silently skips signing when they are absent (so local/unsigned builds work).
+  # See docs/setup/code-signing.md for the Azure Trusted Signing alternative.
+mac:
+  target: [dmg, pkg]
+  category: public.app-category.productivity
+  icon: icons/icon.icns
+  # Hardened runtime + entitlements are REQUIRED for notarization. They only take
+  # effect when the app is actually signed (a Developer ID identity in the keychain,
+  # or CSC_LINK + CSC_KEY_PASSWORD in the env); with no identity, electron-builder
+  # skips signing and these are inert, so unsigned local builds are unaffected.
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  # Notarization is OFF by default and enabled opt-in by scripts/package.mjs
+  # (ED_NOTARIZE=1 + APPLE_TEAM_ID), so it never blocks an unsigned build.
+  notarize: false
+nsis:
+  oneClick: false
+  perMachine: false

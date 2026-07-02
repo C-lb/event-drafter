@@ -2,18 +2,18 @@ import type { Job } from '@event-drafter/core';
 import { getDb } from '@event-drafter/core/db';
 import { contacts, events, follow_ups, invites, replies } from '@event-drafter/core/schema';
 import { and, eq, isNotNull, lte, notInArray } from 'drizzle-orm';
-import { getSetting } from '@event-drafter/core/settings';
+import { getSetting, getTimingConfig } from '@event-drafter/core/settings';
 import { complete } from '../llm/client.js';
 import { buildFollowUpPrompt } from '../llm/prompts.js';
 import { sanitizeDraft } from '../llm/sanitize.js';
 import { logger } from '../logger.js';
 
-const MIN_DAYS_SINCE_SENT = 3;
 const DEFAULT_STYLE_GUIDE = 'Brief and warm. 1-3 sentences. No emoji. No pressure.';
 
 export async function generateFollowUpsHandler(_job: Job): Promise<void> {
   const db = getDb();
-  const cutoff = new Date(Date.now() - MIN_DAYS_SINCE_SENT * 24 * 3600 * 1000);
+  const delayDays = getTimingConfig().follow_up_delay_days;
+  const cutoff = new Date(Date.now() - delayDays * 24 * 3600 * 1000);
 
   const repliedInviteIds = db.select({ id: replies.invite_id }).from(replies).all().map((r) => r.id);
   const followedInviteIds = db

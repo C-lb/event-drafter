@@ -16,9 +16,13 @@ export type NewSetting = typeof settings.$inferInsert;
 export const SETTING_KEYS = {
   google_tokens: 'google_tokens',
   google_client_id: 'google_client_id',
+  google_client_secret: 'google_client_secret',
+  google_redirect_uri: 'google_redirect_uri',
   contacts_sheet: 'contacts_sheet',
   style_guide: 'style_guide',
   llm_ready: 'llm_ready',
+  llm_provider: 'llm_provider',
+  anthropic_api_key: 'anthropic_api_key',
   wa_ready: 'wa_ready',
   operator_persona_name: 'operator_persona_name',
   operator_persona_role: 'operator_persona_role',
@@ -30,6 +34,10 @@ export const SETTING_KEYS = {
   llm_last_error: 'llm_last_error',
   sheet_history: 'sheet_history',
   last_sheet_url: 'last_sheet_url',
+  worker_safety_stop: 'worker_safety_stop',
+  rate_limit_config: 'rate_limit_config',
+  timing_config: 'timing_config',
+  worker_autostart: 'worker_autostart',
 } as const;
 
 export type SettingKey = (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS];

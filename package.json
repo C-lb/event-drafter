@@ -1,15 +1,19 @@
 {
   "name": "event-drafter",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "type": "module",
   "workspaces": ["packages/*"],
   "scripts": {
-    "dev": "ED_DB_PATH=\"$PWD/data/app.db\" ED_WA_PROFILE_DIR=\"$PWD/data/wa-profile\" concurrently -k -n web,worker -c blue,magenta \"npm -w @event-drafter/web run dev\" \"npm -w @event-drafter/worker run dev\"",
+    "dev": "ED_DB_PATH=\"$PWD/data/app.db\" ED_WA_PROFILE_DIR=\"$PWD/data/wa-profile\" npm -w @event-drafter/web run dev",
+    "dev:worker": "ED_DB_PATH=\"$PWD/data/app.db\" ED_WA_PROFILE_DIR=\"$PWD/data/wa-profile\" npm -w @event-drafter/worker run dev",
+    "dev:all": "ED_DB_PATH=\"$PWD/data/app.db\" ED_WA_PROFILE_DIR=\"$PWD/data/wa-profile\" concurrently -k -n web,worker -c blue,magenta \"npm -w @event-drafter/web run dev\" \"npm -w @event-drafter/worker run dev\"",
     "build": "npm -w @event-drafter/core run build && npm -w @event-drafter/worker run build && npm -w @event-drafter/web run build",
     "test": "npm -ws --if-present run test",
     "migrate": "ED_DB_PATH=\"$PWD/data/app.db\" npm -w @event-drafter/core run migrate",
-    "lint": "npm -ws --if-present run lint"
+    "lint": "npm -ws --if-present run lint",
+    "desktop:dev": "npm -w @event-drafter/desktop run build && ED_DESKTOP_URL=http://127.0.0.1:3000 npm -w @event-drafter/desktop run start",
+    "desktop:dist": "npm run build && npm -w @event-drafter/desktop run fetch-browser && npm -w @event-drafter/desktop run dist"
   },
   "devDependencies": {
     "concurrently": "^9.0.0",

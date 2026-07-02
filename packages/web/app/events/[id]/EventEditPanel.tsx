@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { updateEvent, deleteEvent } from '../actions';
+import { updateEvent, deleteEvent, duplicateEvent } from '../actions';
 
 interface Props {
   event: {
@@ -81,6 +81,16 @@ export function EventEditPanel({ event }: Props) {
     });
   };
 
+  const duplicate = () => {
+    setBanner(null);
+    start(async () => {
+      const res = await duplicateEvent({ id: event.id });
+      if (!res.ok) { setBanner({ kind: 'err', text: res.error }); return; }
+      // Land on the copy with its edit form open so details can be adjusted.
+      router.push(`/events/${res.id}#edit`);
+    });
+  };
+
   return (
     <div id="edit" className="space-y-3 scroll-mt-4">
       {banner && (
@@ -98,6 +108,15 @@ export function EventEditPanel({ event }: Props) {
           type="button"
         >
           {editing ? 'Cancel edit' : 'Edit event'}
+        </button>
+        <button
+          onClick={duplicate}
+          disabled={isPending}
+          className="btn btn-sm disabled:opacity-50"
+          type="button"
+          title="Create a new event with these details copied, but no contacts."
+        >
+          {isPending ? 'Duplicating…' : 'Duplicate event'}
         </button>
         <button
           onClick={() => setConfirmOpen((v) => !v)}
@@ -150,19 +169,19 @@ export function EventEditPanel({ event }: Props) {
             Delete this event and cascade-delete all of its invites, replies, and follow-ups.
           </p>
           <p className="mt-1 text-red-700">
-            Type the event name exactly to confirm: <code className="rounded-sm bg-surface px-1 font-mono">{event.name}</code>
+            Type <code className="rounded-sm bg-surface px-1 font-mono">XXX</code> to confirm.
           </p>
           <div className="mt-3 flex gap-2">
             <input
               type="text"
               value={confirmPhrase}
               onChange={(e) => setConfirmPhrase(e.target.value)}
-              placeholder={event.name}
+              placeholder="XXX"
               className="field flex-1 font-mono"
             />
             <button
               onClick={remove}
-              disabled={isPending || confirmPhrase !== event.name}
+              disabled={isPending || confirmPhrase !== 'XXX'}
               className="btn-danger btn-sm disabled:opacity-50"
             >
               {isPending ? 'Deleting…' : 'Delete event'}

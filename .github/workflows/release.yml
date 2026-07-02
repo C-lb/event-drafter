@@ -1,0 +1,80 @@
+name: release
+
+# Builds signed (when secrets are present) installers for macOS + Windows and
+# attaches them to a GitHub Release. Push a tag like v0.1.0, or run manually.
+#
+# Signing is fully credential-gated: with no secrets configured the build still
+# succeeds and produces UNSIGNED installers. Add the secrets in
+# docs/setup/code-signing.md to turn on Authenticode (Windows) + Developer ID
+# signing & notarization (macOS).
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # node 22: better-sqlite3 ships a prebuilt for it (node 24 has none on
+          # Windows, forcing a from-source gyp build that fails on the runner).
+          node-version: '22'
+
+      - name: Install
+        # electron-builder 26 dropped the native app-builder-bin Go helper (it
+        # threw ENOENT only on hosted runners); the packaging path is pure JS now,
+        # so a plain install mirrors the working local setup.
+        run: npm install --no-audit --no-fund
+
+      - name: Build installers
+        # desktop:dist = build all packages -> fetch bundled Chromium -> tsc desktop
+        # -> scripts/package.mjs (electron-rebuild better-sqlite3 for Electron ->
+        #    electron-builder -> restore the system-Node binary).
+        run: npm run desktop:dist
+        env:
+          # macOS Developer ID signing (base64 .p12 + its password). Empty => skip.
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          # macOS notarization via notarytool (Apple ID + app-specific password).
+          # ED_NOTARIZE is set to '1' only on macOS AND only when the team id secret
+          # exists, so an unsigned build never tries (and fails) to notarize.
+          ED_NOTARIZE: ${{ (matrix.os == 'macos-14' && secrets.APPLE_TEAM_ID != '') && '1' || '' }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Windows Authenticode signing (base64 .pfx + its password). Empty => skip.
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.os }}
+          path: |
+            packages/desktop/release/*.dmg
+            packages/desktop/release/*.pkg
+            packages/desktop/release/*.exe
+            packages/desktop/release/*.msi
+          if-no-files-found: error
+
+      - name: Attach to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            packages/desktop/release/*.dmg
+            packages/desktop/release/*.pkg
+            packages/desktop/release/*.exe
+            packages/desktop/release/*.msi
+          fail_on_unmatched_files: false

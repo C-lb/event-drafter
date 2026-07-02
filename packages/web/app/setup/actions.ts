@@ -19,3 +19,21 @@ export async function getSetupStatus() {
     wa: getSetting('wa_ready') === true,
   };
 }
+
+export async function saveLLMConfig(data: FormData): Promise<void> {
+  const provider = String(data.get('provider') ?? '');
+  const apiKey = String(data.get('anthropic_api_key') ?? '').trim();
+  if (provider === 'ollama' || provider === 'anthropic') {
+    setSetting('llm_provider', provider);
+  }
+  if (apiKey) {
+    setSetting('anthropic_api_key', apiKey);
+  }
+}
+
+export async function saveGoogleCredentials(data: FormData): Promise<void> {
+  const clientId = String(data.get('google_client_id') ?? '').trim();
+  const clientSecret = String(data.get('google_client_secret') ?? '').trim();
+  if (clientId) setSetting('google_client_id', clientId);
+  if (clientSecret) setSetting('google_client_secret', clientSecret);
+}

@@ -9,3 +9,5 @@ dist/
 *.tsbuildinfo
 playwright-report/
 test-results/
+packages/desktop/resources/
+packages/desktop/release/

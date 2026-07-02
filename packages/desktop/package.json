@@ -1,0 +1,22 @@
+{
+  "name": "@event-drafter/desktop",
+  "version": "0.0.2",
+  "private": true,
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "electron .",
+    "test": "vitest run",
+    "rebuild-native": "electron-rebuild -f -w better-sqlite3",
+    "fetch-browser": "node scripts/fetch-browser.mjs",
+    "dist": "npm run build && node scripts/package.mjs"
+  },
+  "devDependencies": {
+    "electron": "33.4.11",
+    "@electron/rebuild": "^4.0.4",
+    "electron-builder": "^26.15.3",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0",
+    "@types/node": "^22.0.0"
+  }
+}

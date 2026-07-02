@@ -1,6 +1,6 @@
-import { setSetting } from '@event-drafter/core/settings';
+import { getSetting, setSetting } from '@event-drafter/core/settings';
 
-export const LLM_PROVIDER = (process.env.LLM_PROVIDER ?? 'ollama') as 'ollama' | 'anthropic';
+export const LLM_PROVIDER = (process.env.LLM_PROVIDER ?? 'anthropic') as 'ollama' | 'anthropic';
 
 export const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
 export const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'qwen2.5:7b-instruct';
@@ -22,7 +22,7 @@ export class LLMModelMissing extends Error {
 
 export class AnthropicNotConfigured extends Error {
   constructor() {
-    super('ANTHROPIC_API_KEY missing from .env');
+    super('No Anthropic API key - set it in Setup (LLM provider page)');
   }
 }
 
@@ -111,14 +111,17 @@ async function completeOllama(
   };
 }
 
+let _anthropicClientKey: string | null = null;
 let _anthropicClient: import('@anthropic-ai/sdk').default | null = null;
 
 async function getAnthropicClient() {
-  const key = process.env.ANTHROPIC_API_KEY;
+  const key = getSetting('anthropic_api_key') ?? process.env.ANTHROPIC_API_KEY;
   if (!key) throw new AnthropicNotConfigured();
-  if (_anthropicClient) return _anthropicClient;
+  // Re-create client if the key changed (e.g. updated in Setup).
+  if (_anthropicClient && _anthropicClientKey === key) return _anthropicClient;
   const { default: Anthropic } = await import('@anthropic-ai/sdk');
   _anthropicClient = new Anthropic({ apiKey: key });
+  _anthropicClientKey = key;
   return _anthropicClient;
 }
 
@@ -156,11 +159,16 @@ async function completeAnthropic(
   }
 }
 
+/** Effective provider: settings first, then env, then default. */
+function effectiveLLMProvider(): 'ollama' | 'anthropic' {
+  return getSetting('llm_provider') ?? LLM_PROVIDER;
+}
+
 export async function complete(
   prompt: PromptBlock,
   max_tokens = 1024,
   opts: CompleteOptions = {},
 ): Promise<CompletionResult> {
-  if (LLM_PROVIDER === 'anthropic') return completeAnthropic(prompt, max_tokens, opts);
+  if (effectiveLLMProvider() === 'anthropic') return completeAnthropic(prompt, max_tokens, opts);
   return completeOllama(prompt, max_tokens, opts);
 }
