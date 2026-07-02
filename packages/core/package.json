@@ -13,7 +13,8 @@
     "./migrate": "./dist/migrate.js",
     "./settings": "./dist/settings.js",
     "./edm-extract": "./dist/edm-extract.js",
-    "./edm-templates": "./dist/edm-templates.js"
+    "./edm-templates": "./dist/edm-templates.js",
+    "./message-templates": "./dist/message-templates.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

@@ -6,3 +6,4 @@ export * from './follow-ups.js';
 export * from './jobs.js';
 export * from './wa-chat-cursors.js';
 export * from './settings.js';
+export * from './message-templates.js';

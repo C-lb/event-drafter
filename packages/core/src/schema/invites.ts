@@ -27,6 +27,10 @@ export const invites = sqliteTable(
     rsvp: text('rsvp').notNull().$type<Rsvp>().default('none'),
     attended: integer('attended', { mode: 'boolean' }).notNull().default(false),
     attended_notes: text('attended_notes'),
+    chauffeured: integer('chauffeured', { mode: 'boolean' }).notNull().default(false),
+    parking_coupon: integer('parking_coupon', { mode: 'boolean' }).notNull().default(false),
+    takes_bus: integer('takes_bus', { mode: 'boolean' }).notNull().default(false),
+    food_pref: text('food_pref'),
     generation_meta: text('generation_meta', { mode: 'json' }).$type<Record<string, unknown>>(),
     created_at: integer('created_at', { mode: 'timestamp_ms' })
       .notNull()
