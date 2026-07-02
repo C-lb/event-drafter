@@ -99,19 +99,19 @@ export function EventCard({ ev, expired, dateLabel }: Props) {
             Delete this event and all of its invites, replies, and follow-ups.
           </p>
           <p className="mt-1 text-red-800">
-            Type the event name exactly to confirm: <code className="rounded bg-white px-1.5 py-0.5 font-mono text-xs">{ev.name}</code>
+            Type <code className="rounded bg-white px-1.5 py-0.5 font-mono text-xs">XXX</code> to confirm.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <input
               type="text"
               value={confirmPhrase}
               onChange={(e) => setConfirmPhrase(e.target.value)}
-              placeholder={ev.name}
+              placeholder="XXX"
               className="field min-w-[180px] flex-1 font-mono"
             />
             <button
               onClick={doDelete}
-              disabled={isPending || confirmPhrase !== ev.name}
+              disabled={isPending || confirmPhrase !== 'XXX'}
               className="btn-danger btn-sm"
               type="button"
             >
