@@ -1,6 +1,12 @@
 appId: com.eventdrafter.app
 productName: Event Drafter
 asar: false
+# scripts/package.mjs already rebuilds better-sqlite3 (the only non-N-API native
+# module) for Electron's ABI before we invoke electron-builder, so its internal
+# @electron/rebuild is pure redundancy. It also walks the source repo's node_modules
+# and dies on the npm-workspace self-symlink @event-drafter/desktop -> ../../packages/desktop
+# ("packages/desktop not a file") on CI runners. Turn it off.
+npmRebuild: false
 directories:
   output: release
   buildResources: build
