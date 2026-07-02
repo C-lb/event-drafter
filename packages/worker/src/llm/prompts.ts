@@ -376,3 +376,73 @@ Draft the follow-up now.`;
     user: userMessage,
   };
 }
+
+// ===== Targeted follow-up (Plan 7) =====
+
+const TARGETED_FOLLOW_UP_RULES = `You are writing a short WhatsApp follow-up to someone we already invited to an event. This is a nudge or a logistics update, not a fresh invite.
+
+- 1 to 3 sentences. No sign-off block, no signature (it reads as a continuation of the same chat).
+- Do not re-paste the original invite. Reference the event briefly by name.
+- Warm, no pressure, no guilt-tripping about a missing reply.
+- If a "Logistics to weave in" section is present, mention ONLY those points, briefly and naturally, as helpful updates. If it is absent, write a plain friendly reminder.
+
+${HUMAN_VOICE_RULES}`;
+
+export interface TargetedFollowUpLogistics {
+  food_pref?: string | null;
+  chauffeured: boolean;
+  parking_coupon: boolean;
+  takes_bus: boolean;
+}
+
+export interface TargetedFollowUpInput {
+  event: Pick<Event, 'name' | 'event_date' | 'venue'>;
+  contact: Pick<Contact, 'first_name' | 'last_name' | 'remarks'>;
+  mode: 'general' | 'tailored';
+  logistics?: TargetedFollowUpLogistics;
+  style_guide: string;
+  operator_first_name?: string;
+}
+
+export function buildTargetedFollowUpPrompt(input: TargetedFollowUpInput): PromptBlock {
+  const eventDateStr = new Date(input.event.event_date).toLocaleDateString('en-SG', {
+    weekday: 'long', month: 'long', day: 'numeric',
+  });
+
+  const systemHeader = `# Style guide
+
+${input.style_guide}
+
+# Follow-up drafting rules
+
+${TARGETED_FOLLOW_UP_RULES}
+
+# Event context
+Event: ${input.event.name}
+When: ${eventDateStr}
+Venue: ${input.event.venue ?? '(not specified)'}`;
+
+  const logisticsLines: string[] = [];
+  if (input.mode === 'tailored' && input.logistics) {
+    const l = input.logistics;
+    if (l.food_pref && l.food_pref.trim()) logisticsLines.push(`Dietary / food note: ${l.food_pref.trim()}`);
+    if (l.parking_coupon) logisticsLines.push('We are giving them a parking coupon.');
+    if (l.takes_bus) logisticsLines.push('They are riding our shuttle bus to the venue.');
+    if (l.chauffeured) logisticsLines.push('We are arranging a car to chauffeur them.');
+  }
+  const logisticsBlock = logisticsLines.length
+    ? `\n\n# Logistics to weave in (mention only these)\n${logisticsLines.map((s) => `- ${s}`).join('\n')}`
+    : '';
+
+  const fullName = `${input.contact.first_name}${input.contact.last_name ? ' ' + input.contact.last_name : ''}`;
+  const userMessage = `# Contact
+Name: ${fullName} (preferred: ${input.contact.first_name})
+Remarks: ${input.contact.remarks ?? '(none)'}${logisticsBlock}
+
+Draft the follow-up now.`;
+
+  return {
+    system: [{ type: 'text', text: systemHeader, cache_control: { type: 'ephemeral' } }],
+    user: userMessage,
+  };
+}
