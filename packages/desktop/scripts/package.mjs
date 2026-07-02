@@ -27,6 +27,19 @@ const electronVersion = JSON.parse(readFileSync(electronPkg, 'utf8')).version;
 
 const run = (cmd, cwd) => execSync(cmd, { stdio: 'inherit', cwd });
 
+// The CI release workflow maps signing secrets straight into env vars, so an
+// UNSET secret arrives as an EMPTY STRING (not absent). electron-builder then
+// tries to load CSC_LINK="" as a cert path, resolves "" relative to the project
+// dir, and dies: "…/packages/desktop not a file" (builder-util cscLink.js). A
+// local machine has these vars fully absent, so it just skips signing — which is
+// why CI failed where local always passed. Delete the empty ones so CI matches
+// local: absent cert => signing skipped.
+for (const k of ['CSC_LINK', 'CSC_KEY_PASSWORD', 'WIN_CSC_LINK', 'WIN_CSC_KEY_PASSWORD', 'CSC_INSTALLER_LINK', 'CSC_INSTALLER_KEY_PASSWORD']) {
+  if (process.env[k] !== undefined && process.env[k].trim() === '') {
+    delete process.env[k];
+  }
+}
+
 try {
   console.log(`\n[package] rebuilding better-sqlite3 for Electron ${electronVersion}...`);
   // Invoke the bin bare (not ./node_modules/.bin/...): npm puts node_modules/.bin
