@@ -9,6 +9,7 @@ export const JOB_KINDS = [
   'draft_invite',
   'send_response',
   'generate_follow_ups',
+  'generate_targeted_follow_ups',
   'send_follow_up',
   'cleanup_jobs',
   'update_delegate_tracker',
