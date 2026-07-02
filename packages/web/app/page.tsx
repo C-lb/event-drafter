@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getDb } from '@/lib/db';
-import { events, contacts, replies } from '@event-drafter/core/schema';
+import { contacts, replies } from '@event-drafter/core/schema';
 import { eq, sql } from 'drizzle-orm';
 import { listEventsWithStats } from './events/actions';
 import { listAllReplies, triggerReplyCheck } from './replies/actions';
@@ -46,7 +46,6 @@ function EyeIcon() {
 export default async function HomePage() {
   const db = getDb();
   const contactCount = db.select({ count: sql<number>`count(*)` }).from(contacts).all()[0]?.count ?? 0;
-  const eventCount = db.select({ count: sql<number>`count(*)` }).from(events).all()[0]?.count ?? 0;
   const replyCount = db.select({ count: sql<number>`count(*)` }).from(replies).where(eq(replies.resolved, false)).all()[0]?.count ?? 0;
 
   const now = new Date();

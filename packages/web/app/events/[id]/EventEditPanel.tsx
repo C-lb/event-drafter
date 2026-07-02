@@ -43,6 +43,9 @@ export function EventEditPanel({ event }: Props) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (window.location.hash === '#edit') {
+      // Mount-only: open the form when arrived at via the #edit deep link. Can't
+      // be derived during render (would mismatch the server-rendered HTML).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEditing(true);
       requestAnimationFrame(() => {
         document.getElementById('edit')?.scrollIntoView({ behavior: 'smooth', block: 'start' });

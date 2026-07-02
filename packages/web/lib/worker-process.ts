@@ -53,14 +53,19 @@ export function spawnWorker(): SpawnResult {
 
   const root = repoRoot();
   const workerDir = join(root, 'packages', 'worker');
-  const tsxBin = join(root, 'node_modules', '.bin', 'tsx');
+  const tsxPkg = join(root, 'node_modules', 'tsx', 'package.json');
+  const workerSrc = join(workerDir, 'src', 'index.ts');
   const distEntry = join(workerDir, 'dist', 'index.js');
 
   let cmd: string;
   let args: string[];
-  if (existsSync(tsxBin)) {
-    cmd = tsxBin;
-    args = ['--env-file=.env', 'src/index.ts'];
+  if (existsSync(tsxPkg) && existsSync(workerSrc)) {
+    // Run the TS entry via node's tsx loader. Spawn node itself (process.execPath
+    // is always executable) with `--import tsx`, NOT the node_modules/.bin/tsx
+    // shim: that shim is an extensionless shell script, so spawning it without a
+    // shell throws ENOENT on Windows and the worker silently never starts.
+    cmd = process.execPath; // node
+    args = ['--import', 'tsx', '--env-file=.env', 'src/index.ts'];
   } else if (existsSync(distEntry)) {
     cmd = process.execPath; // node
     args = ['--env-file=.env', 'dist/index.js'];

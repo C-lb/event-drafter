@@ -58,7 +58,9 @@ export async function sendMessageHandler(job: Job): Promise<void> {
       throw err;
     }
     if (err instanceof WaSelectorMismatch) {
-      throw new JobDeferred(60 * 60 * 1000, `selector mismatch — defer 1h: ${err.message}`);
+      // Usually means WA Web was still loading past appReadyMs (not a real
+      // layout change). Retry soon rather than parking the invite for an hour.
+      throw new JobDeferred(5 * 60 * 1000, `prefill not ready — defer 5m: ${err.message}`);
     }
     throw err;
   }

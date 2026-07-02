@@ -1,5 +1,6 @@
 import './globals.css';
 import type { ReactNode } from 'react';
+import Link from 'next/link';
 import { DM_Sans } from 'next/font/google';
 import { SetupBanner } from './components/SetupBanner';
 import { Nav } from './components/Nav';
@@ -24,7 +25,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <ToastProvider>
         <header className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur-md">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-3.5">
-            <a href="/" className="inline-flex items-center gap-2.5">
+            <Link href="/" className="inline-flex items-center gap-2.5">
               <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-ink text-white shadow-raise">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden>
                   <rect x="3" y="5" width="18" height="16" rx="2" />
@@ -32,7 +33,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 </svg>
               </span>
               <span className="text-[15px] font-semibold tracking-tight">Event Drafter</span>
-            </a>
+            </Link>
             <div className="flex flex-wrap items-center gap-3">
               <Nav />
               <WorkerStatus />

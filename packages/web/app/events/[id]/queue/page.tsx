@@ -37,10 +37,13 @@ export default function QueuePage() {
     setAutoSend(await getAutoSendEnabled());
   });
 
+  // Mount-only: kick off the first refresh and a 2 s poll; `refresh` reads the
+  // latest eventId via closure.
   useEffect(() => {
     refresh();
     const t = setInterval(refresh, 2000);
     return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toggleAutoSend = () => {

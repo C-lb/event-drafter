@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { searchInbox, createEventFromMessage, previewGmailMessage } from '../actions';
 import type { GmailMessageSummary } from '@event-drafter/worker/google/gmail';
@@ -273,8 +274,10 @@ export default function NewEventPage() {
     return arr;
   }, [results, sort]);
 
-  // Fetch the full body when picked changes
+  // Fetch the full body when picked changes. This is a genuine data-fetching
+  // effect keyed on the selection, so it must reset/set state synchronously.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!picked) { setFullMessage(null); return; }
     setPreviewLoading(true);
     let cancelled = false;
@@ -298,9 +301,16 @@ export default function NewEventPage() {
     if (!picked) return;
     const fallbackYear = new Date(picked.internal_date).getFullYear();
     const inferred = inferFromSubject(picked.subject, fallbackYear);
+    // Seeding the editable form fields from the newly picked message is the
+    // intended side effect of selecting a row.
+    /* eslint-disable react-hooks/set-state-in-effect */
     setName(inferred.cleanedName);
     setDate(inferred.date_local ?? '');
     setVenue(inferred.venue ?? '');
+    /* eslint-enable react-hooks/set-state-in-effect */
+    // picked.id is the real dependency; the full object identity changes on every
+    // fetch but only a new selection should re-seed the fields.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picked?.id]);
 
   // Once the full body loads, scan it for date / time / venue and use those
@@ -312,9 +322,11 @@ export default function NewEventPage() {
     if (!fullMessage || !picked || fullMessage.id !== picked.id) return;
     const fallbackYear = new Date(picked.internal_date).getFullYear();
     const inferred = inferEventDetails(fullMessage.body_text, picked.subject, fallbackYear);
+    // Authoritative date/venue from the loaded body overwrites the subject guess.
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (inferred.date_local) setDate(inferred.date_local);
     if (inferred.venue) setVenue(inferred.venue);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [fullMessage, picked]);
 
   const submit = () => {
@@ -336,9 +348,9 @@ export default function NewEventPage() {
     <section className="max-w-6xl space-y-6">
       <div className="flex items-baseline justify-between">
         <h2 className="text-2xl font-semibold tracking-tight">New event from Gmail</h2>
-        <a href="/events/new/blank" className="text-xs font-medium text-accent hover:text-accent-hover">
+        <Link href="/events/new/blank" className="text-xs font-medium text-accent hover:text-accent-hover">
           No email to pull from? Create blank →
-        </a>
+        </Link>
       </div>
 
       <div className="space-y-3">

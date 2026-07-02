@@ -48,6 +48,8 @@ export default function PickContactsPage() {
     setCandidates(await listCandidatesForEvent(eventId, { search, exclude_invited: true }));
   });
 
+  // Mount-only initial load; `load` reads the latest search/eventId via closure.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, []);
 
   const toggle = (id: number, index: number, shiftKey: boolean) => {
