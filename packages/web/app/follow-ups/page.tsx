@@ -28,6 +28,7 @@ export default function FollowUpsPage() {
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-2xl font-semibold tracking-tight">Follow-ups</h2>
         <div className="flex items-center gap-2">
+          <a href="/follow-ups/new" className="btn btn-sm">New follow-up</a>
           <a href="/settings/timing" className="btn btn-sm">Timing</a>
           <button
             onClick={() => start(async () => { await triggerFollowUpGeneration(); refresh(); })}

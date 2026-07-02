@@ -100,6 +100,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         <Link href={`/events/${eventId}/replies`} className="btn">
           Replies ({allReplies.length})
         </Link>
+        <Link href={`/events/${eventId}/follow-up`} className="btn">
+          Follow up
+        </Link>
         <form action={check}>
           <button
             type="submit"
