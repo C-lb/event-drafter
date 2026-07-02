@@ -39,9 +39,9 @@ describe('follow-up logistics actions', () => {
     const rows = await listInvitesForFollowUp(eventId);
     expect(rows).toHaveLength(2);
     const byId = Object.fromEntries(rows.map((r) => [r.invite_id, r]));
-    expect(byId[i1].has_reply).toBe(false);
-    expect(byId[i2].has_reply).toBe(true);
-    expect(byId[i1].chauffeured).toBe(false);
+    expect(byId[i1]?.has_reply).toBe(false);
+    expect(byId[i2]?.has_reply).toBe(true);
+    expect(byId[i1]?.chauffeured).toBe(false);
   });
 
   it('persists logistics to the invite', async () => {
