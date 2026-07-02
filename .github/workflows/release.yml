@@ -32,9 +32,9 @@ jobs:
           node-version: '22'
 
       - name: Install
-        # npm install, not npm ci: ci does not reliably materialize the 216MB
-        # app-builder-bin (electron-builder's helper binaries). install mirrors
-        # the working local setup.
+        # electron-builder 26 dropped the native app-builder-bin Go helper (it
+        # threw ENOENT only on hosted runners); the packaging path is pure JS now,
+        # so a plain install mirrors the working local setup.
         run: npm install --no-audit --no-fund
 
       - name: Build installers
