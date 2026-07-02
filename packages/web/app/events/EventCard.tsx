@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { deleteEvent } from './actions';
+import { DELETE_CONFIRM_PHRASE } from './delete-confirm';
 
 interface CardEvent {
   id: number;
@@ -99,19 +100,19 @@ export function EventCard({ ev, expired, dateLabel }: Props) {
             Delete this event and all of its invites, replies, and follow-ups.
           </p>
           <p className="mt-1 text-red-800">
-            Type <code className="rounded bg-white px-1.5 py-0.5 font-mono text-xs">XXX</code> to confirm.
+            Type <code className="rounded bg-white px-1.5 py-0.5 font-mono text-xs">{DELETE_CONFIRM_PHRASE}</code> to confirm.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <input
               type="text"
               value={confirmPhrase}
               onChange={(e) => setConfirmPhrase(e.target.value)}
-              placeholder="XXX"
+              placeholder={DELETE_CONFIRM_PHRASE}
               className="field min-w-[180px] flex-1 font-mono"
             />
             <button
               onClick={doDelete}
-              disabled={isPending || confirmPhrase !== 'XXX'}
+              disabled={isPending || confirmPhrase !== DELETE_CONFIRM_PHRASE}
               className="btn-danger btn-sm"
               type="button"
             >

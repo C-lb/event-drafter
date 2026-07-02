@@ -7,6 +7,7 @@ import { summarizeEdm } from '@event-drafter/core/edm-extract';
 import { desc, eq, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { listRecentMessages, fetchMessage } from '@event-drafter/worker/google/gmail';
+import { DELETE_CONFIRM_PHRASE } from './delete-confirm';
 
 export async function listEvents() {
   const db = getDb();
@@ -319,8 +320,8 @@ export async function deleteEvent(input: unknown): Promise<{ ok: true; cascaded:
   const db = getDb();
   const ev = db.select().from(events).where(eq(events.id, id)).get();
   if (!ev) return { ok: false, error: 'Event not found.' };
-  if (confirm_phrase !== 'XXX') {
-    return { ok: false, error: 'Type XXX to confirm deletion.' };
+  if (confirm_phrase !== DELETE_CONFIRM_PHRASE) {
+    return { ok: false, error: `Type ${DELETE_CONFIRM_PHRASE} to confirm deletion.` };
   }
 
   const inviteCount = db
