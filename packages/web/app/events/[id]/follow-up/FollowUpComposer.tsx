@@ -23,7 +23,7 @@ type Invitee = {
   food_pref: string | null;
 };
 type Template = { id: number; name: string; body: string };
-type Banner = { kind: 'ok' | 'err'; text: string } | null;
+type Banner = { kind: 'err'; text: string } | null;
 const TOKENS = '{first_name} {last_name} {event_name} {event_date} {venue} {food_pref} {parking} {bus} {chauffeur}';
 
 export function FollowUpComposer({
@@ -62,8 +62,16 @@ export function FollowUpComposer({
   const clearAll = () => { setPicked(new Set()); setLastIndex(null); };
 
   const setLogistics = (invite_id: number, patch: Partial<Invitee>) => {
-    setRows((rs) => rs.map((r) => (r.invite_id === invite_id ? { ...r, ...patch } : r)));
-    const row = { ...rows.find((r) => r.invite_id === invite_id)!, ...patch };
+    let merged: Invitee | undefined;
+    setRows((rs) =>
+      rs.map((r) => {
+        if (r.invite_id !== invite_id) return r;
+        merged = { ...r, ...patch };
+        return merged;
+      }),
+    );
+    if (!merged) return;
+    const row = merged;
     start(async () => {
       await saveInviteLogistics({
         invite_id,
@@ -106,7 +114,7 @@ export function FollowUpComposer({
   return (
     <div className="mt-6 space-y-6">
       {banner && (
-        <p className={`rounded-md p-3 text-sm ${banner.kind === 'ok' ? 'badge-green' : 'badge-red'}`}>
+        <p className="rounded-md p-3 text-sm badge-red">
           {banner.text}
         </p>
       )}
