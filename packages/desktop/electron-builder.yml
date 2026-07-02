@@ -33,6 +33,29 @@ extraResources:
     to: app/packages/core/drizzle
   - from: ../../node_modules
     to: app/node_modules
+    # Drop the npm-workspace self-symlinks (@event-drafter/core|worker|web|desktop
+    # -> ../../packages/*). electron-builder 26 copies them AS symlinks: web/desktop
+    # dangle in the packaged tree (macOS "not a file"), and WiX/light.exe can't
+    # harvest symlinks at all (Windows LGHT0103). We re-add core+worker as REAL
+    # copies below (web+desktop are never imported by bare specifier at runtime).
+    filter:
+      - "**/*"
+      - "!@event-drafter"
+      - "!@event-drafter/**"
+  # Real (dereferenced) copies of the two workspace packages that runtime code
+  # imports by bare specifier: web (`next start`) and the worker both resolve
+  # `@event-drafter/core`, and web also resolves `@event-drafter/worker`.
+  - from: ../../packages/core
+    to: app/node_modules/@event-drafter/core
+    filter:
+      - package.json
+      - dist/**
+      - drizzle/**
+  - from: ../../packages/worker
+    to: app/node_modules/@event-drafter/worker
+    filter:
+      - package.json
+      - dist/**
   - from: resources/ms-playwright
     to: ms-playwright
 win:
