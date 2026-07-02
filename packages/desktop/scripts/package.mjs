@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { existsSync, readFileSync, renameSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -27,25 +27,7 @@ const electronVersion = JSON.parse(readFileSync(electronPkg, 'utf8')).version;
 
 const run = (cmd, cwd) => execSync(cmd, { stdio: 'inherit', cwd });
 
-// The npm-workspace self-symlinks (node_modules/@event-drafter/{core,worker,web,
-// desktop} -> ../../packages/*) make electron-builder's file collector abort with
-// "packages/desktop not a file" on the CI runners (it can't handle a symlink whose
-// target is the appDir tree; reproduces on hosted macOS/Windows, not locally).
-// We don't need them during packaging: electron-builder.yml re-adds core+worker as
-// real copies via extraResources, and nothing imports web/desktop by bare specifier.
-// So move the whole @event-drafter dir aside for the electron-builder run, restore
-// it in `finally` so dev/test keep working. (The build step already ran by now.)
-const scope = join(repoRoot, 'node_modules', '@event-drafter');
-const scopeBak = join(repoRoot, 'node_modules', '.@event-drafter.bak');
-const hadScope = existsSync(scope);
-
 try {
-  if (hadScope) {
-    rmSync(scopeBak, { recursive: true, force: true });
-    renameSync(scope, scopeBak);
-    console.log('[package] moved node_modules/@event-drafter aside (workspace self-symlinks)');
-  }
-
   console.log(`\n[package] rebuilding better-sqlite3 for Electron ${electronVersion}...`);
   // Invoke the bin bare (not ./node_modules/.bin/...): npm puts node_modules/.bin
   // on PATH for this script, so this resolves the .cmd shim on Windows too. An
@@ -61,6 +43,14 @@ try {
   // Code signing itself is auto-enabled by electron-builder when CSC_LINK/WIN_CSC_LINK
   // are present in the env; no flag needed here. See docs/setup/code-signing.md.
   const args = ['electron-builder', '--publish', process.env.ED_PUBLISH ?? 'never'];
+  // With no macOS signing cert, force identity=null so electron-builder SKIPS
+  // signing (as it does locally when the keychain has no Developer ID). On CI the
+  // release workflow passes an empty CSC_KEY_PASSWORD, which otherwise pushes
+  // electron-builder into ad-hoc signing — and that codesign walk dies with
+  // "packages/desktop not a file" on the hosted runner. We ship unsigned for now.
+  if (!process.env.CSC_LINK) {
+    args.push('--config.mac.identity=null');
+  }
   if (process.env.ED_NOTARIZE === '1') {
     if (!process.env.APPLE_TEAM_ID) {
       throw new Error('ED_NOTARIZE=1 requires APPLE_TEAM_ID (and notarytool creds) in the env');
@@ -72,11 +62,6 @@ try {
   console.log(`\n[package] running electron-builder — ${signing}...`);
   run(args.join(' '), desktopDir);
 } finally {
-  if (hadScope) {
-    rmSync(scope, { recursive: true, force: true });
-    renameSync(scopeBak, scope);
-    console.log('[package] restored node_modules/@event-drafter workspace symlinks');
-  }
   console.log('\n[package] restoring better-sqlite3 for system Node...');
   run('npm rebuild better-sqlite3', repoRoot);
 }
