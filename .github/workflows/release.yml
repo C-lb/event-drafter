@@ -58,6 +58,12 @@ jobs:
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
 
       - name: Upload build artifacts
+        # Only for manual (workflow_dispatch) test builds — on tag pushes the
+        # installers already live permanently on the GitHub Release below, which
+        # is free storage. Duplicating them as Actions artifacts (counted against
+        # the 500MB quota, 90-day default retention) is what blew past the limit.
+        # retention-days: 2 keeps a manual build around just long enough to grab.
+        if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: installers-${{ matrix.os }}
@@ -67,6 +73,7 @@ jobs:
             packages/desktop/release/*.exe
             packages/desktop/release/*.msi
           if-no-files-found: error
+          retention-days: 2
 
       - name: Attach to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
