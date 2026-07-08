@@ -1,9 +1,11 @@
 {
   "name": "event-drafter",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "private": true,
   "type": "module",
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "ED_DB_PATH=\"$PWD/data/app.db\" ED_WA_PROFILE_DIR=\"$PWD/data/wa-profile\" npm -w @event-drafter/web run dev",
     "dev:worker": "ED_DB_PATH=\"$PWD/data/app.db\" ED_WA_PROFILE_DIR=\"$PWD/data/wa-profile\" npm -w @event-drafter/worker run dev",
