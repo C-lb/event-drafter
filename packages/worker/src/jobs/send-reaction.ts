@@ -58,8 +58,16 @@ export async function sendReactionHandler(job: Job): Promise<void> {
     throw err;
   }
 
+  // A landed reaction IS the acknowledgement — the operator has dealt with this
+  // reply, so resolve it too (it drops off the "unread replies" list). Only on a
+  // CONFIRMED send: a failed reaction above leaves the row unresolved to retry.
   db.update(replies)
-    .set({ reaction_status: 'sent', reaction_sent_at: new Date() })
+    .set({
+      reaction_status: 'sent',
+      reaction_sent_at: new Date(),
+      resolved: true,
+      resolved_at: new Date(),
+    })
     .where(eq(replies.id, reply_id))
     .run();
   logger.info('send_reaction: reacted', { reply_id, emoji });
