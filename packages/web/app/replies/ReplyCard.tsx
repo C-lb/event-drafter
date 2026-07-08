@@ -14,11 +14,13 @@ import { setReplyResolved, setReplyClassification } from './actions';
 import { useQueue } from './QueueProvider';
 import { useDeferredSend } from './useDeferredSend';
 
+// Flat semantic tints, house style: a soft tinted fill + hairline ring, never a
+// saturated block. Colour carries meaning (yes/no/maybe), it doesn't decorate.
 const CLASSIFY_OPTIONS = [
-  { value: 'yes', label: 'Yes', cls: 'bg-green-600 text-white border-green-700' },
-  { value: 'no', label: 'No', cls: 'bg-red-600 text-white border-red-700' },
-  { value: 'maybe', label: 'Maybe', cls: 'bg-amber-500 text-white border-amber-600' },
-  { value: 'unclear', label: 'Unclear', cls: 'bg-neutral-500 text-white border-neutral-600' },
+  { value: 'yes', label: 'Yes', cls: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' },
+  { value: 'no', label: 'No', cls: 'bg-red-50 text-red-700 ring-red-600/20' },
+  { value: 'maybe', label: 'Maybe', cls: 'bg-amber-50 text-amber-700 ring-amber-600/25' },
+  { value: 'unclear', label: 'Unclear', cls: 'bg-line text-ink-2 ring-line-strong' },
 ] as const;
 
 function ago(ts: Date | number | null | undefined): string {
@@ -42,8 +44,39 @@ function classificationVisual(c: string | null | undefined): ClassificationVisua
   }
 }
 
+/** The anti-vibecoded "Mark it as" chips: flat semantic tints, 1px inset ring,
+ *  four states (default / hover / selected / disabled). Shared by the compact
+ *  and expanded cards so the styling lives in one place. */
+function ClassifyOptions({
+  current,
+  disabled,
+  onPick,
+}: {
+  current: string | null;
+  disabled: boolean;
+  onPick: (value: string) => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-1">
+      {CLASSIFY_OPTIONS.map((opt) => (
+        <button
+          key={opt.value}
+          disabled={disabled}
+          onClick={() => onPick(opt.value)}
+          className={`rounded-sm px-2 py-1 text-xs ring-1 ring-inset transition disabled:opacity-50 ${opt.cls} ${
+            current === opt.value ? 'font-semibold ring-2' : 'font-medium hover:ring-2'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export interface ReplyRow {
   reply_id: number;
+  invite_id: number;
   event_id: number;
   event_name: string;
   classification: string | null;
@@ -74,6 +107,9 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
   const dirty = (r.response_draft ?? '') !== editValue;
   const cv = classificationVisual(r.classification);
   const status = r.response_status ?? 'pending';
+  // A clear yes/no needs no drafted reply: it collapses to a compact card whose
+  // only action is a private follow-up. maybe/unclear keep the full preview.
+  const isMarkedYesNo = r.classification === 'yes' || r.classification === 'no';
   const refresh = () => router.refresh();
 
   const canApprove = !!editValue.trim() && status !== 'approved' && status !== 'sent';
@@ -115,6 +151,7 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
   // Register keyboard handlers with the queue.
   useEffect(() => {
     const primary = () => {
+      if (isMarkedYesNo) return; // compact card: no send action to trigger
       if (status === 'prefilled') {
         doCollapse('sentManual', () => markResponseSent({ reply_id: r.reply_id }));
       } else if (canApprove) {
@@ -126,7 +163,7 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
     return queue.registerCard(r.reply_id, { primary, focusEditor, isTerminal });
     // re-register when the inputs to these closures change
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [r.reply_id, status, canApprove, terminal]);
+  }, [r.reply_id, status, canApprove, terminal, isMarkedYesNo]);
 
   const highlighted = queue.highlightedId === r.reply_id;
 
@@ -147,6 +184,63 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
             Undo
           </button>
         )}
+      </li>
+    );
+  }
+
+  // ---- Compact render: a clear yes/no needs no reply preview. ----
+  // Show who it is, the marked status, and one action: follow up privately.
+  if (isMarkedYesNo) {
+    const yes = r.classification === 'yes';
+    const reclassify = (value: string) =>
+      start(async () => {
+        await setReplyClassification({ reply_id: r.reply_id, classification: value });
+        setPickerOpen(false);
+        refresh();
+      });
+    return (
+      <li
+        className={`card flex flex-wrap items-center gap-x-4 gap-y-3 p-4 text-sm ${
+          highlighted ? 'ring-2 ring-accent/40' : ''
+        } ${r.resolved ? 'opacity-70' : ''}`}
+      >
+        <span className={`badge flex-none ${yes ? 'badge-green' : 'badge-red'}`}>
+          {yes ? 'Marked yes' : 'Marked no'}
+        </span>
+
+        <div className="min-w-0 flex-1 space-y-0.5">
+          <div className="flex flex-wrap items-baseline gap-2">
+            <strong className="truncate">{r.contact_name}</strong>
+            <Link
+              href={`/events/${r.event_id}/replies`}
+              className="text-xs font-medium text-accent hover:text-accent-hover"
+            >
+              {r.event_name}
+            </Link>
+          </div>
+          {r.summary && <p className="truncate text-xs italic text-ink-2">{r.summary}</p>}
+        </div>
+
+        <div className="flex flex-none items-center gap-2">
+          <Link href={`/events/${r.event_id}/follow-up?invite=${r.invite_id}`} className="btn btn-sm">
+            Follow up privately
+          </Link>
+          <div className="relative">
+            <button
+              onClick={() => setPickerOpen((o) => !o)}
+              disabled={isPending}
+              className="btn btn-sm"
+              title="Change how this reply is classified"
+            >
+              Mark it as {pickerOpen ? '▴' : '▾'}
+            </button>
+            {pickerOpen && (
+              <div className="absolute right-0 z-10 mt-1 w-40 rounded-sm border border-line bg-surface p-1 shadow-pop">
+                <ClassifyOptions current={r.classification} disabled={isPending} onPick={reclassify} />
+              </div>
+            )}
+          </div>
+        </div>
       </li>
     );
   }
@@ -244,26 +338,17 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
           </button>
 
           {pickerOpen && (
-            <div className="grid grid-cols-2 gap-1">
-              {CLASSIFY_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  disabled={isPending}
-                  onClick={() =>
-                    start(async () => {
-                      await setReplyClassification({ reply_id: r.reply_id, classification: opt.value });
-                      setPickerOpen(false);
-                      refresh();
-                    })
-                  }
-                  className={`rounded border px-1.5 py-1 text-xs font-semibold disabled:opacity-50 ${opt.cls} ${
-                    r.classification === opt.value ? 'ring-2 ring-neutral-400 ring-offset-1' : 'opacity-90 hover:opacity-100'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+            <ClassifyOptions
+              current={r.classification}
+              disabled={isPending}
+              onPick={(value) =>
+                start(async () => {
+                  await setReplyClassification({ reply_id: r.reply_id, classification: value });
+                  setPickerOpen(false);
+                  refresh();
+                })
+              }
+            />
           )}
         </div>
       </div>

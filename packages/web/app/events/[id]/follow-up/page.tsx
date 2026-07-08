@@ -7,10 +7,21 @@ import { FollowUpComposer } from './FollowUpComposer';
 
 export const dynamic = 'force-dynamic';
 
-export default async function FollowUpPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function FollowUpPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ invite?: string }>;
+}) {
   const { id } = await params;
+  const { invite } = await searchParams;
   const eventId = Number(id);
   if (!Number.isFinite(eventId)) notFound();
+
+  // Optional deep-link from a reply card: preselect this one invitee so the
+  // operator lands ready to follow up privately with them.
+  const preselectInviteId = invite && Number.isFinite(Number(invite)) ? Number(invite) : undefined;
 
   const event = getDb().select().from(events).where(eq(events.id, eventId)).get();
   if (!event) notFound();
@@ -31,6 +42,7 @@ export default async function FollowUpPage({ params }: { params: Promise<{ id: s
         eventId={eventId}
         invitees={invitees}
         templates={templates}
+        preselectInviteId={preselectInviteId}
       />
     </section>
   );

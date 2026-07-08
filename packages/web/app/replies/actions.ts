@@ -83,6 +83,7 @@ export async function listAllReplies(opts: { includeResolved?: boolean } = {}) {
   const base = db
     .select({
       reply_id: replies.id,
+      invite_id: invites.id,
       event_id: invites.event_id,
       event_name: events.name,
       classification: replies.classification,
@@ -194,6 +195,12 @@ export async function setReplyClassification(
     reply.response_status === 'prefilled' ||
     reply.response_status === 'sent';
 
+  // A clear yes/no needs no auto-reply: the operator follows up privately from
+  // the compact card in the reply window, so we deliberately do NOT re-draft a
+  // response for it (no "future preview"). maybe/unclear still get a fresh
+  // draft so the operator has something to send.
+  const wantsDraft = classification === 'maybe' || classification === 'unclear';
+
   db.transaction((tx) => {
     tx.update(replies)
       .set({
@@ -213,7 +220,7 @@ export async function setReplyClassification(
       .where(eq(invites.id, reply.invite_id))
       .run();
 
-    if (!locked) {
+    if (!locked && wantsDraft) {
       tx.insert(jobs).values({ kind: 'redraft_reply', payload: { reply_id }, status: 'queued' }).run();
     }
   });

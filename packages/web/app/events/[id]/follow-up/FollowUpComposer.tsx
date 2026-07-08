@@ -27,11 +27,17 @@ type Banner = { kind: 'err'; text: string } | null;
 const TOKENS = '{first_name} {last_name} {event_name} {event_date} {venue} {food_pref} {parking} {bus} {chauffeur}';
 
 export function FollowUpComposer({
-  eventId, invitees: initial, templates,
-}: { eventId: number; invitees: Invitee[]; templates: Template[] }) {
+  eventId, invitees: initial, templates, preselectInviteId,
+}: { eventId: number; invitees: Invitee[]; templates: Template[]; preselectInviteId?: number }) {
   const router = useRouter();
   const [rows, setRows] = useState<Invitee[]>(initial);
-  const [picked, setPicked] = useState<Set<number>>(new Set());
+  // Seed the selection from a deep-link (a reply card's "Follow up privately"),
+  // but only if that invitee is actually in this event's follow-up list.
+  const [picked, setPicked] = useState<Set<number>>(() =>
+    preselectInviteId && initial.some((r) => r.invite_id === preselectInviteId)
+      ? new Set([preselectInviteId])
+      : new Set(),
+  );
   const [lastIndex, setLastIndex] = useState<number | null>(null);
   const [tab, setTab] = useState<'general' | 'tailored' | 'template'>('general');
   const [body, setBody] = useState('');
