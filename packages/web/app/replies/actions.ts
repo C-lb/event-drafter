@@ -92,6 +92,7 @@ export async function listAllReplies(opts: { includeResolved?: boolean } = {}) {
       summary: replies.classification_summary,
       classification_source: replies.classification_source,
       reply_text: replies.wa_message_text,
+      prior_reply_text: replies.prior_reply_text,
       response_draft: replies.response_draft,
       response_status: replies.response_status,
       response_sent_at: replies.response_sent_at,

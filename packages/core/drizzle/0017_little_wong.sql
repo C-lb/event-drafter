@@ -1,0 +1,1 @@
+ALTER TABLE `replies` ADD `prior_reply_text` text;

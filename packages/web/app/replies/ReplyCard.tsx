@@ -79,6 +79,20 @@ function ClassifyOptions({
   );
 }
 
+/** Shown when a reply's thread grew: flags that they texted again and surfaces
+ *  what they had said before, so the operator keeps the context of the switch. */
+function RepliedAgainNote({ prior }: { prior: string | null }) {
+  if (!prior) return null;
+  return (
+    <div className="space-y-1">
+      <span className="badge badge-amber">Replied again</span>
+      <p className="rounded-sm bg-surface-2 px-2.5 py-1.5 text-xs text-ink-3">
+        <span className="font-medium text-ink-2">Earlier:</span> {prior}
+      </p>
+    </div>
+  );
+}
+
 export interface ReplyRow {
   reply_id: number;
   invite_id: number;
@@ -89,6 +103,7 @@ export interface ReplyRow {
   summary: string | null;
   classification_source: string | null;
   reply_text: string;
+  prior_reply_text: string | null;
   response_draft: string | null;
   response_status: string | null;
   response_sent_at: Date | null;
@@ -232,6 +247,7 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
               {r.event_name}
             </Link>
           </div>
+          <RepliedAgainNote prior={r.prior_reply_text} />
           {/* The reply that settled it, so the operator sees why it's a yes/no. */}
           <p className="rounded-sm bg-surface-2 px-2.5 py-1.5 text-xs text-ink">
             {r.reply_text}
@@ -389,6 +405,8 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
           )}
         </div>
       </div>
+
+      <RepliedAgainNote prior={r.prior_reply_text} />
 
       <div className="rounded-sm bg-surface-2 p-3 text-sm">
         <p className="eyebrow mb-1">Their reply</p>

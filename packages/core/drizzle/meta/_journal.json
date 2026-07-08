@@ -120,6 +120,13 @@
       "when": 1783481684778,
       "tag": "0016_massive_micromax",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1783483636719,
+      "tag": "0017_little_wong",
+      "breakpoints": true
     }
   ]
 }

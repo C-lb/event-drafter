@@ -22,6 +22,10 @@ export const replies = sqliteTable(
     detected_at: integer('detected_at', { mode: 'timestamp_ms' })
       .notNull()
       .default(sql`(unixepoch() * 1000)`),
+    // When the thread updates (they text again), the message that was showing
+    // BEFORE the new one is stashed here so the card can show "here's what they
+    // said earlier" alongside a "replied again" indicator. Null until a re-text.
+    prior_reply_text: text('prior_reply_text'),
     classification: text('classification').$type<ReplyClassification>(),
     classification_confidence: real('classification_confidence'),
     classification_summary: text('classification_summary'),

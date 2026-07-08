@@ -117,6 +117,9 @@ export async function checkRepliesHandler(job: Job): Promise<void> {
             // get cleared because they belong to the prior turn.
             tx.update(replies)
               .set({
+                // Stash what they said before, so the card can show it as
+                // context with a "replied again" indicator.
+                prior_reply_text: existing.wa_message_text,
                 wa_message_id: latest.wa_message_id ?? null,
                 wa_message_text: joinedText,
                 wa_sent_at: latest.wa_sent_at,
@@ -128,6 +131,11 @@ export async function checkRepliesHandler(job: Job): Promise<void> {
                 response_status: 'pending',
                 response_approved_at: null,
                 response_prefilled_at: null,
+                // A reaction acknowledged the PREVIOUS message; a new message
+                // reopens the exchange, so reset it and let them react afresh.
+                reaction_emoji: null,
+                reaction_status: null,
+                reaction_sent_at: null,
               })
               .where(eq(replies.id, existing.id))
               .run();

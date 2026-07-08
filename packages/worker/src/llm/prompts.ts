@@ -152,6 +152,12 @@ export interface ClassifyAndDraftInput {
   reply_text: string;
   style_guide: string;
   operator_first_name?: string;
+  /**
+   * Past operator corrections: messages the operator manually classified, fed
+   * back as few-shot examples so the model tags similar messages the same way
+   * next time. Empty/absent on a cold start.
+   */
+  examples?: Array<{ text: string; classification: string }>;
 }
 
 export interface ClassifyAndDraftOutput {
@@ -202,6 +208,21 @@ When: ${eventDateStr}
 Venue: ${input.event.venue ?? '(not specified)'}`;
 
   const fullName = `${input.contact.first_name}${input.contact.last_name ? ' ' + input.contact.last_name : ''}`;
+
+  // Learned examples from the operator's past manual corrections. Kept in the
+  // (uncached) user message so the cached system rules stay stable as the
+  // example set grows.
+  const examplesBlock =
+    input.examples && input.examples.length > 0
+      ? `# How the operator has classified similar replies before
+Match these judgements when a reply is similar:
+${input.examples
+  .map((e) => `- "${e.text.replace(/\s+/g, ' ').trim().slice(0, 200)}" -> ${e.classification.toUpperCase()}`)
+  .join('\n')}
+
+`
+      : '';
+
   const userMessage = `# Contact
 Name: ${fullName} (preferred: ${input.contact.first_name})
 Remarks: ${input.contact.remarks ?? '(none)'}
@@ -209,7 +230,7 @@ Remarks: ${input.contact.remarks ?? '(none)'}
 # Original invitation we sent
 ${input.original_invite_text}
 
-# Their reply
+${examplesBlock}# Their reply
 ${input.reply_text}
 
 Output the JSON object now. Do not wrap it in code fences. Do not add commentary.`;

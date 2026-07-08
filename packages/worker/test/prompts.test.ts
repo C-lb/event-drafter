@@ -143,4 +143,34 @@ describe('buildClassifyAndDraftPrompt', () => {
     expect(p.user).toContain('Hi Ada');
     expect(p.system[0]?.cache_control?.type).toBe('ephemeral');
   });
+
+  it('injects learned operator corrections as few-shot examples', () => {
+    const p = buildClassifyAndDraftPrompt({
+      event: { name: 'Gala', event_date: new Date(), venue: null },
+      contact: { first_name: 'Ada', last_name: null, remarks: null },
+      original_invite_text: 'invite',
+      reply_text: 'will try to pop by',
+      style_guide: 'Brief.',
+      examples: [
+        { text: 'will try to pop by', classification: 'maybe' },
+        { text: 'wouldn’t miss it', classification: 'yes' },
+      ],
+    });
+    expect(p.user).toContain('classified similar replies before');
+    expect(p.user).toContain('will try to pop by" -> MAYBE');
+    expect(p.user).toContain('-> YES');
+    // Examples live in the (uncached) user message, not the cached system rules.
+    expect(p.system[0]?.text).not.toContain('classified similar replies before');
+  });
+
+  it('omits the examples section when there are none', () => {
+    const p = buildClassifyAndDraftPrompt({
+      event: { name: 'Gala', event_date: new Date(), venue: null },
+      contact: { first_name: 'Ada', last_name: null, remarks: null },
+      original_invite_text: 'invite',
+      reply_text: 'see you there',
+      style_guide: 'Brief.',
+    });
+    expect(p.user).not.toContain('classified similar replies before');
+  });
 });
