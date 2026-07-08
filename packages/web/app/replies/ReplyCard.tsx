@@ -10,7 +10,7 @@ import {
   editResponse,
   regenerateResponse,
 } from '../events/[id]/actions';
-import { setReplyResolved, setReplyClassification } from './actions';
+import { setReplyResolved, setReplyClassification, reactToReply } from './actions';
 import { useQueue } from './QueueProvider';
 import { useDeferredSend } from './useDeferredSend';
 
@@ -22,6 +22,11 @@ const CLASSIFY_OPTIONS = [
   { value: 'maybe', label: 'Maybe', cls: 'bg-amber-50 text-amber-700 ring-amber-600/25' },
   { value: 'unclear', label: 'Unclear', cls: 'bg-line text-ink-2 ring-line-strong' },
 ] as const;
+
+// The two reactions offered on the compact card. Kept in sync with the
+// server's REACTION_EMOJIS (@event-drafter/core); hardcoded here so the client
+// bundle does not pull the core package in.
+const REACTION_CHOICES = ['\u{1F44D}', '❤️'] as const; // 👍  ❤️
 
 function ago(ts: Date | number | null | undefined): string {
   if (!ts) return '—';
@@ -87,6 +92,8 @@ export interface ReplyRow {
   response_draft: string | null;
   response_status: string | null;
   response_sent_at: Date | null;
+  reaction_emoji: string | null;
+  reaction_status: string | null;
   wa_sent_at: Date | null;
   detected_at: Date | null;
   resolved: boolean;
@@ -198,6 +205,13 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
         setPickerOpen(false);
         refresh();
       });
+    const reacting = r.reaction_status === 'pending' || r.reaction_status === 'sending';
+    const reactFailed = r.reaction_status === 'failed';
+    const react = (emoji: string) =>
+      start(async () => {
+        await reactToReply({ reply_id: r.reply_id, emoji });
+        refresh();
+      });
     return (
       <li
         className={`card flex flex-wrap items-start gap-x-4 gap-y-3 p-4 text-sm ${
@@ -224,7 +238,27 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
           </p>
         </div>
 
-        <div className="flex flex-none items-center gap-2">
+        <div className="flex flex-none flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1" title="React on their reply in WhatsApp">
+            {REACTION_CHOICES.map((emoji) => {
+              const sent = r.reaction_status === 'sent' && r.reaction_emoji === emoji;
+              return (
+                <button
+                  key={emoji}
+                  onClick={() => react(emoji)}
+                  disabled={isPending || reacting}
+                  aria-pressed={sent}
+                  title={sent ? `Reacted ${emoji}` : `React ${emoji}`}
+                  className={`btn btn-sm px-2 text-base leading-none ${sent ? 'ring-2 ring-accent/40' : ''}`}
+                >
+                  {emoji}
+                </button>
+              );
+            })}
+            {reacting && <span className="text-xs text-ink-3">Reacting…</span>}
+            {reactFailed && <span className="text-xs text-red-600">Could not react</span>}
+          </div>
+
           <Link href={`/events/${r.event_id}/follow-up?invite=${r.invite_id}`} className="btn btn-sm">
             Follow up privately
           </Link>

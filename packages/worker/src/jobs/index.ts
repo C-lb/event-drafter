@@ -11,6 +11,7 @@ import { sendResponseHandler } from './send-response.js';
 import { generateFollowUpsHandler } from './generate-follow-ups.js';
 import { generateTargetedFollowUpsHandler } from './generate-targeted-follow-ups.js';
 import { sendFollowUpHandler } from './send-follow-up.js';
+import { sendReactionHandler } from './send-reaction.js';
 import { cleanupJobsHandler } from './cleanup-jobs.js';
 import { updateDelegateTrackerHandler } from './update-delegate-tracker.js';
 
@@ -30,6 +31,7 @@ export const handlers: Record<JobKind, JobHandler> = {
   generate_targeted_follow_ups: generateTargetedFollowUpsHandler,
   generate_follow_up: generateFollowUpsHandler,
   send_follow_up: sendFollowUpHandler,
+  send_reaction: sendReactionHandler,
   cleanup_jobs: cleanupJobsHandler,
   update_delegate_tracker: updateDelegateTrackerHandler,
 };

@@ -1,6 +1,12 @@
 import { sqliteTable, integer, text, real, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import type { ReplyClassification, ResponseStatus, ClassificationSource } from '../types.js';
+import type {
+  ReplyClassification,
+  ResponseStatus,
+  ClassificationSource,
+  ReactionEmoji,
+  ReactionStatus,
+} from '../types.js';
 import { invites } from './invites.js';
 
 export const replies = sqliteTable(
@@ -28,6 +34,11 @@ export const replies = sqliteTable(
     response_prefilled_at: integer('response_prefilled_at', { mode: 'timestamp_ms' }),
     response_sent_at: integer('response_sent_at', { mode: 'timestamp_ms' }),
     response_status: text('response_status').$type<ResponseStatus>().default('pending'),
+    // A WhatsApp reaction (👍/❤️) the operator sent on the contact's reply, in
+    // place of a text response. Null until they react from the compact card.
+    reaction_emoji: text('reaction_emoji').$type<ReactionEmoji>(),
+    reaction_status: text('reaction_status').$type<ReactionStatus>(),
+    reaction_sent_at: integer('reaction_sent_at', { mode: 'timestamp_ms' }),
     // Operator-facing "this thread is done with, hide from the feed". Independent
     // of response_status so a row can be auto-sent + marked resolved separately.
     resolved: integer('resolved', { mode: 'boolean' }).notNull().default(false),

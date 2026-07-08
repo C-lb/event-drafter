@@ -3,6 +3,7 @@
 import { z } from 'zod';
 import { getDb } from '@event-drafter/core/db';
 import { replies, invites, contacts, events, jobs } from '@event-drafter/core/schema';
+import { REACTION_EMOJIS, type ReactionEmoji } from '@event-drafter/core';
 import { eq, sql, and, inArray, isNull } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
@@ -94,6 +95,8 @@ export async function listAllReplies(opts: { includeResolved?: boolean } = {}) {
       response_draft: replies.response_draft,
       response_status: replies.response_status,
       response_sent_at: replies.response_sent_at,
+      reaction_emoji: replies.reaction_emoji,
+      reaction_status: replies.reaction_status,
       wa_sent_at: replies.wa_sent_at,
       detected_at: replies.detected_at,
       resolved: replies.resolved,
@@ -223,6 +226,47 @@ export async function setReplyClassification(
     if (!locked && wantsDraft) {
       tx.insert(jobs).values({ kind: 'redraft_reply', payload: { reply_id }, status: 'queued' }).run();
     }
+  });
+
+  revalidatePath('/replies');
+  return { ok: true };
+}
+
+const reactionSchema = z.object({
+  reply_id: z.number().int().positive(),
+  emoji: z.enum(REACTION_EMOJIS as unknown as [string, ...string[]]),
+});
+
+/**
+ * Queues a WhatsApp reaction (👍/❤️) on the contact's confirming reply, as a
+ * lightweight acknowledgement instead of a text response. Marks the row
+ * 'pending' immediately (so the card shows "Reacting…") and enqueues a
+ * send_reaction job for the worker. Re-reacting with a different emoji is
+ * allowed; a react already in flight ('sending') is left alone.
+ */
+export async function reactToReply(
+  input: unknown,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const parsed = reactionSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'invalid input' };
+  const { reply_id, emoji } = parsed.data;
+
+  const db = getDb();
+  const reply = db.select().from(replies).where(eq(replies.id, reply_id)).get();
+  if (!reply) return { ok: false, error: 'reply not found' };
+  if (reply.reaction_status === 'sending') {
+    return { ok: false, error: 'a reaction is already being sent' };
+  }
+  if (reply.reaction_status === 'sent' && reply.reaction_emoji === emoji) {
+    return { ok: true }; // already reacted with this emoji, nothing to do
+  }
+
+  db.transaction((tx) => {
+    tx.update(replies)
+      .set({ reaction_status: 'pending', reaction_emoji: emoji as ReactionEmoji })
+      .where(eq(replies.id, reply_id))
+      .run();
+    tx.insert(jobs).values({ kind: 'send_reaction', payload: { reply_id, emoji }, status: 'queued' }).run();
   });
 
   revalidatePath('/replies');

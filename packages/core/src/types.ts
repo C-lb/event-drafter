@@ -11,10 +11,20 @@ export const JOB_KINDS = [
   'generate_follow_ups',
   'generate_targeted_follow_ups',
   'send_follow_up',
+  'send_reaction',
   'cleanup_jobs',
   'update_delegate_tracker',
 ] as const;
 export type JobKind = (typeof JOB_KINDS)[number];
+
+// The WhatsApp reactions the operator can send to a contact's confirming reply,
+// as a lightweight acknowledgement instead of a text response.
+export const REACTION_EMOJIS = ['\u{1F44D}', '❤️'] as const; // 👍  ❤️
+export type ReactionEmoji = (typeof REACTION_EMOJIS)[number];
+
+// Lifecycle of a sent reaction: queued/in-flight, delivered, or it failed.
+export const REACTION_STATUSES = ['pending', 'sending', 'sent', 'failed'] as const;
+export type ReactionStatus = (typeof REACTION_STATUSES)[number];
 
 export const JOB_STATUSES = ['queued', 'running', 'succeeded', 'failed'] as const;
 export type JobStatus = (typeof JOB_STATUSES)[number];

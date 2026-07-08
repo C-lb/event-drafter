@@ -47,6 +47,17 @@ export const SEL = {
   ].join(', '),
   messageText: 'span.selectable-text, span[dir="ltr"], span[dir="auto"]',
   messageMeta: '[data-pre-plain-text]',
+
+  // ===== Sending a reaction (react-to-reply feature) =====
+  // HEURISTIC and unverified against a live WA build — needs one live-tuning
+  // pass (see driver.reactToLastInbound). On hovering a message row WA reveals
+  // a "React" affordance; clicking it opens a quick-emoji popover. Union a few
+  // known signals so a class rename does not break all of them at once.
+  reactHoverButton:
+    'button[aria-label="React" i], [aria-label="React to message" i], span[data-icon="reaction"], span[data-icon="status-reaction"]',
+  // The quick-reaction popover that appears after clicking react.
+  reactionPopover:
+    'div[data-animate-reactions-popup], div[data-animate-reaction-popover], [aria-label="Reactions" i]',
 };
 
 export const WAIT = {

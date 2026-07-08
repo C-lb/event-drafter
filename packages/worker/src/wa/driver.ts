@@ -180,6 +180,77 @@ export async function prefillDraft(phoneE164: string, text: string): Promise<voi
   throw new WaSelectorMismatch('input box did not receive prefilled text');
 }
 
+/**
+ * Reacts to the contact's most recent inbound message with a single emoji
+ * (👍 / ❤️), a lightweight acknowledgement instead of a text reply. Never
+ * clicks send — a reaction is committed by the emoji click alone.
+ *
+ * HEURISTIC WhatsApp Web automation: the react affordance only shows on hover
+ * and the emoji popover is transient, so SEL.reactHoverButton /
+ * SEL.reactionPopover are best-guesses that need one live-tuning pass against a
+ * logged-in session. Every step fails safe — a missing element throws
+ * WaSelectorMismatch so the job DEFERS rather than doing the wrong thing.
+ */
+export async function reactToLastInbound(phoneE164: string, emoji: string): Promise<void> {
+  const { page } = await ensureContext();
+
+  await page.goto(WA_URL.base, { waitUntil: 'domcontentloaded' });
+  await humanPause(page);
+  if ((await detectLoginState(page)) !== 'logged-in') throw new WaNotLoggedIn();
+
+  await humanPause(page);
+  await page.goto(WA_URL.send(phoneE164, ''), { waitUntil: 'domcontentloaded' });
+  await humanPause(page);
+
+  // Wait for the conversation to be interactive, or bail on an invalid number.
+  const input = page.locator(SEL.messageInputBox).first();
+  const invalid = page.locator(SEL.invalidNumberDialog).first();
+  const winner = await Promise.race([
+    input.waitFor({ state: 'visible', timeout: WAIT.inputReadyMs }).then(() => 'ok' as const),
+    invalid.waitFor({ state: 'visible', timeout: WAIT.inputReadyMs }).then(() => 'invalid' as const),
+  ]).catch(() => 'timeout' as const);
+  if (winner === 'invalid') throw new WaInvalidNumber(phoneE164);
+  if (winner === 'timeout') throw new WaSelectorMismatch('conversation did not open for reaction');
+
+  // Target the contact's most recent inbound bubble.
+  await humanPause(page);
+  const lastInbound = page.locator(SEL.inboundBubble).last();
+  if ((await lastInbound.count()) === 0) throw new WaSelectorMismatch('no inbound message to react to');
+  await lastInbound.scrollIntoViewIfNeeded().catch(() => {});
+  await lastInbound.hover();
+  await humanPause(page);
+
+  // Reveal + click the react affordance. Scope to the row first, then fall back
+  // to a page-level lookup (some builds render it in a portal).
+  let reactBtn = lastInbound.locator(SEL.reactHoverButton).first();
+  if ((await reactBtn.count()) === 0) reactBtn = page.locator(SEL.reactHoverButton).first();
+  try {
+    await reactBtn.waitFor({ state: 'visible', timeout: 4000 });
+  } catch {
+    throw new WaSelectorMismatch('react affordance not found on hover');
+  }
+  await reactBtn.click();
+  await humanPause(page);
+
+  // Click the emoji in the quick-reaction popover. Match by the emoji character
+  // in an aria-label or as button text (both are heuristic, hence tunable).
+  const popover = page.locator(SEL.reactionPopover).first();
+  const scope = (await popover.count()) > 0 ? popover : page.locator('body');
+  const emojiBtn = scope
+    .locator(`[aria-label*="${emoji}"]`)
+    .or(scope.getByText(emoji, { exact: false }))
+    .first();
+  try {
+    await emojiBtn.waitFor({ state: 'visible', timeout: 4000 });
+  } catch {
+    throw new WaSelectorMismatch(`reaction emoji ${emoji} not found in popover`);
+  }
+  await emojiBtn.click();
+  await humanPause(page);
+
+  logger.info('wa: reaction sent', { phone: phoneE164, emoji });
+}
+
 import {
   openChatAndReadInbound as _read,
   scrapeOutboundReactions as _readReactions,
