@@ -200,15 +200,15 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
       });
     return (
       <li
-        className={`card flex flex-wrap items-center gap-x-4 gap-y-3 p-4 text-sm ${
+        className={`card flex flex-wrap items-start gap-x-4 gap-y-3 p-4 text-sm ${
           highlighted ? 'ring-2 ring-accent/40' : ''
         } ${r.resolved ? 'opacity-70' : ''}`}
       >
-        <span className={`badge flex-none ${yes ? 'badge-green' : 'badge-red'}`}>
+        <span className={`badge mt-0.5 flex-none ${yes ? 'badge-green' : 'badge-red'}`}>
           {yes ? 'Marked yes' : 'Marked no'}
         </span>
 
-        <div className="min-w-0 flex-1 space-y-0.5">
+        <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex flex-wrap items-baseline gap-2">
             <strong className="truncate">{r.contact_name}</strong>
             <Link
@@ -218,7 +218,10 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
               {r.event_name}
             </Link>
           </div>
-          {r.summary && <p className="truncate text-xs italic text-ink-2">{r.summary}</p>}
+          {/* The reply that settled it, so the operator sees why it's a yes/no. */}
+          <p className="rounded-sm bg-surface-2 px-2.5 py-1.5 text-xs text-ink">
+            {r.reply_text}
+          </p>
         </div>
 
         <div className="flex flex-none items-center gap-2">
