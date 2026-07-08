@@ -274,6 +274,39 @@ export async function reactToReply(
   return { ok: true };
 }
 
+/**
+ * One-click "Auto-draft and Send": the LLM drafts a response and the worker
+ * sends it to the contact immediately, no review. Marks the row 'sending' at
+ * once (so the card shows "Sending reply…") and enqueues an auto_respond job.
+ * Requires a classification to draft against (marked yes/no always have one).
+ */
+export async function autoDraftAndSend(
+  input: unknown,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const parsed = z.object({ reply_id: z.number() }).safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'invalid input' };
+  const { reply_id } = parsed.data;
+
+  const db = getDb();
+  const reply = db.select().from(replies).where(eq(replies.id, reply_id)).get();
+  if (!reply) return { ok: false, error: 'reply not found' };
+  if (!reply.classification) return { ok: false, error: 'reply is not classified yet' };
+  if (reply.response_status === 'sending' || reply.response_status === 'approved') {
+    return { ok: false, error: 'a reply is already being sent' };
+  }
+
+  db.transaction((tx) => {
+    tx.update(replies)
+      .set({ response_status: 'sending' })
+      .where(eq(replies.id, reply_id))
+      .run();
+    tx.insert(jobs).values({ kind: 'auto_respond', payload: { reply_id }, status: 'queued' }).run();
+  });
+
+  revalidatePath('/replies');
+  return { ok: true };
+}
+
 export async function resolvedReplyCount(): Promise<number> {
   const db = getDb();
   const row = db

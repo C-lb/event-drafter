@@ -125,10 +125,32 @@ export default async function HomePage() {
           )}
         </div>
 
-        {/* Unread replies: count + view all / refresh */}
+        {/* Unread replies: per-event breakdown + view all / refresh */}
         <div className="card flex flex-col p-5">
-          <p className="eyebrow">Unread replies</p>
-          <p className="mt-2 text-3xl font-semibold tracking-tight">{replyCount}</p>
+          <div className="flex items-baseline justify-between">
+            <p className="eyebrow">Unread replies</p>
+            <span className="text-xs font-medium text-ink-3">{replyCount} total</span>
+          </div>
+          {replyGroups.length === 0 ? (
+            <p className="mt-3 text-sm text-ink-3">No unread replies.</p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {replyGroups.slice(0, 3).map((g) => (
+                <li key={g.event_id}>
+                  <Link
+                    href={`/events/${g.event_id}/replies`}
+                    className="flex items-baseline justify-between gap-3 rounded-sm px-2 py-1.5 hover:bg-surface-2"
+                  >
+                    <span className="truncate text-sm font-medium">{g.event_name}</span>
+                    <span className="flex-none text-sm tabular-nums text-ink-2">{g.rows.length}</span>
+                  </Link>
+                </li>
+              ))}
+              {replyGroups.length > 3 && (
+                <li className="px-2 text-xs text-ink-3">+{replyGroups.length - 3} more events</li>
+              )}
+            </ul>
+          )}
           <div className="mt-auto flex items-center gap-2 pt-4">
             <Link href="/replies" className="btn btn-sm px-2" title="View all replies" aria-label="View all replies">
               <EyeIcon />

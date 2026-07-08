@@ -57,6 +57,22 @@ export default async function AllRepliesPage({ searchParams }: PageProps) {
     resolvedReplyCount(),
   ]);
   const inFlight = last?.status === 'queued' || last?.status === 'running';
+  // A reaction is dispatched as an async worker job; its row's reaction_status
+  // moves pending/sending -> sent/failed only once the worker finishes. Poll
+  // while any reaction is mid-flight so the card reflects the outcome without a
+  // manual reload (otherwise "Reacting…" sticks until Cmd+R).
+  const reactionInFlight = all.some(
+    (r) => r.reaction_status === 'pending' || r.reaction_status === 'sending',
+  );
+  // Auto-draft-and-send moves a row through sending -> approved -> prefilled in
+  // the worker; poll until it settles so the card reflects the result.
+  const responseInFlight = all.some(
+    (r) =>
+      r.response_status === 'sending' ||
+      r.response_status === 'approved' ||
+      r.response_status === 'prefilled',
+  );
+  const pollActive = inFlight || reactionInFlight || responseInFlight;
 
   const counts: Record<Filter, number> = {
     all: all.length,
@@ -128,7 +144,7 @@ export default async function AllRepliesPage({ searchParams }: PageProps) {
 
       {filter === 'awaiting' ? (
         <>
-        <AutoRefresh active={inFlight} />
+        <AutoRefresh active={pollActive} />
         {awaiting.length === 0 ? (
           <p className="card-quiet p-5 text-sm text-ink-2">
             Everyone who was sent an invite has replied.
@@ -165,7 +181,7 @@ export default async function AllRepliesPage({ searchParams }: PageProps) {
             : `No ${FILTER_LABEL[filter].toLowerCase()} replies in this view.`}
         </p>
       ) : (
-        <RepliesQueue replies={visibleReplies as ReplyRow[]} active={inFlight} />
+        <RepliesQueue replies={visibleReplies as ReplyRow[]} active={pollActive} />
       )}
     </section>
   );

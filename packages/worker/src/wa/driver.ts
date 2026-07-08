@@ -217,7 +217,13 @@ export async function reactToLastInbound(phoneE164: string, emoji: string): Prom
   const lastInbound = page.locator(SEL.inboundBubble).last();
   if ((await lastInbound.count()) === 0) throw new WaSelectorMismatch('no inbound message to react to');
   await lastInbound.scrollIntoViewIfNeeded().catch(() => {});
-  await lastInbound.hover();
+  // WA's message bubble is a big copyable-text wrapper whose center is covered
+  // by inner spans, and the list animates, so a strict actionability-checked
+  // hover perpetually reports "subtree intercepts pointer events" / "not stable"
+  // and times out. We only need a mouseover on the row subtree to reveal the
+  // react affordance, so force the hover (skips the intercept/stability gate)
+  // and don't hard-fail on it — the affordance check below is the real gate.
+  await lastInbound.hover({ force: true, timeout: 8000 }).catch(() => {});
   await humanPause(page);
 
   // Reveal + click the react affordance. Scope to the row first, then fall back
@@ -229,23 +235,30 @@ export async function reactToLastInbound(phoneE164: string, emoji: string): Prom
   } catch {
     throw new WaSelectorMismatch('react affordance not found on hover');
   }
-  await reactBtn.click();
+  // Force past WA's hover-toolbar entrance animation (elements briefly report
+  // "not stable" / detach as the toolbar settles).
+  await reactBtn.click({ force: true });
   await humanPause(page);
 
   // Click the emoji in the quick-reaction popover. Match by the emoji character
   // in an aria-label or as button text (both are heuristic, hence tunable).
   const popover = page.locator(SEL.reactionPopover).first();
   const scope = (await popover.count()) > 0 ? popover : page.locator('body');
+  // VERIFIED live 2026-07-08: WA renders the quick-reaction emojis as
+  // `<img alt="👍" class="emojik apple …">` — the glyph is in the `alt`, not an
+  // aria-label or text node, and the quick-react row is distinguished from the
+  // full picker (`emoji`) by the `emojik` class. Prefer that, then fall back.
   const emojiBtn = scope
-    .locator(`[aria-label*="${emoji}"]`)
-    .or(scope.getByText(emoji, { exact: false }))
+    .locator(`img.emojik[alt="${emoji}"]`)
+    .or(scope.locator(`img[alt="${emoji}"]`))
+    .or(scope.locator(`[aria-label*="${emoji}"]`))
     .first();
   try {
     await emojiBtn.waitFor({ state: 'visible', timeout: 4000 });
   } catch {
     throw new WaSelectorMismatch(`reaction emoji ${emoji} not found in popover`);
   }
-  await emojiBtn.click();
+  await emojiBtn.click({ force: true });
   await humanPause(page);
 
   logger.info('wa: reaction sent', { phone: phoneE164, emoji });

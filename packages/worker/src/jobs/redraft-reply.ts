@@ -13,16 +13,12 @@ const payloadSchema = z.object({ reply_id: z.number() });
 const DEFAULT_STYLE_GUIDE = 'Brief and warm. 1-3 sentences. No emoji.';
 
 /**
- * Redraft a reply's response after the operator manually overrode its
- * classification. Unlike classify_reply, this NEVER re-classifies — it honours
- * the classification already on the row (which the operator just set) and only
- * rewrites response_draft to match that judgement. The operator's
- * classification, confidence (pinned to 1), summary, and 'manual' source are
- * left intact.
+ * Draft a response for a reply that honours the classification already on the
+ * row (never re-classifies). Returns the draft text WITHOUT persisting it —
+ * callers decide the resulting response_status. Shared by redraft_reply (which
+ * saves it as 'drafted' for review) and auto_respond (which sends it).
  */
-export async function redraftReplyHandler(job: Job): Promise<void> {
-  const { reply_id } = payloadSchema.parse(job.payload);
-
+export async function draftResponseForReply(reply_id: number): Promise<string> {
   const db = getDb();
   const reply = db.select().from(replies).where(eq(replies.id, reply_id)).get();
   if (!reply) throw new Error(`reply ${reply_id} not found`);
@@ -49,7 +45,7 @@ export async function redraftReplyHandler(job: Job): Promise<void> {
   });
 
   const result = await complete(prompt, 500, { json: false });
-  logger.info('redraft_reply: model output', {
+  logger.info('draft_response_for_reply: model output', {
     reply_id,
     classification: reply.classification,
     in: result.input_tokens,
@@ -57,9 +53,23 @@ export async function redraftReplyHandler(job: Job): Promise<void> {
     cache_read: result.cache_read_input_tokens,
   });
 
-  const response_draft = parseRedraft(result.text);
+  return parseRedraft(result.text);
+}
 
-  db.update(replies)
+/**
+ * Redraft a reply's response after the operator manually overrode its
+ * classification. Unlike classify_reply, this NEVER re-classifies — it honours
+ * the classification already on the row (which the operator just set) and only
+ * rewrites response_draft to match that judgement. The operator's
+ * classification, confidence (pinned to 1), summary, and 'manual' source are
+ * left intact.
+ */
+export async function redraftReplyHandler(job: Job): Promise<void> {
+  const { reply_id } = payloadSchema.parse(job.payload);
+  const response_draft = await draftResponseForReply(reply_id);
+
+  getDb()
+    .update(replies)
     .set({ response_draft, response_status: 'drafted' })
     .where(eq(replies.id, reply_id))
     .run();

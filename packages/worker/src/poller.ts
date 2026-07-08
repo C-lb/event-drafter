@@ -36,6 +36,7 @@ export const SEND_KINDS: ReadonlySet<JobKind> = new Set([
   'send_follow_up',
   'send_response',
   'send_reaction',
+  'auto_respond',
 ]);
 
 /**

@@ -3,7 +3,7 @@
  * When WA changes its markup (it does, multiple times per year),
  * update only this file. Names are stable; implementations are not.
  *
- * Last verified against WA Web build: 2026-06-20
+ * Last verified against WA Web build: 2026-07-08 (reaction flow re-tuned live)
  */
 
 export const SEL = {
@@ -53,8 +53,14 @@ export const SEL = {
   // pass (see driver.reactToLastInbound). On hovering a message row WA reveals
   // a "React" affordance; clicking it opens a quick-emoji popover. Union a few
   // known signals so a class rename does not break all of them at once.
+  // The quick-react affordance revealed on hover. VERIFIED live 2026-07-08:
+  // WA renders it as `div[role="button"][aria-label="React"]` (NOT a <button>),
+  // so the selector must be tag-agnostic. Do NOT include the context-menu
+  // chevron (`[data-js-context-icon]`, aria-label "Open message options") here:
+  // it opens a different menu AND it animates ("velocity-animating") so clicks
+  // detach mid-action. Clicking this quick-react button opens the emoji popover.
   reactHoverButton:
-    'button[aria-label="React" i], [aria-label="React to message" i], span[data-icon="reaction"], span[data-icon="status-reaction"]',
+    '[aria-label="React" i], [aria-label="React to message" i], span[data-icon="reaction"], span[data-icon="status-reaction"]',
   // The quick-reaction popover that appears after clicking react.
   reactionPopover:
     'div[data-animate-reactions-popup], div[data-animate-reaction-popover], [aria-label="Reactions" i]',

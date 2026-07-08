@@ -12,6 +12,7 @@ export const JOB_KINDS = [
   'generate_targeted_follow_ups',
   'send_follow_up',
   'send_reaction',
+  'auto_respond',
   'cleanup_jobs',
   'update_delegate_tracker',
 ] as const;

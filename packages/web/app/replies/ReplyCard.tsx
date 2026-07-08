@@ -10,7 +10,7 @@ import {
   editResponse,
   regenerateResponse,
 } from '../events/[id]/actions';
-import { setReplyResolved, setReplyClassification, reactToReply } from './actions';
+import { setReplyResolved, setReplyClassification, reactToReply, autoDraftAndSend } from './actions';
 import { useQueue } from './QueueProvider';
 import { useDeferredSend } from './useDeferredSend';
 
@@ -227,6 +227,17 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
         await reactToReply({ reply_id: r.reply_id, emoji });
         refresh();
       });
+    // Auto-draft-and-send is in flight while the response works through
+    // sending -> approved -> prefilled in the worker.
+    const responding =
+      r.response_status === 'sending' ||
+      r.response_status === 'approved' ||
+      r.response_status === 'prefilled';
+    const autoSend = () =>
+      start(async () => {
+        await autoDraftAndSend({ reply_id: r.reply_id });
+        refresh();
+      });
     return (
       <li
         className={`card flex flex-wrap items-start gap-x-4 gap-y-3 p-4 text-sm ${
@@ -274,6 +285,15 @@ export function ReplyCard({ r }: { r: ReplyRow }) {
             {reacting && <span className="text-xs text-ink-3">Reacting…</span>}
             {reactFailed && <span className="text-xs text-red-600">Could not react</span>}
           </div>
+
+          <button
+            onClick={autoSend}
+            disabled={isPending || responding}
+            className="btn btn-sm"
+            title="Draft a reply and send it to them now"
+          >
+            {responding ? 'Sending reply…' : 'Auto-draft and send'}
+          </button>
 
           <Link href={`/events/${r.event_id}/follow-up?invite=${r.invite_id}`} className="btn btn-sm">
             Follow up privately

@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 
 // One icon family: Feather-style, stroke 2, sized to the label's line height.
@@ -31,10 +32,45 @@ const NAV: { href: string; label: string; icon: ReactNode }[] = [
   { href: '/setup', label: 'Setup', icon: <><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" /></> },
 ];
 
+// Browser-style history controls. Back/forward walk the SPA history; reload
+// does a real hard refresh of the page.
+function HistoryControls() {
+  const router = useRouter();
+  const [spun, setSpun] = useState(false);
+  const btn =
+    'inline-flex items-center justify-center rounded-btn p-1.5 text-ink-2 transition hover:bg-line hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 active:bg-line-strong';
+  return (
+    <div className="flex items-center gap-1 pr-1">
+      <button type="button" onClick={() => router.back()} className={btn} title="Go back" aria-label="Go back">
+        <Icon><path d="m15 18-6-6 6-6" /></Icon>
+      </button>
+      <button type="button" onClick={() => router.forward()} className={btn} title="Go forward" aria-label="Go forward">
+        <Icon><path d="m9 18 6-6-6-6" /></Icon>
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setSpun(true);
+          window.location.reload();
+        }}
+        className={btn}
+        title="Reload this page"
+        aria-label="Reload this page"
+      >
+        <span className={spun ? 'inline-flex animate-spin' : 'inline-flex'}>
+          <Icon><><path d="M23 4v6h-6" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></></Icon>
+        </span>
+      </button>
+    </div>
+  );
+}
+
 export function Nav() {
   const pathname = usePathname() || '/';
   return (
     <nav className="flex flex-wrap items-center gap-1">
+      <HistoryControls />
+      <span className="mr-1 h-5 w-px flex-none bg-line" aria-hidden />
       {NAV.map((item) => {
         const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
         return (
