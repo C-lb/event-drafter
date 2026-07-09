@@ -1,12 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <!-- macOS app-icon grid: the tile is inset with ~10% transparent padding and
-       uses Apple's squircle corner radius (~0.2237 x tile size), so it matches
-       sibling icons instead of filling the slot edge-to-edge. -->
-  <rect x="100" y="100" width="824" height="824" rx="185" ry="185" fill="#1c1c1f"/>
-  <!-- Calendar-with-check glyph, centred on the tile. 24-unit artwork scaled x26
-       and translated so its centre (12,12) lands at the tile centre (512,512). -->
-  <g transform="translate(200 200) scale(26)" fill="none" stroke="#ffffff"
-     stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Full-bleed dark tile (no transparent padding) with clearly rounded corners. -->
+  <rect x="0" y="0" width="1024" height="1024" rx="228" ry="228" fill="#1c1c1f"/>
+  <!-- Calendar-with-check glyph, centred. 24-unit artwork scaled x30 and
+       translated so its centre (12,12) lands at the tile centre (512,512). -->
+  <g transform="translate(152 152) scale(30)" fill="none" stroke="#ffffff"
+     stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
     <rect x="3" y="5" width="18" height="16" rx="2"/>
     <path d="M16 3v4M8 3v4M3 10h18M9 14l2 2 4-4"/>
   </g>
