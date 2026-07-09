@@ -14,9 +14,10 @@ You only do this the first time on a given laptop.
    - Mac: open the `.dmg`, drag **Event Drafter** into the Applications folder.
    - Windows: run `Event Drafter Setup ....exe` and click through.
 
-2. **Get past the "unknown developer" warning.** The app is not code-signed, so the computer will warn you the first time. This is expected, not a virus.
-   - Mac: do not double-click the first time. **Right-click the app, choose Open, then click Open** in the box. After that first time you can open it normally.
-   - Windows: on the blue "Windows protected your PC" box, click **More info**, then **Run anyway**.
+2. **Get past the security warning.** The app is not code-signed, so the computer warns you the first time. This is expected, not a virus.
+   - **Mac:** double-click Event Drafter. macOS will say it **"cannot be opened because it is from an unidentified developer"** — this is expected for an app we don't pay Apple to certify. Click **Done**, then go to **Apple menu → System Settings → Privacy & Security**, scroll down, and next to the Event Drafter message click **Open Anyway** (confirm with your password/Touch ID). It opens from then on.
+     - *Fallback:* if it instead says **"damaged and can't be opened"**, open the **Terminal** app (Cmd-Space, type `Terminal`), paste this line and press Return, then open the app: `xattr -dr com.apple.quarantine "/Applications/Event Drafter.app"`
+   - **Windows:** on the blue "Windows protected your PC" box, click **More info**, then **Run anyway**.
 
 3. **Open the app and finish the checklist.** A window opens (this is the whole app). Go to the **Setup** page and complete the five steps in order:
    1. **LLM provider** — paste the Anthropic API key. This is what writes the messages.
