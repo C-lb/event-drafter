@@ -15,8 +15,18 @@ You only do this the first time on a given laptop.
    - Windows: run `Event Drafter Setup ....exe` and click through.
 
 2. **Get past the security warning.** The app is not code-signed, so the computer warns you the first time. This is expected, not a virus.
-   - **Mac:** double-click Event Drafter. macOS will say it **"cannot be opened because it is from an unidentified developer"** — this is expected for an app we don't pay Apple to certify. Click **Done**, then go to **Apple menu → System Settings → Privacy & Security**, scroll down, and next to the Event Drafter message click **Open Anyway** (confirm with your password/Touch ID). It opens from then on.
-     - *Fallback:* if it instead says **"damaged and can't be opened"**, open the **Terminal** app (Cmd-Space, type `Terminal`), paste this line and press Return, then open the app: `xattr -dr com.apple.quarantine "/Applications/Event Drafter.app"`
+   - **Mac:** macOS will say **"Event Drafter is damaged and can't be opened"** (this is just what a downloaded app we don't pay Apple to certify looks like — it is **not** actually damaged, and there is **no** "Open Anyway" button for this kind of app). To clear it, do this once:
+     1. Make sure you dragged **Event Drafter** into **Applications** (step 1).
+     2. Open the **Terminal** app: press **Cmd-Space**, type `Terminal`, press **Return**.
+     3. Copy this exact line, paste it into Terminal, press **Return**:
+
+        ```
+        xattr -dr com.apple.quarantine "/Applications/Event Drafter.app"
+        ```
+
+     4. Nothing visible happens — that's fine. Now open Event Drafter normally (double-click it in Applications). It opens every time after this.
+
+     (If you put the app somewhere other than Applications, change the path in the command to match.)
    - **Windows:** on the blue "Windows protected your PC" box, click **More info**, then **Run anyway**.
 
 3. **Open the app and finish the checklist.** A window opens (this is the whole app). Go to the **Setup** page and complete the five steps in order:
