@@ -26,6 +26,14 @@ export class AnthropicNotConfigured extends Error {
   }
 }
 
+export class AnthropicKeyRejected extends Error {
+  constructor() {
+    super(
+      'Anthropic rejected the API key (401). It looks wrong or inactive - re-enter a valid key in Setup > LLM provider.',
+    );
+  }
+}
+
 export interface CompletionResult {
   text: string;
   input_tokens: number;
@@ -151,11 +159,19 @@ async function completeAnthropic(
       cache_read_input_tokens: res.usage.cache_read_input_tokens ?? 0,
     };
   } catch (err) {
+    // The Anthropic SDK throws an APIError carrying the HTTP status. A 401 is an
+    // authentication_error — the key is wrong/inactive — so translate it into a
+    // message the operator can act on instead of a bare "401".
+    const status =
+      err && typeof err === 'object' && 'status' in err
+        ? (err as { status?: number }).status
+        : undefined;
+    const mapped = status === 401 ? new AnthropicKeyRejected() : err;
     setSetting('llm_last_error', {
       ts: Date.now(),
-      message: err instanceof Error ? err.message : String(err),
+      message: mapped instanceof Error ? mapped.message : String(mapped),
     });
-    throw err;
+    throw mapped;
   }
 }
 
