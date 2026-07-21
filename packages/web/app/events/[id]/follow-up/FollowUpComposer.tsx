@@ -41,6 +41,7 @@ export function FollowUpComposer({
   const [lastIndex, setLastIndex] = useState<number | null>(null);
   const [tab, setTab] = useState<'general' | 'tailored' | 'template'>('general');
   const [body, setBody] = useState('');
+  const [selectedPresetId, setSelectedPresetId] = useState('');
   const [saveTpl, setSaveTpl] = useState(false);
   const [tplName, setTplName] = useState('');
   const [banner, setBanner] = useState<Banner>(null);
@@ -295,16 +296,17 @@ export function FollowUpComposer({
 
             {templates.length > 0 && (
               <label className="block text-sm">
-                <span className="text-ink-2">Load a saved template</span>
+                <span className="text-ink-2">Load a preset</span>
                 <select
                   className="field mt-1 w-full"
-                  value=""
+                  value={selectedPresetId}
                   onChange={(e) => {
+                    setSelectedPresetId(e.target.value);
                     const t = templates.find((x) => String(x.id) === e.target.value);
                     if (t) setBody(t.body);
                   }}
                 >
-                  <option value="">Choose a template…</option>
+                  <option value="">Choose a saved preset…</option>
                   {templates.map((t) => (
                     <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
@@ -319,12 +321,12 @@ export function FollowUpComposer({
                 onChange={(e) => setSaveTpl(e.target.checked)}
                 className="h-4 w-4 cursor-pointer accent-accent"
               />
-              <span className="text-ink-2">Save this as a template</span>
+              <span className="text-ink-2">Save as a preset (usable on any event)</span>
             </label>
             {saveTpl && (
               <input
                 className="field w-full"
-                placeholder="Template name (optional)"
+                placeholder="Preset name (optional)"
                 value={tplName}
                 onChange={(e) => setTplName(e.target.value)}
               />

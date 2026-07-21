@@ -517,6 +517,25 @@ export async function skipDraft(input: unknown) {
   db.update(invites).set({ status: 'skipped' }).where(eq(invites.id, invite_id)).run();
 }
 
+// Wipes a drafted message back to "no message yet" (pending) so the operator
+// can start over — via Auto-draft, a template, or a manual edit — instead of
+// being stuck editing or skipping the existing text.
+export async function clearDraft(input: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { invite_id } = approveSchema.parse(input);
+  const db = getDb();
+  const inv = db.select().from(invites).where(eq(invites.id, invite_id)).get();
+  if (!inv) return { ok: false, error: 'Invite not found.' };
+  if (inv.status === 'sending' || inv.status === 'sent') {
+    return { ok: false, error: 'Cannot clear a draft that has already sent.' };
+  }
+  db.update(invites)
+    .set({ draft_text: null, draft_generated_at: null, status: 'pending' })
+    .where(eq(invites.id, invite_id))
+    .run();
+  revalidatePath(`/events/${inv.event_id}/queue`);
+  return { ok: true };
+}
+
 export async function regenerateDraft(input: unknown) {
   const { invite_id } = approveSchema.parse(input);
   const db = getDb();

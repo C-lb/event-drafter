@@ -55,7 +55,7 @@ export default async function HomePage() {
     .select({ id: contacts.id, first_name: contacts.first_name, last_name: contacts.last_name, phone_e164: contacts.phone_e164 })
     .from(contacts)
     .orderBy(desc(contacts.created_at))
-    .limit(3)
+    .limit(20)
     .all();
 
   // The bound sheet only stores its id; the title lives on the matching
@@ -116,7 +116,7 @@ export default async function HomePage() {
           {recentContacts.length === 0 ? (
             <p className="mt-3 text-sm text-ink-3">No contacts imported yet.</p>
           ) : (
-            <ul className="mt-3 space-y-2">
+            <ul className="mt-3 max-h-40 space-y-2 overflow-y-auto">
               {recentContacts.map((c) => (
                 <li key={c.id} className="flex items-baseline justify-between gap-3 rounded-sm px-2 py-1.5">
                   <span className="truncate text-sm font-medium">

@@ -16,6 +16,7 @@ export function TemplatePopover({ eventId, onApplied }: { eventId: number; onApp
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [presets, setPresets] = useState<Preset[]>([]);
+  const [selectedPresetId, setSelectedPresetId] = useState('');
   const [saveAsPreset, setSaveAsPreset] = useState(false);
   const [presetName, setPresetName] = useState('');
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -24,6 +25,7 @@ export function TemplatePopover({ eventId, onApplied }: { eventId: number; onApp
   // one event), so load them once whenever the popover opens.
   useEffect(() => {
     if (!open) return;
+    setSelectedPresetId('');
     void listTemplates().then(setPresets);
   }, [open]);
 
@@ -152,8 +154,9 @@ export function TemplatePopover({ eventId, onApplied }: { eventId: number; onApp
                 <span className="text-ink-2">Load a preset</span>
                 <select
                   className="field mt-1 w-full text-sm"
-                  value=""
+                  value={selectedPresetId}
                   onChange={(e) => {
+                    setSelectedPresetId(e.target.value);
                     const p = presets.find((x) => String(x.id) === e.target.value);
                     if (p) setTemplate(p.body);
                   }}

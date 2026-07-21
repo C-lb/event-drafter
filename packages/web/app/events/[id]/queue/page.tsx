@@ -10,6 +10,7 @@ import {
   approveAll,
   skipDraft,
   regenerateDraft,
+  clearDraft,
   markSent,
   reprefill,
   resendInvite,
@@ -290,6 +291,16 @@ export default function QueuePage() {
                           className="btn btn-sm"
                         >
                           Regenerate
+                        </button>
+                        <button
+                          disabled={isPending || r.status === 'sending' || r.status === 'sent'}
+                          onClick={() => {
+                            if (!window.confirm(`Clear the draft for ${r.first_name}? This wipes the current message back to no message yet.`)) return;
+                            start(async () => { await clearDraft({ invite_id: r.invite_id }); refresh(); });
+                          }}
+                          className="btn-ghost btn-sm text-red-700"
+                        >
+                          Clear draft
                         </button>
                         {(r.status === 'sent' || r.status === 'failed') && (
                           <button
