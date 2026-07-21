@@ -36,6 +36,7 @@ export function StarterDrafts({ eventId, drafts, overrides }: Props) {
     for (const d of drafts) out[d.kind] = initialCardState(d.body, overrides[d.kind]);
     return out;
   });
+  const [active, setActive] = useState<string>(drafts[0]?.kind ?? '');
 
   const patch = (kind: string, p: Partial<CardState>) =>
     setStates((s) => ({ ...s, [kind]: { ...s[kind]!, ...p } }));
@@ -84,123 +85,133 @@ export function StarterDrafts({ eventId, drafts, overrides }: Props) {
 
   if (drafts.length === 0) return null;
 
+  const d = drafts.find((x) => x.kind === active) ?? drafts[0]!;
+  const s = states[d.kind]!;
+  const hasOverride = typeof overrides[d.kind] === 'string';
+  const visible = s.editing ? s.draft : (overrides[d.kind] ?? d.body);
+  const missing = d.missing_facts.length;
+
   return (
     <section className="space-y-3">
       <div className="flex items-baseline justify-between">
         <h3 className="text-base font-semibold text-ink">Starter drafts</h3>
         <p className="text-xs text-ink-3">
           Pre-rendered from the EDM summary. Replace <code>[name]</code> at send time. Click{' '}
-          <em>Edit</em> on any card to tweak the wording for this event.
+          <em>Edit</em> to tweak the wording for this event.
         </p>
       </div>
 
-      {/* Single-column stack: this panel now lives in the right side of the
-          event detail page (half-width on wide monitors), so the cards need
-          full width each to keep the textareas readable. */}
-      <div className="grid gap-3 grid-cols-1">
-        {drafts.map((d) => {
-          const s = states[d.kind]!;
-          const hasOverride = typeof overrides[d.kind] === 'string';
-          const visible = s.editing ? s.draft : (overrides[d.kind] ?? d.body);
-          const missing = d.missing_facts.length;
-
-          return (
-            <article
-              key={d.kind}
-              className="card flex flex-col gap-3 p-5"
-            >
-              <header className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-semibold text-ink">{d.title}</h4>
-                  {hasOverride && !s.editing && (
-                    <span className="badge badge-blue">
-                      Edited
-                    </span>
-                  )}
-                  {s.editing && (
-                    <span className="badge badge-amber">
-                      Editing
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-ink-3">{d.description}</p>
-              </header>
-
-              {missing > 0 && !hasOverride && (
-                <p className="rounded-card bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-inset ring-amber-600/25">
-                  Missing from summary: {d.missing_facts.join(', ')}. Left as placeholders.
-                </p>
-              )}
-
-              {s.error && (
-                <p className="rounded-card bg-red-50 p-4 text-sm text-red-700 ring-1 ring-inset ring-red-600/20">{s.error}</p>
-              )}
-
-              <textarea
-                readOnly={!s.editing}
-                value={visible}
-                onChange={(e) => patch(d.kind, { draft: e.target.value })}
-                rows={Math.min(20, visible.split('\n').length + 1)}
-                className={`field flex-1 font-mono leading-relaxed ${
-                  s.editing ? 'bg-accent-soft' : 'bg-surface-2'
+      <article className="card flex flex-col gap-3 p-5">
+        {/* Segmented toggle — one draft kind visible at a time. */}
+        <div className="flex flex-wrap gap-1.5 text-xs">
+          {drafts.map((t) => {
+            const isActive = t.kind === d.kind;
+            const editedElsewhere = typeof overrides[t.kind] === 'string';
+            return (
+              <button
+                key={t.kind}
+                type="button"
+                onClick={() => setActive(t.kind)}
+                aria-pressed={isActive}
+                className={`rounded-full px-3 py-1 transition ${
+                  isActive ? 'bg-ink text-white shadow-raise' : 'bg-line text-ink-2 hover:bg-line-strong'
                 }`}
-                onFocus={(e) => { if (!s.editing) e.currentTarget.select(); }}
-              />
+              >
+                {t.title}{editedElsewhere ? ' ·' : ''}
+              </button>
+            );
+          })}
+        </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                {!s.editing ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => copy(d)}
-                      className="btn-primary btn-sm"
-                    >
-                      {s.copied ? 'Copied ✓' : 'Copy to clipboard'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => startEdit(d)}
-                      className="btn btn-sm"
-                    >
-                      Edit
-                    </button>
-                    {hasOverride && (
-                      <button
-                        type="button"
-                        onClick={() => reset(d)}
-                        disabled={s.saving}
-                        className="btn-ghost btn-sm text-red-700 disabled:opacity-50"
-                      >
-                        Reset to template
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => save(d)}
-                      disabled={s.saving}
-                      className="btn-primary btn-sm disabled:opacity-50"
-                    >
-                      {s.saving ? 'Saving…' : 'Save'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => cancelEdit(d)}
-                      disabled={s.saving}
-                      className="btn btn-sm disabled:opacity-50"
-                    >
-                      Cancel
-                    </button>
-                  </>
-                )}
-                <span className="ml-auto text-xs text-ink-3">{visible.length} chars</span>
-              </div>
-            </article>
-          );
-        })}
-      </div>
+        <header className="space-y-0.5">
+          <div className="flex items-center gap-2">
+            <h4 className="text-sm font-semibold text-ink">{d.title}</h4>
+            {hasOverride && !s.editing && (
+              <span className="badge badge-blue">
+                Edited
+              </span>
+            )}
+            {s.editing && (
+              <span className="badge badge-amber">
+                Editing
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-ink-3">{d.description}</p>
+        </header>
+
+        {missing > 0 && !hasOverride && (
+          <p className="rounded-card bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-inset ring-amber-600/25">
+            Missing from summary: {d.missing_facts.join(', ')}. Left as placeholders.
+          </p>
+        )}
+
+        {s.error && (
+          <p className="rounded-card bg-red-50 p-4 text-sm text-red-700 ring-1 ring-inset ring-red-600/20">{s.error}</p>
+        )}
+
+        <textarea
+          readOnly={!s.editing}
+          value={visible}
+          onChange={(e) => patch(d.kind, { draft: e.target.value })}
+          rows={Math.min(20, visible.split('\n').length + 1)}
+          className={`field flex-1 font-mono leading-relaxed ${
+            s.editing ? 'bg-accent-soft' : 'bg-surface-2'
+          }`}
+          onFocus={(e) => { if (!s.editing) e.currentTarget.select(); }}
+        />
+
+        <div className="flex flex-wrap items-center gap-2">
+          {!s.editing ? (
+            <>
+              <button
+                type="button"
+                onClick={() => copy(d)}
+                className="btn-primary btn-sm"
+              >
+                {s.copied ? 'Copied ✓' : 'Copy to clipboard'}
+              </button>
+              <button
+                type="button"
+                onClick={() => startEdit(d)}
+                className="btn btn-sm"
+              >
+                Edit
+              </button>
+              {hasOverride && (
+                <button
+                  type="button"
+                  onClick={() => reset(d)}
+                  disabled={s.saving}
+                  className="btn-ghost btn-sm text-red-700 disabled:opacity-50"
+                >
+                  Reset to template
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => save(d)}
+                disabled={s.saving}
+                className="btn-primary btn-sm disabled:opacity-50"
+              >
+                {s.saving ? 'Saving…' : 'Save'}
+              </button>
+              <button
+                type="button"
+                onClick={() => cancelEdit(d)}
+                disabled={s.saving}
+                className="btn btn-sm disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </>
+          )}
+          <span className="ml-auto text-xs text-ink-3">{visible.length} chars</span>
+        </div>
+      </article>
     </section>
   );
 }

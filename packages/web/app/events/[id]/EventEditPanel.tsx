@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { updateEvent, deleteEvent, duplicateEvent } from '../actions';
+import { DELETE_CONFIRM_PHRASE } from '../delete-confirm';
 
 interface Props {
   event: {
@@ -27,7 +28,6 @@ export function EventEditPanel({ event }: Props) {
   const [isPending, start] = useTransition();
   const [editing, setEditing] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmPhrase, setConfirmPhrase] = useState('');
   const [banner, setBanner] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
   const [name, setName] = useState(event.name);
@@ -72,7 +72,7 @@ export function EventEditPanel({ event }: Props) {
   const remove = () => {
     setBanner(null);
     start(async () => {
-      const res = await deleteEvent({ id: event.id, confirm_phrase: confirmPhrase });
+      const res = await deleteEvent({ id: event.id, confirm_phrase: DELETE_CONFIRM_PHRASE });
       if (!res.ok) { setBanner({ kind: 'err', text: res.error }); return; }
       router.push('/events');
     });
@@ -165,26 +165,16 @@ export function EventEditPanel({ event }: Props) {
           <p className="font-medium text-red-900">
             Delete this event and cascade-delete all of its invites, replies, and follow-ups.
           </p>
-          <p className="mt-1 text-red-700">
-            Type <code className="rounded-sm bg-surface px-1 font-mono">XXX</code> to confirm.
-          </p>
           <div className="mt-3 flex gap-2">
-            <input
-              type="text"
-              value={confirmPhrase}
-              onChange={(e) => setConfirmPhrase(e.target.value)}
-              placeholder="XXX"
-              className="field flex-1 font-mono"
-            />
             <button
               onClick={remove}
-              disabled={isPending || confirmPhrase !== 'XXX'}
+              disabled={isPending}
               className="btn-danger btn-sm disabled:opacity-50"
             >
-              {isPending ? 'Deleting…' : 'Delete event'}
+              {isPending ? 'Deleting…' : 'Confirm delete'}
             </button>
             <button
-              onClick={() => { setConfirmOpen(false); setConfirmPhrase(''); }}
+              onClick={() => setConfirmOpen(false)}
               className="btn btn-sm"
               type="button"
             >

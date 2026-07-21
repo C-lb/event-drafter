@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { updateContact, deleteContact, clearAllContacts } from './actions';
 
 interface Row {
@@ -20,6 +20,43 @@ interface Props {
 
 const CLEAR_PHRASE = 'DELETE ALL CONTACTS';
 
+function PencilIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-[1.05em] w-[1.05em] flex-none" aria-hidden>
+      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-[1.05em] w-[1.05em] flex-none" aria-hidden>
+      <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6" />
+    </svg>
+  );
+}
+
+type SortKey = 'row' | 'first_name' | 'last_name' | 'phone_e164' | 'email';
+type SortDir = 'asc' | 'desc';
+
+const SORT_COLUMNS: { key: SortKey; label: string }[] = [
+  { key: 'row', label: '#' },
+  { key: 'first_name', label: 'First name' },
+  { key: 'last_name', label: 'Last name' },
+  { key: 'phone_e164', label: 'Phone' },
+  { key: 'email', label: 'Email' },
+];
+
+function sortValue(r: Row, key: SortKey): string | number {
+  switch (key) {
+    case 'row': return r.sheet_row_index ?? Number.MAX_SAFE_INTEGER;
+    case 'first_name': return r.first_name.toLowerCase();
+    case 'last_name': return (r.last_name ?? '').toLowerCase();
+    case 'phone_e164': return r.phone_e164;
+    case 'email': return (r.email ?? '').toLowerCase();
+  }
+}
+
 export function ContactsTable({ rows: initial }: Props) {
   const [rows, setRows] = useState<Row[]>(initial);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -28,6 +65,22 @@ export function ContactsTable({ rows: initial }: Props) {
   const [banner, setBanner] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [clearOpen, setClearOpen] = useState(false);
   const [clearPhrase, setClearPhrase] = useState('');
+  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: 'row', dir: 'asc' });
+
+  const toggleSort = (key: SortKey) => {
+    setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
+  };
+
+  const sortedRows = useMemo(() => {
+    const dir = sort.dir === 'asc' ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const av = sortValue(a, sort.key);
+      const bv = sortValue(b, sort.key);
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    });
+  }, [rows, sort]);
 
   const beginEdit = (r: Row) => {
     setEditingId(r.id);
@@ -133,18 +186,29 @@ export function ContactsTable({ rows: initial }: Props) {
       <table className="w-full text-sm">
         <thead className="bg-surface-2 text-ink-2">
           <tr>
-            <th className="border-b border-line px-3 py-2 text-right font-medium w-12" title="Source sheet row number">#</th>
-            <th className="border-b border-line px-3 py-2 text-left font-medium">First name</th>
-            <th className="border-b border-line px-3 py-2 text-left font-medium">Last name</th>
-            <th className="border-b border-line px-3 py-2 text-left font-medium">Phone</th>
+            {SORT_COLUMNS.map((c) => (
+              <th
+                key={c.key}
+                className={`border-b border-line px-3 py-2 font-medium ${c.key === 'row' ? 'w-12 text-right' : 'text-left'}`}
+                title={c.key === 'row' ? 'Source sheet row number' : undefined}
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleSort(c.key)}
+                  className={`inline-flex items-center gap-1 hover:text-ink ${sort.key === c.key ? 'text-ink' : ''}`}
+                >
+                  {c.label}
+                  {sort.key === c.key && <span aria-hidden>{sort.dir === 'asc' ? '▲' : '▼'}</span>}
+                </button>
+              </th>
+            ))}
             <th className="border-b border-line px-3 py-2 text-left font-medium">Secondary phone</th>
-            <th className="border-b border-line px-3 py-2 text-left font-medium">Email</th>
             <th className="border-b border-line px-3 py-2 text-left font-medium">Remarks</th>
-            <th className="border-b border-line px-3 py-2 text-left font-medium w-32">Actions</th>
+            <th className="border-b border-line px-3 py-2 text-left font-medium w-20">Actions</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => {
+          {sortedRows.map((r) => {
             const isEditing = editingId === r.id && draft !== null;
             const inputCls = 'field w-full';
             return (
@@ -162,10 +226,10 @@ export function ContactsTable({ rows: initial }: Props) {
                       <input className={inputCls} value={draft.phone_e164} onChange={(e) => setDraft({ ...draft, phone_e164: e.target.value })} />
                     </td>
                     <td className="border-b border-line px-2 py-1.5">
-                      <input className={inputCls} value={draft.secondary_phone_e164 ?? ''} onChange={(e) => setDraft({ ...draft, secondary_phone_e164: e.target.value })} />
+                      <input className={inputCls} value={draft.email ?? ''} onChange={(e) => setDraft({ ...draft, email: e.target.value })} />
                     </td>
                     <td className="border-b border-line px-2 py-1.5">
-                      <input className={inputCls} value={draft.email ?? ''} onChange={(e) => setDraft({ ...draft, email: e.target.value })} />
+                      <input className={inputCls} value={draft.secondary_phone_e164 ?? ''} onChange={(e) => setDraft({ ...draft, secondary_phone_e164: e.target.value })} />
                     </td>
                     <td className="border-b border-line px-2 py-1.5">
                       <input className={inputCls} value={draft.remarks ?? ''} onChange={(e) => setDraft({ ...draft, remarks: e.target.value })} />
@@ -185,12 +249,16 @@ export function ContactsTable({ rows: initial }: Props) {
                     <td className="border-b border-line px-3 py-2">{r.first_name}</td>
                     <td className="border-b border-line px-3 py-2">{r.last_name ?? ''}</td>
                     <td className="border-b border-line px-3 py-2">{r.phone_e164}</td>
-                    <td className="border-b border-line px-3 py-2">{r.secondary_phone_e164 ?? ''}</td>
                     <td className="border-b border-line px-3 py-2">{r.email ?? ''}</td>
+                    <td className="border-b border-line px-3 py-2">{r.secondary_phone_e164 ?? ''}</td>
                     <td className="border-b border-line px-3 py-2">{r.remarks ?? ''}</td>
                     <td className="border-b border-line px-3 py-2 space-x-1">
-                      <button onClick={() => beginEdit(r)} className="btn btn-sm">Edit</button>
-                      <button onClick={() => remove(r)} disabled={isPending} className="btn-ghost btn-sm text-red-700 disabled:opacity-50">Delete</button>
+                      <button onClick={() => beginEdit(r)} className="btn-ghost btn-sm px-2" title={`Edit ${r.first_name}`} aria-label={`Edit ${r.first_name}`}>
+                        <PencilIcon />
+                      </button>
+                      <button onClick={() => remove(r)} disabled={isPending} className="btn-ghost btn-sm px-2 text-red-700 disabled:opacity-50" title={`Delete ${r.first_name}`} aria-label={`Delete ${r.first_name}`}>
+                        <TrashIcon />
+                      </button>
                     </td>
                   </>
                 )}

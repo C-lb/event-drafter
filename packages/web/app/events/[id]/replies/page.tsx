@@ -112,7 +112,7 @@ export default async function EventRepliesPage({ params, searchParams }: PagePro
           ))}
         </div>
         <Link href={buildHref(filter, !includeResolved)} className="btn btn-sm">
-          {includeResolved ? 'Hide resolved' : 'Show resolved'}
+          {includeResolved ? 'Hide past replies' : 'Show past replies'}
         </Link>
       </div>
 
@@ -131,7 +131,7 @@ export default async function EventRepliesPage({ params, searchParams }: PagePro
           {filter === 'all'
             ? includeResolved
               ? 'No replies yet for this event.'
-              : 'No active replies. Anything resolved is hidden. Toggle the button above to show them.'
+              : 'No active replies. Past replies are hidden. Toggle the button above to show them.'
             : `No ${FILTER_LABEL[filter].toLowerCase()} replies in this view.`}
         </p>
       ) : (

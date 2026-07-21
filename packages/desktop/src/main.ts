@@ -66,6 +66,13 @@ async function boot() {
     await waitForPort(port);
 
     const win = new BrowserWindow({ width: 1280, height: 860, title: 'Event Drafter' });
+    // Chromium persists a per-origin zoom level across restarts (in the
+    // profile under userData). Without this, a stray pinch/keyboard zoom on
+    // this origin from an earlier session carries over into every future
+    // launch, which reads as the app randomly opening zoomed in. Reset it on
+    // every load and disable pinch-zoom so it can't silently drift again.
+    win.webContents.on('did-finish-load', () => win.webContents.setZoomFactor(1));
+    win.webContents.setVisualZoomLevelLimits(1, 1).catch(() => {});
     win.loadURL(`http://127.0.0.1:${port}`);
   } catch (err) {
     web?.kill(); worker?.kill();

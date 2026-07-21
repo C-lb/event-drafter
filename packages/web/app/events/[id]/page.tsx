@@ -42,13 +42,6 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     failed: invitesList.filter((i) => i.status === 'failed').length,
   };
 
-  const replyCounts = {
-    yes: allReplies.filter((r) => r.classification === 'yes').length,
-    no: allReplies.filter((r) => r.classification === 'no').length,
-    maybe: allReplies.filter((r) => r.classification === 'maybe').length,
-    unclear: allReplies.filter((r) => r.classification === 'unclear').length,
-  };
-
   async function check() {
     'use server';
     await triggerReplyCheck();
@@ -83,12 +76,17 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         </p>
       </div>
 
-      <div className="grid grid-cols-4 gap-3 text-center text-xs">
-        <div className="card p-4"><p className="text-ink-2">Yes</p><p className="text-lg font-semibold text-emerald-700">{replyCounts.yes}</p></div>
-        <div className="card p-4"><p className="text-ink-2">No</p><p className="text-lg font-semibold text-red-700">{replyCounts.no}</p></div>
-        <div className="card p-4"><p className="text-ink-2">Maybe</p><p className="text-lg font-semibold text-amber-700">{replyCounts.maybe}</p></div>
-        <div className="card p-4"><p className="text-ink-2">Unclear</p><p className="text-lg font-semibold text-ink">{replyCounts.unclear}</p></div>
-      </div>
+      <EventEditPanel
+        event={{
+          id: event.id,
+          name: event.name,
+          event_date: event.event_date as Date,
+          venue: event.venue ?? null,
+          edm_subject: event.edm_subject ?? null,
+          edm_body: event.edm_body ?? null,
+          edm_summary: event.edm_summary ?? null,
+        }}
+      />
 
       <div className="flex flex-wrap gap-2">
         <Link href={`/events/${eventId}/pick-contacts`} className="btn-primary">
@@ -146,18 +144,6 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
           />
         </div>
       </div>
-
-      <EventEditPanel
-        event={{
-          id: event.id,
-          name: event.name,
-          event_date: event.event_date as Date,
-          venue: event.venue ?? null,
-          edm_subject: event.edm_subject ?? null,
-          edm_body: event.edm_body ?? null,
-          edm_summary: event.edm_summary ?? null,
-        }}
-      />
     </section>
   );
 }

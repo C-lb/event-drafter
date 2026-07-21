@@ -108,12 +108,12 @@ export default async function AllRepliesPage({ searchParams }: PageProps) {
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-2xl font-semibold tracking-tight">
-          {includeResolved ? 'All replies (incl. resolved)' : 'All replies'}
+          {includeResolved ? 'All replies (incl. past)' : 'All replies'}
         </h2>
         <div className="flex items-center gap-2">
           {resolvedCount > 0 && (
             <Link href={buildHref(filter, !includeResolved)} className="btn btn-sm">
-              {includeResolved ? `Hide resolved (${resolvedCount})` : `Show resolved (${resolvedCount})`}
+              {includeResolved ? 'Hide past replies' : 'Show past replies'}
             </Link>
           )}
           <CheckNowButton inFlight={inFlight} />
@@ -173,7 +173,7 @@ export default async function AllRepliesPage({ searchParams }: PageProps) {
           {filter === 'all'
             ? includeResolved
               ? 'No replies yet.'
-              : 'No active replies. Anything resolved is hidden — toggle the button above to show them.'
+              : 'No active replies. Past replies are hidden — toggle the button above to show them.'
             : `No ${FILTER_LABEL[filter].toLowerCase()} replies in this view.`}
         </p>
       ) : (

@@ -1,9 +1,26 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { listCandidatesForEvent, addContactsToEvent } from '../actions';
 import type { Contact } from '@event-drafter/core';
+
+type SortKey = 'row' | 'first_name' | 'last_name';
+type SortDir = 'asc' | 'desc';
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: 'row', label: 'Row #' },
+  { key: 'first_name', label: 'First name' },
+  { key: 'last_name', label: 'Last name' },
+];
+
+function sortValue(c: Contact, key: SortKey): string | number {
+  switch (key) {
+    case 'row': return c.sheet_row_index ?? Number.MAX_SAFE_INTEGER;
+    case 'first_name': return c.first_name.toLowerCase();
+    case 'last_name': return (c.last_name ?? '').toLowerCase();
+  }
+}
 
 /**
  * Parse a row-range expression like "12-41, 52, 69-106" into the set of sheet
@@ -43,6 +60,7 @@ export default function PickContactsPage() {
   const [lastIndex, setLastIndex] = useState<number | null>(null);
   const [rowExpr, setRowExpr] = useState('');
   const [rowNote, setRowNote] = useState<string | null>(null);
+  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: 'row', dir: 'asc' });
 
   const load = () => start(async () => {
     setCandidates(await listCandidatesForEvent(eventId, { search, exclude_invited: true }));
@@ -50,16 +68,31 @@ export default function PickContactsPage() {
 
   useEffect(() => { load(); }, []);
 
+  const toggleSort = (key: SortKey) => {
+    setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
+  };
+
+  const sortedCandidates = useMemo(() => {
+    const dir = sort.dir === 'asc' ? 1 : -1;
+    return [...candidates].sort((a, b) => {
+      const av = sortValue(a, sort.key);
+      const bv = sortValue(b, sort.key);
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    });
+  }, [candidates, sort]);
+
   const toggle = (id: number, index: number, shiftKey: boolean) => {
     const next = new Set(picked);
     // Shift-click selects (or deselects) the range from the last clicked row
-    // to the current one, matching the new state of the current row. If no
-    // anchor exists yet, behave like a normal click.
+    // to the current one, matching the new state of the current row. Indices
+    // are into the currently SORTED list, since that's the order on screen.
     if (shiftKey && lastIndex !== null && lastIndex !== index) {
       const [from, to] = lastIndex < index ? [lastIndex, index] : [index, lastIndex];
       const turnOn = !next.has(id);
       for (let i = from; i <= to; i++) {
-        const c = candidates[i];
+        const c = sortedCandidates[i];
         if (!c) continue;
         if (turnOn) next.add(c.id); else next.delete(c.id);
       }
@@ -127,7 +160,7 @@ export default function PickContactsPage() {
         <button onClick={load} className="btn">Search</button>
       </div>
 
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-ink-2">
           {picked.size} selected · {candidates.length} candidates (excluding already-invited)
         </p>
@@ -148,6 +181,27 @@ export default function PickContactsPage() {
           </button>
         </div>
       </div>
+
+      <div className="flex flex-wrap items-center gap-1.5 text-xs">
+        <span className="text-ink-3">Sort by</span>
+        {SORT_OPTIONS.map((o) => {
+          const isActive = sort.key === o.key;
+          return (
+            <button
+              key={o.key}
+              type="button"
+              onClick={() => toggleSort(o.key)}
+              aria-pressed={isActive}
+              className={`inline-flex items-center gap-1 rounded-full px-3 py-1 transition ${
+                isActive ? 'bg-ink text-white shadow-raise' : 'bg-line text-ink-2 hover:bg-line-strong'
+              }`}
+            >
+              {o.label}
+              {isActive && <span aria-hidden>{sort.dir === 'asc' ? '▲' : '▼'}</span>}
+            </button>
+          );
+        })}
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         <input
           className="field flex-1 min-w-[14rem]"
@@ -166,7 +220,7 @@ export default function PickContactsPage() {
       </p>
 
       <ul className="space-y-1">
-        {candidates.map((c, i) => (
+        {sortedCandidates.map((c, i) => (
           <li
             key={c.id}
             onClick={(e) => toggle(c.id, i, e.shiftKey)}
