@@ -1,6 +1,6 @@
 {
   "name": "@event-drafter/desktop",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "private": true,
   "main": "dist/main.js",
   "scripts": {
