@@ -30,7 +30,6 @@ export function EventCard({ ev, expired, dateLabel }: Props) {
   const router = useRouter();
   const [isPending, start] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmPhrase, setConfirmPhrase] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const wrapperCls = expired
@@ -41,7 +40,7 @@ export function EventCard({ ev, expired, dateLabel }: Props) {
   const doDelete = () => {
     setError(null);
     start(async () => {
-      const res = await deleteEvent({ id: ev.id, confirm_phrase: confirmPhrase });
+      const res = await deleteEvent({ id: ev.id, confirm_phrase: DELETE_CONFIRM_PHRASE });
       if (!res.ok) { setError(res.error); return; }
       router.refresh();
     });
@@ -99,27 +98,17 @@ export function EventCard({ ev, expired, dateLabel }: Props) {
           <p className="font-medium text-red-900">
             Delete this event and all of its invites, replies, and follow-ups.
           </p>
-          <p className="mt-1 text-red-800">
-            Type <code className="rounded bg-white px-1.5 py-0.5 font-mono text-xs">{DELETE_CONFIRM_PHRASE}</code> to confirm.
-          </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <input
-              type="text"
-              value={confirmPhrase}
-              onChange={(e) => setConfirmPhrase(e.target.value)}
-              placeholder={DELETE_CONFIRM_PHRASE}
-              className="field min-w-[180px] flex-1 font-mono"
-            />
             <button
               onClick={doDelete}
-              disabled={isPending || confirmPhrase !== DELETE_CONFIRM_PHRASE}
+              disabled={isPending}
               className="btn-danger btn-sm"
               type="button"
             >
-              {isPending ? 'Deleting…' : 'Delete event'}
+              {isPending ? 'Deleting…' : 'Confirm delete'}
             </button>
             <button
-              onClick={() => { setConfirmOpen(false); setConfirmPhrase(''); setError(null); }}
+              onClick={() => { setConfirmOpen(false); setError(null); }}
               className="btn btn-sm"
               type="button"
             >

@@ -1,12 +1,14 @@
 import Link from 'next/link';
 import { getDb } from '@/lib/db';
 import { events, contacts, replies } from '@event-drafter/core/schema';
-import { eq, sql } from 'drizzle-orm';
+import { getSetting } from '@event-drafter/core/settings';
+import { desc, eq, sql } from 'drizzle-orm';
 import { listEventsWithStats } from './events/actions';
-import { listAllReplies, triggerReplyCheck } from './replies/actions';
+import { listAllReplies, triggerReplyCheck, setReplyResolved } from './replies/actions';
 import { enqueueImport } from './setup/import/actions';
 import { EventStickyCard, type StickyEvent } from './EventStickyCard';
 import { RefreshButton } from './RefreshButton';
+import { ResolveButton } from './ResolveButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,6 +51,21 @@ export default async function HomePage() {
   const eventCount = db.select({ count: sql<number>`count(*)` }).from(events).all()[0]?.count ?? 0;
   const replyCount = db.select({ count: sql<number>`count(*)` }).from(replies).where(eq(replies.resolved, false)).all()[0]?.count ?? 0;
 
+  const recentContacts = db
+    .select({ id: contacts.id, first_name: contacts.first_name, last_name: contacts.last_name, phone_e164: contacts.phone_e164 })
+    .from(contacts)
+    .orderBy(desc(contacts.created_at))
+    .limit(3)
+    .all();
+
+  // The bound sheet only stores its id; the title lives on the matching
+  // history entry recorded when it was picked.
+  const contactsSheet = getSetting('contacts_sheet');
+  const sheetHistory = getSetting('sheet_history') ?? [];
+  const contactsSheetTitle = contactsSheet
+    ? sheetHistory.find((h) => h.spreadsheet_id === contactsSheet.spreadsheet_id)?.title
+    : undefined;
+
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const nowMs = now.getTime();
@@ -88,15 +105,33 @@ export default async function HomePage() {
   return (
     <section className="space-y-8">
       <div className="grid grid-cols-3 items-stretch gap-4">
-        {/* Contacts: count + view / refresh icon buttons */}
+        {/* Contacts: recently imported preview + view / update icon buttons */}
         <div className="card flex flex-col p-5">
-          <p className="eyebrow">Contacts</p>
-          <p className="mt-2 text-3xl font-semibold tracking-tight">{contactCount}</p>
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="eyebrow truncate">
+              Contacts{contactsSheetTitle ? ` · ${contactsSheetTitle}` : ''}
+            </p>
+            <span className="flex-none text-xs font-medium text-ink-3">{contactCount} total</span>
+          </div>
+          {recentContacts.length === 0 ? (
+            <p className="mt-3 text-sm text-ink-3">No contacts imported yet.</p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {recentContacts.map((c) => (
+                <li key={c.id} className="flex items-baseline justify-between gap-3 rounded-sm px-2 py-1.5">
+                  <span className="truncate text-sm font-medium">
+                    {c.first_name}{c.last_name ? ` ${c.last_name}` : ''}
+                  </span>
+                  <span className="flex-none text-xs text-ink-3">{c.phone_e164}</span>
+                </li>
+              ))}
+            </ul>
+          )}
           <div className="mt-auto flex items-center gap-2 pt-4">
             <Link href="/contacts" className="btn btn-sm px-2" title="View contacts" aria-label="View contacts">
               <EyeIcon />
             </Link>
-            <RefreshButton action={refreshContacts} title="Re-sync contacts from the Sheet" />
+            <RefreshButton action={refreshContacts} title="Re-sync contacts from the Sheet" label="Update" />
           </div>
         </div>
 
@@ -217,6 +252,7 @@ export default async function HomePage() {
                       <span className="font-medium">{r.contact_name}</span>
                       <span className={classBadge(r.classification)}>{r.classification ?? 'unclassified'}</span>
                       <span className="min-w-0 flex-1 truncate text-sm text-ink-2">{snippet(r.reply_text)}</span>
+                      <ResolveButton replyId={r.reply_id} action={setReplyResolved} />
                       <Link
                         href={`/events/${g.event_id}/replies`}
                         className="btn btn-sm flex-none"

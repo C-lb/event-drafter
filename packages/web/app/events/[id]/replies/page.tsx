@@ -5,12 +5,12 @@ import { eq } from 'drizzle-orm';
 import {
   listAllReplies,
   latestReplyCheck,
-  triggerReplyCheck,
   maybeEnqueueAutoReplyCheck,
 } from '../../../replies/actions';
 import { type ReplyRow } from '../../../replies/ReplyCard';
 import { RepliesQueue } from '../../../replies/RepliesQueue';
 import { AutoRefresh } from '../../../components/AutoRefresh';
+import { CheckNowButton } from '../../../replies/CheckNowButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,11 +100,7 @@ export default async function EventRepliesPage({ params, searchParams }: PagePro
           <h2 className="text-2xl font-semibold tracking-tight">Replies</h2>
           {eventName && <p className="mt-0.5 truncate text-sm text-ink-3">{eventName}</p>}
         </div>
-        <form action={triggerReplyCheck}>
-          <button type="submit" disabled={inFlight} className="btn-primary btn-sm">
-            {inFlight ? 'Checking…' : 'Check now'}
-          </button>
-        </form>
+        <CheckNowButton inFlight={inFlight} />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2">

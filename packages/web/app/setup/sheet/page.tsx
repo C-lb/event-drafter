@@ -191,15 +191,20 @@ export default function SheetPickerPage() {
                 key={h.spreadsheet_id}
                 className="card flex items-center justify-between gap-2 p-4 text-sm"
               >
-                <button
-                  onClick={() => doPreview(h.sheet_url, h.range)}
-                  className="flex-1 text-left"
-                  type="button"
-                >
+                <div className="min-w-0 flex-1">
                   <span className="font-medium text-ink">{h.title}</span>
                   <span className="ml-2 text-xs text-ink-3">
                     {h.range} · {timeAgo(h.last_used)}
                   </span>
+                </div>
+                <button
+                  onClick={() => doPreview(h.sheet_url, h.range)}
+                  disabled={isPending}
+                  className="btn btn-sm"
+                  type="button"
+                  title={`Re-check ${h.title} for new columns and rows`}
+                >
+                  {isPending ? 'Updating…' : 'Update'}
                 </button>
                 <button
                   onClick={() => removeFromHistory(h.spreadsheet_id)}

@@ -1,18 +1,31 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { applyTemplate } from '../actions';
+import { listTemplates, saveTemplate } from '../follow-up/actions';
 
 const VARIABLES = ['first name', 'last name', 'event name', 'date', 'venue'] as const;
 
 const PLACEHOLDER = `Hi [first name]! You're invited to [event name] on [date] at [venue]. Hope to see you there!`;
+
+type Preset = { id: number; name: string; body: string };
 
 export function TemplatePopover({ eventId, onApplied }: { eventId: number; onApplied: () => void }) {
   const [open, setOpen] = useState(false);
   const [template, setTemplate] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [presets, setPresets] = useState<Preset[]>([]);
+  const [saveAsPreset, setSaveAsPreset] = useState(false);
+  const [presetName, setPresetName] = useState('');
   const taRef = useRef<HTMLTextAreaElement>(null);
+
+  // Presets are shared across every event (message_templates isn't scoped to
+  // one event), so load them once whenever the popover opens.
+  useEffect(() => {
+    if (!open) return;
+    void listTemplates().then(setPresets);
+  }, [open]);
 
   // Insert a [token] at the caret, replacing any selection.
   const insertVar = (name: string) => {
@@ -65,6 +78,10 @@ export function TemplatePopover({ eventId, onApplied }: { eventId: number; onApp
     setBusy(true);
     setMsg(null);
     try {
+      if (saveAsPreset) {
+        const saved = await saveTemplate({ name: presetName || undefined, body: template });
+        if (!saved.ok) { setMsg(saved.error); setBusy(false); return; }
+      }
       const r = await applyTemplate({ event_id: eventId, template });
       setMsg(`Applied to ${r.applied} invite${r.applied === 1 ? '' : 's'}.`);
       onApplied();
@@ -77,7 +94,7 @@ export function TemplatePopover({ eventId, onApplied }: { eventId: number; onApp
 
   return (
     <div className="relative">
-      <button type="button" onClick={() => setOpen((v) => !v)} className="btn btn-sm" aria-expanded={open}>
+      <button type="button" onClick={() => setOpen((v) => !v)} className="btn" aria-expanded={open}>
         Use my own template
       </button>
 
@@ -130,6 +147,25 @@ export function TemplatePopover({ eventId, onApplied }: { eventId: number; onApp
               ))}
             </div>
 
+            {presets.length > 0 && (
+              <label className="mt-3 block text-xs">
+                <span className="text-ink-2">Load a preset</span>
+                <select
+                  className="field mt-1 w-full text-sm"
+                  value=""
+                  onChange={(e) => {
+                    const p = presets.find((x) => String(x.id) === e.target.value);
+                    if (p) setTemplate(p.body);
+                  }}
+                >
+                  <option value="">Choose a saved preset…</option>
+                  {presets.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+
             <textarea
               ref={taRef}
               value={template}
@@ -138,6 +174,24 @@ export function TemplatePopover({ eventId, onApplied }: { eventId: number; onApp
               className="field mt-3 h-32 w-full resize-y text-sm"
               aria-label="Message template"
             />
+
+            <label className="mt-3 flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={saveAsPreset}
+                onChange={(e) => setSaveAsPreset(e.target.checked)}
+                className="h-4 w-4 cursor-pointer accent-accent"
+              />
+              <span className="text-ink-2">Save as a preset (usable on any event)</span>
+            </label>
+            {saveAsPreset && (
+              <input
+                className="field mt-2 w-full text-sm"
+                placeholder="Preset name (optional)"
+                value={presetName}
+                onChange={(e) => setPresetName(e.target.value)}
+              />
+            )}
 
             <div className="mt-3 flex items-center justify-between gap-2">
               {msg ? (

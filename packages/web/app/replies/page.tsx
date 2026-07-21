@@ -4,12 +4,12 @@ import {
   listAwaitingInvites,
   latestReplyCheck,
   maybeEnqueueAutoReplyCheck,
-  triggerReplyCheck,
   resolvedReplyCount,
 } from './actions';
 import { type ReplyRow } from './ReplyCard';
 import { RepliesQueue } from './RepliesQueue';
 import { AutoRefresh } from '../components/AutoRefresh';
+import { CheckNowButton } from './CheckNowButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -116,11 +116,7 @@ export default async function AllRepliesPage({ searchParams }: PageProps) {
               {includeResolved ? `Hide resolved (${resolvedCount})` : `Show resolved (${resolvedCount})`}
             </Link>
           )}
-          <form action={triggerReplyCheck}>
-            <button type="submit" disabled={inFlight} className="btn-primary btn-sm">
-              {inFlight ? 'Checking…' : 'Check now'}
-            </button>
-          </form>
+          <CheckNowButton inFlight={inFlight} />
         </div>
       </div>
 
