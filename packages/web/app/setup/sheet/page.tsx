@@ -232,9 +232,9 @@ export default function SheetPickerPage() {
           <h3 className="text-base font-semibold">
             {preview.title}, preview ({preview.preview.rows.length} row{preview.preview.rows.length === 1 ? '' : 's'})
           </h3>
-          <div className="overflow-x-auto">
+          <div className="max-h-72 overflow-y-auto overflow-x-auto rounded-card ring-1 ring-inset ring-line">
             <table className="w-full border-collapse text-xs">
-              <thead className="bg-surface-2 text-ink-2">
+              <thead className="sticky top-0 z-10 bg-surface-2 text-ink-2">
                 <tr>{preview.preview.headers.map((h) => <th key={h} className="border-b border-line px-2 py-1 text-left">{h}</th>)}</tr>
               </thead>
               <tbody>
